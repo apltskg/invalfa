@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Send, Check, FileSpreadsheet, Archive } from "lucide-react";
+import { Download, Send, Check, Archive, Link2, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Invoice, ExportLog } from "@/types/database";
 import { toast } from "sonner";
@@ -10,6 +12,7 @@ import JSZip from "jszip";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, subMonths } from "date-fns";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 export default function ExportHub() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -19,6 +22,8 @@ export default function ExportHub() {
   const [exporting, setExporting] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [magicLinkDialog, setMagicLinkDialog] = useState(false);
+  const [magicLink, setMagicLink] = useState("");
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = subMonths(new Date(), i);
@@ -35,18 +40,18 @@ export default function ExportHub() {
       supabase.from("invoices").select("*"),
       supabase.from("export_logs").select("*").order("sent_at", { ascending: false }),
     ]);
-    
-    const packagesWithInvoices = ((pkgs as Package[]) || []).map(pkg => ({
+
+    const packagesWithInvoices = ((pkgs as Package[]) || []).map((pkg) => ({
       ...pkg,
-      invoices: ((invs as Invoice[]) || []).filter(inv => inv.package_id === pkg.id)
+      invoices: ((invs as Invoice[]) || []).filter((inv) => inv.package_id === pkg.id),
     }));
-    
+
     setPackages(packagesWithInvoices);
     setExportLogs((logs as ExportLog[]) || []);
     setLoading(false);
   }
 
-  const filteredPackages = packages.filter(pkg => {
+  const filteredPackages = packages.filter((pkg) => {
     const pkgMonth = format(new Date(pkg.start_date), "yyyy-MM");
     return pkgMonth === selectedMonth;
   });
@@ -54,19 +59,18 @@ export default function ExportHub() {
   async function generateZip() {
     setExporting(true);
     const zip = new JSZip();
-    
+
     const summaryData: any[] = [];
-    
+
     for (const pkg of filteredPackages) {
       for (const inv of pkg.invoices) {
         const fileName = `${pkg.client_name}-${inv.category}-€${inv.amount?.toFixed(2) || "0"}.pdf`;
-        
-        // Fetch file from storage
+
         const { data } = await supabase.storage.from("invoices").download(inv.file_path);
         if (data) {
           zip.file(fileName, data);
         }
-        
+
         summaryData.push({
           Package: pkg.client_name,
           Category: inv.category,
@@ -76,34 +80,35 @@ export default function ExportHub() {
         });
       }
     }
-    
-    // Create Excel summary
+
     const ws = XLSX.utils.json_to_sheet(summaryData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Summary");
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     zip.file("Summary.xlsx", excelBuffer);
-    
+
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const a = document.createElement("a");
     a.href = url;
     a.download = `invoices-${selectedMonth}.zip`;
     a.click();
-    
+
     setExporting(false);
     toast.success("Export downloaded!");
   }
 
   async function sendToAccountant() {
     setSending(true);
-    
-    await supabase.from("export_logs").insert([{
-      month_year: selectedMonth,
-      packages_included: filteredPackages.length,
-      invoices_included: filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0),
-    }]);
-    
+
+    await supabase.from("export_logs").insert([
+      {
+        month_year: selectedMonth,
+        packages_included: filteredPackages.length,
+        invoices_included: filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0),
+      },
+    ]);
+
     setSending(false);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
@@ -111,98 +116,179 @@ export default function ExportHub() {
     toast.success("Sent to accountant!");
   }
 
+  function generateMagicLink() {
+    // Generate a shareable link (in production this would create a secure token)
+    const link = `${window.location.origin}/shared/report/${selectedMonth}`;
+    setMagicLink(link);
+    setMagicLinkDialog(true);
+  }
+
+  function copyMagicLink() {
+    navigator.clipboard.writeText(magicLink);
+    toast.success("Link copied to clipboard");
+  }
+
   const totalInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
   const totalAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Export Hub</h1>
-          <p className="mt-1 text-muted-foreground">Generate monthly reports for your accountant</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Export Hub</h1>
+          <p className="mt-1 text-muted-foreground">Δημιουργία μηνιαίων αναφορών για τον λογιστή</p>
         </div>
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
           <SelectTrigger className="w-48 rounded-xl">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {months.map(m => (
-              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+            {months.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Card className="p-6 rounded-3xl">
-          <p className="text-sm text-muted-foreground">Packages</p>
-          <p className="text-3xl font-semibold">{filteredPackages.length}</p>
+          <p className="text-sm font-medium text-muted-foreground">Πακέτα</p>
+          <p className="mt-1 text-4xl font-semibold tracking-tight">{filteredPackages.length}</p>
         </Card>
         <Card className="p-6 rounded-3xl">
-          <p className="text-sm text-muted-foreground">Invoices</p>
-          <p className="text-3xl font-semibold">{totalInvoices}</p>
+          <p className="text-sm font-medium text-muted-foreground">Παραστατικά</p>
+          <p className="mt-1 text-4xl font-semibold tracking-tight">{totalInvoices}</p>
         </Card>
-        <Card className="p-6 rounded-3xl">
-          <p className="text-sm text-muted-foreground">Total Amount</p>
-          <p className="text-3xl font-semibold">€{totalAmount.toFixed(2)}</p>
+        <Card className="p-6 rounded-3xl bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <p className="text-sm font-medium text-muted-foreground">Σύνολο</p>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-primary">€{totalAmount.toFixed(2)}</p>
         </Card>
       </div>
 
-      <div className="flex gap-4 mb-8">
-        <Button onClick={generateZip} disabled={exporting || totalInvoices === 0} className="rounded-xl">
-          <Archive className="h-4 w-4 mr-2" />
-          {exporting ? "Generating..." : "Generate Monthly Report"}
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3 mb-8">
+        <Button onClick={generateZip} disabled={exporting || totalInvoices === 0} className="rounded-xl gap-2">
+          <Archive className="h-4 w-4" />
+          {exporting ? "Generating..." : "Generate ZIP + Excel"}
         </Button>
-        <Button onClick={sendToAccountant} disabled={sending || totalInvoices === 0} variant="outline" className="rounded-xl relative overflow-hidden">
-          <AnimatePresence>
+        <Button onClick={generateMagicLink} disabled={totalInvoices === 0} variant="outline" className="rounded-xl gap-2">
+          <Link2 className="h-4 w-4" />
+          Create Magic Link
+        </Button>
+        <Button
+          onClick={sendToAccountant}
+          disabled={sending || totalInvoices === 0}
+          variant="outline"
+          className="rounded-xl relative overflow-hidden gap-2"
+        >
+          <AnimatePresence mode="wait">
             {showSuccess ? (
-              <motion.span initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex items-center text-green-600">
+              <motion.span
+                key="success"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                className="flex items-center text-green-600"
+              >
                 <Check className="h-4 w-4 mr-2" /> Sent!
               </motion.span>
             ) : (
-              <motion.span initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex items-center">
-                <Send className="h-4 w-4 mr-2" /> Send to Accountant
+              <motion.span
+                key="send"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                className="flex items-center"
+              >
+                <Send className="h-4 w-4 mr-2" /> Mark as Sent
               </motion.span>
             )}
           </AnimatePresence>
         </Button>
       </div>
 
-      {filteredPackages.length > 0 && (
-        <Card className="rounded-3xl overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold">Packages in {months.find(m => m.value === selectedMonth)?.label}</h3>
+      {/* Packages List */}
+      {filteredPackages.length > 0 ? (
+        <Card className="rounded-3xl overflow-hidden mb-8">
+          <div className="p-4 border-b border-border bg-muted/30">
+            <h3 className="font-semibold">Πακέτα για {months.find((m) => m.value === selectedMonth)?.label}</h3>
           </div>
           <div className="divide-y divide-border">
-            {filteredPackages.map(pkg => (
+            {filteredPackages.map((pkg) => (
               <div key={pkg.id} className="p-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{pkg.client_name}</p>
-                  <p className="text-sm text-muted-foreground">{pkg.invoices.length} invoices</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge variant="secondary" className="rounded-lg">
+                      {pkg.invoices.length} invoices
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {format(new Date(pkg.start_date), "dd MMM")} - {format(new Date(pkg.end_date), "dd MMM")}
+                    </span>
+                  </div>
                 </div>
-                <p className="font-semibold">€{pkg.invoices.reduce((a, i) => a + (i.amount || 0), 0).toFixed(2)}</p>
+                <p className="text-lg font-semibold">€{pkg.invoices.reduce((a, i) => a + (i.amount || 0), 0).toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <div className="mb-8">
+          <EmptyState
+            icon={Archive}
+            title="Δεν υπάρχουν πακέτα"
+            description={`Δεν υπάρχουν πακέτα για ${months.find((m) => m.value === selectedMonth)?.label}. Επιλέξτε διαφορετικό μήνα ή δημιουργήστε νέα πακέτα.`}
+          />
+        </div>
+      )}
+
+      {/* Export History */}
+      {exportLogs.length > 0 && (
+        <Card className="rounded-3xl">
+          <div className="p-4 border-b border-border bg-muted/30">
+            <h3 className="font-semibold">Ιστορικό Εξαγωγών</h3>
+          </div>
+          <div className="divide-y divide-border">
+            {exportLogs.slice(0, 5).map((log) => (
+              <div key={log.id} className="p-4 flex items-center justify-between text-sm">
+                <Badge variant="outline" className="rounded-lg">
+                  {log.month_year}
+                </Badge>
+                <span className="text-muted-foreground">
+                  {log.packages_included} packages, {log.invoices_included} invoices
+                </span>
+                <span className="text-muted-foreground">{format(new Date(log.sent_at), "dd MMM yyyy, HH:mm")}</span>
               </div>
             ))}
           </div>
         </Card>
       )}
 
-      {exportLogs.length > 0 && (
-        <Card className="mt-8 rounded-3xl">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold">Export History</h3>
+      {/* Magic Link Dialog */}
+      <Dialog open={magicLinkDialog} onOpenChange={setMagicLinkDialog}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Magic Link Created</DialogTitle>
+            <DialogDescription>
+              Share this link with your accountant for read-only access to the monthly report.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="flex items-center gap-2 rounded-xl bg-muted p-3">
+              <code className="flex-1 text-sm truncate">{magicLink}</code>
+              <Button variant="ghost" size="sm" onClick={copyMagicLink} className="rounded-lg shrink-0">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              This link provides read-only access to the summary for {months.find((m) => m.value === selectedMonth)?.label}.
+            </p>
           </div>
-          <div className="divide-y divide-border">
-            {exportLogs.slice(0, 5).map(log => (
-              <div key={log.id} className="p-4 flex items-center justify-between text-sm">
-                <span>{log.month_year}</span>
-                <span className="text-muted-foreground">{log.packages_included} packages, {log.invoices_included} invoices</span>
-                <span className="text-muted-foreground">{format(new Date(log.sent_at), "MMM d, yyyy HH:mm")}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

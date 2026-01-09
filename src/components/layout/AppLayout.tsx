@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { UploadButton } from "@/components/upload/UploadButton";
+import { ContextualFAB } from "./ContextualFAB";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {children}
           </div>
         </main>
-        <UploadButton />
+        <ContextualFAB />
       </div>
     </SidebarProvider>
   );
