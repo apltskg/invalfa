@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Send, Check, Archive, Link2, Copy, ExternalLink } from "lucide-react";
+import { Send, Check, Archive, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Invoice, ExportLog } from "@/types/database";
 import { toast } from "sonner";
@@ -22,8 +22,6 @@ export default function ExportHub() {
   const [exporting, setExporting] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [magicLinkDialog, setMagicLinkDialog] = useState(false);
-  const [magicLink, setMagicLink] = useState("");
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = subMonths(new Date(), i);
@@ -116,17 +114,6 @@ export default function ExportHub() {
     toast.success("Sent to accountant!");
   }
 
-  function generateMagicLink() {
-    // Generate a shareable link (in production this would create a secure token)
-    const link = `${window.location.origin}/shared/report/${selectedMonth}`;
-    setMagicLink(link);
-    setMagicLinkDialog(true);
-  }
-
-  function copyMagicLink() {
-    navigator.clipboard.writeText(magicLink);
-    toast.success("Link copied to clipboard");
-  }
 
   const totalInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
   const totalAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
@@ -174,9 +161,14 @@ export default function ExportHub() {
           <Archive className="h-4 w-4" />
           {exporting ? "Generating..." : "Generate ZIP + Excel"}
         </Button>
-        <Button onClick={generateMagicLink} disabled={totalInvoices === 0} variant="outline" className="rounded-xl gap-2">
+        <Button 
+          disabled 
+          variant="outline" 
+          className="rounded-xl gap-2 opacity-50 cursor-not-allowed"
+          title="Σύντομα διαθέσιμο"
+        >
           <Link2 className="h-4 w-4" />
-          Create Magic Link
+          Magic Link (σύντομα)
         </Button>
         <Button
           onClick={sendToAccountant}
@@ -267,28 +259,6 @@ export default function ExportHub() {
         </Card>
       )}
 
-      {/* Magic Link Dialog */}
-      <Dialog open={magicLinkDialog} onOpenChange={setMagicLinkDialog}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>Magic Link Created</DialogTitle>
-            <DialogDescription>
-              Share this link with your accountant for read-only access to the monthly report.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div className="flex items-center gap-2 rounded-xl bg-muted p-3">
-              <code className="flex-1 text-sm truncate">{magicLink}</code>
-              <Button variant="ghost" size="sm" onClick={copyMagicLink} className="rounded-lg shrink-0">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              This link provides read-only access to the summary for {months.find((m) => m.value === selectedMonth)?.label}.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
