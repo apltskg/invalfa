@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Send, Check, Archive, Link2 } from "lucide-react";
+import { Send, Check, Archive, Link2, FileSpreadsheet, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Invoice, ExportLog } from "@/types/database";
+import { Package, Invoice, ExportLog, BankTransaction, InvoiceTransactionMatch } from "@/types/database";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import * as XLSX from "xlsx";
@@ -17,11 +18,15 @@ import { EmptyState } from "@/components/shared/EmptyState";
 export default function ExportHub() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [packages, setPackages] = useState<(Package & { invoices: Invoice[] })[]>([]);
+  const [transactions, setTransactions] = useState<BankTransaction[]>([]);
+  const [matches, setMatches] = useState<InvoiceTransactionMatch[]>([]);
   const [exportLogs, setExportLogs] = useState<ExportLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
   const [sending, setSending] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [confirmSendDialog, setConfirmSendDialog] = useState(false);
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = subMonths(new Date(), i);
@@ -33,10 +38,12 @@ export default function ExportHub() {
   }, []);
 
   async function fetchData() {
-    const [{ data: pkgs }, { data: invs }, { data: logs }] = await Promise.all([
+    const [{ data: pkgs }, { data: invs }, { data: logs }, { data: txns }, { data: matchData }] = await Promise.all([
       supabase.from("packages").select("*"),
       supabase.from("invoices").select("*"),
-      supabase.from("export_logs").select("*").order("sent_at", { ascending: false }),
+      supabase.from("export_logs").select("*").order("sent_at", { ascending: false }).limit(10),
+      supabase.from("bank_transactions").select("*"),
+      supabase.from("invoice_transaction_matches").select("*"),
     ]);
 
     const packagesWithInvoices = ((pkgs as Package[]) || []).map((pkg) => ({
@@ -45,6 +52,8 @@ export default function ExportHub() {
     }));
 
     setPackages(packagesWithInvoices);
+    setTransactions((txns as BankTransaction[]) || []);
+    setMatches((matchData as InvoiceTransactionMatch[]) || []);
     setExportLogs((logs as ExportLog[]) || []);
     setLoading(false);
   }
@@ -53,6 +62,84 @@ export default function ExportHub() {
     const pkgMonth = format(new Date(pkg.start_date), "yyyy-MM");
     return pkgMonth === selectedMonth;
   });
+
+  // Get match info for an invoice
+  function getMatchInfo(invoiceId: string) {
+    const match = matches.find(m => m.invoice_id === invoiceId);
+    if (!match) return null;
+    const transaction = transactions.find(t => t.id === match.transaction_id);
+    return transaction;
+  }
+
+  async function generateXlsx() {
+    setExportingXlsx(true);
+
+    try {
+      const summaryData: any[] = [];
+
+      for (const pkg of filteredPackages) {
+        for (const inv of pkg.invoices) {
+          const matchedTxn = getMatchInfo(inv.id);
+          const extractedData = inv.extracted_data as any;
+          
+          summaryData.push({
+            "Package": pkg.client_name,
+            "Merchant": inv.merchant || "—",
+            "Category": inv.category,
+            "Invoice Date": inv.invoice_date || "—",
+            "Amount (€)": inv.amount?.toFixed(2) || "—",
+            "VAT Amount (€)": extractedData?.vat_amount?.toFixed(2) || "—",
+            "Matched": matchedTxn ? "Yes" : "No",
+            "Transaction Date": matchedTxn ? matchedTxn.transaction_date : "—",
+            "Transaction Amount (€)": matchedTxn ? Math.abs(matchedTxn.amount).toFixed(2) : "—",
+            "Transaction Description": matchedTxn ? matchedTxn.description : "—",
+          });
+        }
+      }
+
+      if (summaryData.length === 0) {
+        toast.error("No invoices to export");
+        setExportingXlsx(false);
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(summaryData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 20 }, // Package
+        { wch: 25 }, // Merchant
+        { wch: 12 }, // Category
+        { wch: 12 }, // Invoice Date
+        { wch: 12 }, // Amount
+        { wch: 12 }, // VAT
+        { wch: 8 },  // Matched
+        { wch: 12 }, // Txn Date
+        { wch: 12 }, // Txn Amount
+        { wch: 30 }, // Txn Description
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
+      
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TravelDocs-${selectedMonth}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("XLSX report downloaded!");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to generate report");
+    }
+
+    setExportingXlsx(false);
+  }
 
   async function generateZip() {
     setExporting(true);
@@ -99,7 +186,7 @@ export default function ExportHub() {
   async function sendToAccountant() {
     setSending(true);
 
-    await supabase.from("export_logs").insert([
+    const { error } = await supabase.from("export_logs").insert([
       {
         month_year: selectedMonth,
         packages_included: filteredPackages.length,
@@ -107,16 +194,24 @@ export default function ExportHub() {
       },
     ]);
 
+    if (error) {
+      console.error("Export log error:", error);
+      toast.error(`Failed to log export: ${error.message}`);
+      setSending(false);
+      return;
+    }
+
     setSending(false);
+    setConfirmSendDialog(false);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
     fetchData();
-    toast.success("Sent to accountant!");
+    toast.success("Marked as sent!");
   }
-
 
   const totalInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
   const totalAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
+  const currentMonthLabel = months.find((m) => m.value === selectedMonth)?.label || selectedMonth;
 
   return (
     <div>
@@ -157,9 +252,22 @@ export default function ExportHub() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-8">
-        <Button onClick={generateZip} disabled={exporting || totalInvoices === 0} className="rounded-xl gap-2">
+        <Button 
+          onClick={generateXlsx} 
+          disabled={exportingXlsx || totalInvoices === 0} 
+          className="rounded-xl gap-2"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          {exportingXlsx ? "Generating..." : "Download XLSX Report"}
+        </Button>
+        <Button 
+          onClick={generateZip} 
+          disabled={exporting || totalInvoices === 0} 
+          variant="outline"
+          className="rounded-xl gap-2"
+        >
           <Archive className="h-4 w-4" />
-          {exporting ? "Generating..." : "Generate ZIP + Excel"}
+          {exporting ? "Generating..." : "Download ZIP + Excel"}
         </Button>
         <Button 
           disabled 
@@ -171,7 +279,7 @@ export default function ExportHub() {
           Magic Link (σύντομα)
         </Button>
         <Button
-          onClick={sendToAccountant}
+          onClick={() => setConfirmSendDialog(true)}
           disabled={sending || totalInvoices === 0}
           variant="outline"
           className="rounded-xl relative overflow-hidden gap-2"
@@ -206,7 +314,7 @@ export default function ExportHub() {
       {filteredPackages.length > 0 ? (
         <Card className="rounded-3xl overflow-hidden mb-8">
           <div className="p-4 border-b border-border bg-muted/30">
-            <h3 className="font-semibold">Πακέτα για {months.find((m) => m.value === selectedMonth)?.label}</h3>
+            <h3 className="font-semibold">Πακέτα για {currentMonthLabel}</h3>
           </div>
           <div className="divide-y divide-border">
             {filteredPackages.map((pkg) => (
@@ -232,17 +340,22 @@ export default function ExportHub() {
           <EmptyState
             icon={Archive}
             title="Δεν υπάρχουν πακέτα"
-            description={`Δεν υπάρχουν πακέτα για ${months.find((m) => m.value === selectedMonth)?.label}. Επιλέξτε διαφορετικό μήνα ή δημιουργήστε νέα πακέτα.`}
+            description={`Δεν υπάρχουν πακέτα για ${currentMonthLabel}. Επιλέξτε διαφορετικό μήνα ή δημιουργήστε νέα πακέτα.`}
           />
         </div>
       )}
 
       {/* Export History */}
-      {exportLogs.length > 0 && (
-        <Card className="rounded-3xl">
-          <div className="p-4 border-b border-border bg-muted/30">
-            <h3 className="font-semibold">Ιστορικό Εξαγωγών</h3>
+      <Card className="rounded-3xl">
+        <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-2">
+          <History className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold">Ιστορικό Εξαγωγών</h3>
+        </div>
+        {exportLogs.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <p>Δεν υπάρχουν εξαγωγές ακόμα</p>
           </div>
+        ) : (
           <div className="divide-y divide-border">
             {exportLogs.slice(0, 5).map((log) => (
               <div key={log.id} className="p-4 flex items-center justify-between text-sm">
@@ -256,9 +369,28 @@ export default function ExportHub() {
               </div>
             ))}
           </div>
-        </Card>
-      )}
+        )}
+      </Card>
 
+      {/* Confirm Send Dialog */}
+      <AlertDialog open={confirmSendDialog} onOpenChange={setConfirmSendDialog}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Επιβεβαίωση Αποστολής</AlertDialogTitle>
+            <AlertDialogDescription>
+              Είστε σίγουροι ότι θέλετε να σημειώσετε την αναφορά για <strong>{currentMonthLabel}</strong> ως απεσταλμένη;
+              <br /><br />
+              Αυτό θα καταγράψει: {filteredPackages.length} πακέτα με {totalInvoices} παραστατικά.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Άκυρο</AlertDialogCancel>
+            <AlertDialogAction onClick={sendToAccountant} className="rounded-xl">
+              {sending ? "Καταγράφεται..." : "Επιβεβαίωση"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
