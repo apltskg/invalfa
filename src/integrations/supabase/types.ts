@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountant_magic_links: {
+        Row: {
+          accessed_count: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          month_year: string
+          token: string
+        }
+        Insert: {
+          accessed_count?: number | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          month_year: string
+          token: string
+        }
+        Update: {
+          accessed_count?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          month_year?: string
+          token?: string
+        }
+        Relationships: []
+      }
       bank_transactions: {
         Row: {
           amount: number

@@ -40,9 +40,12 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Use signed URL for private bucket
+      const { data: signedUrlData } = await supabase.storage
         .from("invoices")
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+      
+      const fileUrl = signedUrlData?.signedUrl || "";
 
       setUploading(false);
       setExtracting(true);
@@ -50,7 +53,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
       // Call AI extraction edge function
       const { data: extractionData, error: extractionError } = await supabase.functions
         .invoke("extract-invoice", {
-          body: { fileUrl: publicUrl, fileName: file.name }
+          body: { fileUrl: fileUrl, fileName: file.name }
         });
 
       if (extractionError) {
@@ -61,7 +64,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
       setUploadedFile({
         file,
         path: filePath,
-        url: publicUrl,
+        url: fileUrl,
         extractedData: extractionData?.extracted || null
       });
 

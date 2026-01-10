@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, CreditCard, CheckCircle2, AlertCircle, Link2, Sparkles, Upload, Eye } from "lucide-react";
+import { ArrowLeft, FileText, CreditCard, CheckCircle2, AlertCircle, Link2, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -193,9 +193,6 @@ export default function PackageDetail() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold">€{inv.amount?.toFixed(2) || "—"}</p>
-                      <Button variant="ghost" size="sm" className="mt-1 h-7 px-2 rounded-lg">
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
                     </div>
                   </div>
                 </motion.div>
