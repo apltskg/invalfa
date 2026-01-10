@@ -5,20 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const AIRLINE_KEYWORDS = ["aegean", "ryanair", "tap", "lufthansa", "british airways", "easyjet", "vueling", "airline", "flight", "boarding"];
-const HOTEL_KEYWORDS = ["marriott", "hilton", "booking.com", "airbnb", "hotel", "hostel", "accommodation", "resort", "inn"];
-const TOLL_KEYWORDS = ["via verde", "toll", "highway", "motorway", "autoestrada", "peaje"];
-
-function detectCategory(text: string): "airline" | "hotel" | "tolls" | "other" {
-  const lowerText = text.toLowerCase();
-  
-  if (AIRLINE_KEYWORDS.some(kw => lowerText.includes(kw))) return "airline";
-  if (HOTEL_KEYWORDS.some(kw => lowerText.includes(kw))) return "hotel";
-  if (TOLL_KEYWORDS.some(kw => lowerText.includes(kw))) return "tolls";
-  
-  return "other";
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -32,25 +18,9 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Processing invoice:", fileName);
+    console.log("Processing invoice:", fileName, "URL:", fileUrl);
 
-    // Prepare prompt for AI extraction
-    const systemPrompt = `You are an invoice data extraction assistant. Extract the following information from the invoice image or PDF:
-- merchant: The company/vendor name
-- amount: The total amount (number only, no currency symbols)
-- date: The invoice date in YYYY-MM-DD format
-- category: One of "airline", "hotel", "tolls", or "other" based on the type of service
-
-Look for keywords to determine category:
-- Airline: airline names, flight, boarding pass
-- Hotel: hotel names, booking.com, accommodation
-- Tolls: via verde, toll, highway fees
-
-Return ONLY a JSON object with these fields. If you can't determine a value, use null.`;
-
-    const userPrompt = `Extract invoice data from this document. The file is named: ${fileName}`;
-
-    // Call Lovable AI Gateway
+    // Use tool calling for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -60,15 +30,78 @@ Return ONLY a JSON object with these fields. If you can't determine a value, use
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { 
+            role: "system", 
+            content: `You are an expert invoice data extraction assistant. Analyze invoice images/PDFs and extract structured data accurately.
+
+For category classification:
+- "airline": Airlines (Aegean, Ryanair, TAP, Lufthansa, BA, easyJet, Vueling), flights, boarding passes
+- "hotel": Hotels (Marriott, Hilton), Booking.com, Airbnb, hostels, accommodation
+- "tolls": Via Verde, toll roads, highway fees, motorway charges
+- "other": Restaurants, taxis, fuel, general expenses
+
+Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transaction date.`
+          },
           { 
             role: "user", 
             content: [
-              { type: "text", text: userPrompt },
-              { type: "image_url", image_url: { url: fileUrl } }
+              { 
+                type: "text", 
+                text: `Extract invoice data from this document. Filename: ${fileName}. Look carefully at all text, numbers, and dates visible in the document.`
+              },
+              { 
+                type: "image_url", 
+                image_url: { url: fileUrl } 
+              }
             ]
           }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_invoice_data",
+              description: "Extract structured data from an invoice document",
+              parameters: {
+                type: "object",
+                properties: {
+                  merchant: { 
+                    type: "string", 
+                    description: "Company or vendor name (e.g., 'Aegean Airlines', 'Marriott Hotel')" 
+                  },
+                  amount: { 
+                    type: "number", 
+                    description: "Total amount paid as a number (e.g., 125.50)" 
+                  },
+                  currency: {
+                    type: "string",
+                    description: "Currency code (EUR, USD, GBP, etc.)"
+                  },
+                  date: { 
+                    type: "string", 
+                    description: "Invoice date in YYYY-MM-DD format" 
+                  },
+                  category: { 
+                    type: "string", 
+                    enum: ["airline", "hotel", "tolls", "other"],
+                    description: "Category based on merchant type" 
+                  },
+                  vat_amount: {
+                    type: "number",
+                    description: "VAT/tax amount if visible"
+                  },
+                  invoice_number: {
+                    type: "string",
+                    description: "Invoice or receipt number if visible"
+                  }
+                },
+                required: ["merchant", "amount", "date", "category"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "extract_invoice_data" } }
       }),
     });
 
@@ -76,59 +109,85 @@ Return ONLY a JSON object with these fields. If you can't determine a value, use
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
       
-      // Return fallback extraction based on filename
-      const category = detectCategory(fileName);
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment.", extracted: null }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue.", extracted: null }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({
-          extracted: {
-            merchant: null,
-            amount: null,
-            date: null,
-            category,
-            confidence: 0.3
-          }
+        JSON.stringify({ 
+          extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const aiResponse = await response.json();
+    console.log("AI response:", JSON.stringify(aiResponse, null, 2));
+
+    // Extract from tool call response
+    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+    
+    if (toolCall?.function?.arguments) {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      console.log("Parsed extraction:", parsed);
+      
+      return new Response(
+        JSON.stringify({
+          extracted: {
+            merchant: parsed.merchant || null,
+            amount: parsed.amount ?? null,
+            date: parsed.date || null,
+            category: parsed.category || "other",
+            currency: parsed.currency || "EUR",
+            vat_amount: parsed.vat_amount ?? null,
+            invoice_number: parsed.invoice_number || null,
+            confidence: 0.9
+          }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fallback: try to parse from regular content
     const content = aiResponse.choices?.[0]?.message?.content;
-
-    console.log("AI response:", content);
-
-    // Parse the AI response
-    let extracted = {
-      merchant: null as string | null,
-      amount: null as number | null,
-      date: null as string | null,
-      category: "other" as "airline" | "hotel" | "tolls" | "other",
-      confidence: 0.8
-    };
-
-    try {
-      // Try to extract JSON from the response
+    if (content) {
+      console.log("Fallback content parsing:", content);
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        extracted = {
-          merchant: parsed.merchant || null,
-          amount: parsed.amount ? parseFloat(parsed.amount) : null,
-          date: parsed.date || null,
-          category: parsed.category || detectCategory(content),
-          confidence: 0.85
-        };
+        return new Response(
+          JSON.stringify({
+            extracted: {
+              merchant: parsed.merchant || null,
+              amount: parsed.amount ? parseFloat(parsed.amount) : null,
+              date: parsed.date || null,
+              category: parsed.category || "other",
+              confidence: 0.7
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      extracted.category = detectCategory(content || fileName);
-      extracted.confidence = 0.5;
     }
 
+    console.log("No structured data extracted");
     return new Response(
-      JSON.stringify({ extracted }),
+      JSON.stringify({ 
+        extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Extraction error:", error);
     return new Response(
