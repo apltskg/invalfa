@@ -1,5 +1,6 @@
 export type PackageStatus = 'active' | 'completed';
 export type InvoiceCategory = 'airline' | 'hotel' | 'tolls' | 'other';
+export type MatchStatus = 'confirmed' | 'pending' | 'rejected';
 
 export interface Package {
   id: string;
@@ -32,6 +33,9 @@ export interface ExtractedData {
   category?: InvoiceCategory;
   confidence?: number;
   raw_text?: string;
+  currency?: string;
+  vat_amount?: number;
+  invoice_number?: string;
 }
 
 export interface BankTransaction {
@@ -43,6 +47,15 @@ export interface BankTransaction {
   needs_invoice: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface InvoiceTransactionMatch {
+  id: string;
+  invoice_id: string;
+  transaction_id: string;
+  status: MatchStatus;
+  matched_at: string;
+  created_at: string;
 }
 
 export interface ExportLog {

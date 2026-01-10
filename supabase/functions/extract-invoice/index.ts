@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,14 +12,36 @@ serve(async (req) => {
   }
 
   try {
-    const { fileUrl, fileName } = await req.json();
+    const { filePath, fileName } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Processing invoice:", fileName, "URL:", fileUrl);
+    if (!filePath) {
+      throw new Error("filePath is required");
+    }
+
+    console.log("Processing invoice:", fileName, "Path:", filePath);
+
+    // Create service role client to access storage
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Generate a signed URL server-side for the AI to access
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from("invoices")
+      .createSignedUrl(filePath, 300); // 5 minutes for AI processing
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      console.error("Failed to create signed URL:", signedUrlError);
+      throw new Error("Failed to access file in storage");
+    }
+
+    const fileUrl = signedUrlData.signedUrl;
+    console.log("Generated server-side signed URL for AI");
 
     // Use tool calling for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -132,7 +155,7 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
     }
 
     const aiResponse = await response.json();
-    console.log("AI response:", JSON.stringify(aiResponse, null, 2));
+    console.log("AI response received");
 
     // Extract from tool call response
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
@@ -161,7 +184,7 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
     // Fallback: try to parse from regular content
     const content = aiResponse.choices?.[0]?.message?.content;
     if (content) {
-      console.log("Fallback content parsing:", content);
+      console.log("Fallback content parsing");
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);

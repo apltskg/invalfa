@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, CreditCard, CheckCircle2, AlertCircle, Link2, Sparkles, Upload } from "lucide-react";
+import { ArrowLeft, FileText, CreditCard, CheckCircle2, AlertCircle, Link2, Sparkles, Upload, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Invoice, BankTransaction } from "@/types/database";
+import { Package, Invoice, BankTransaction, InvoiceTransactionMatch } from "@/types/database";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { UploadModal } from "@/components/upload/UploadModal";
 
-type InvoiceWithMatch = Invoice & { matchedTransaction?: BankTransaction };
+type InvoiceWithMatch = Invoice & { matchedTransaction?: BankTransaction; matchId?: string };
 
 export default function PackageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,54 +20,112 @@ export default function PackageDetail() {
   const [pkg, setPkg] = useState<Package | null>(null);
   const [invoices, setInvoices] = useState<InvoiceWithMatch[]>([]);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
+  const [matches, setMatches] = useState<InvoiceTransactionMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [linking, setLinking] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) fetchData();
-  }, [id]);
-
-  async function fetchData() {
-    const [{ data: pkgData }, { data: invData }, { data: txnData }] = await Promise.all([
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    
+    const [{ data: pkgData }, { data: invData }, { data: txnData }, { data: matchData }] = await Promise.all([
       supabase.from("packages").select("*").eq("id", id).single(),
       supabase.from("invoices").select("*").eq("package_id", id),
       supabase.from("bank_transactions").select("*").eq("package_id", id),
+      supabase.from("invoice_transaction_matches").select("*"),
     ]);
 
     setPkg(pkgData as Package | null);
+    setMatches((matchData || []) as InvoiceTransactionMatch[]);
     
-    // Match invoices with transactions
+    const txns = (txnData as BankTransaction[]) || [];
+    setTransactions(txns);
+    
+    // Match invoices with transactions using the matches table
     const invoicesWithMatches = ((invData as Invoice[]) || []).map((inv) => {
-      const match = (txnData as BankTransaction[] || []).find(
-        (txn) => inv.amount && Math.abs(txn.amount - inv.amount) <= 1
-      );
-      return { ...inv, matchedTransaction: match };
+      const match = (matchData || []).find((m: InvoiceTransactionMatch) => m.invoice_id === inv.id);
+      const matchedTransaction = match ? txns.find(t => t.id === match.transaction_id) : undefined;
+      return { ...inv, matchedTransaction, matchId: match?.id };
     });
     
     setInvoices(invoicesWithMatches);
-    setTransactions((txnData as BankTransaction[]) || []);
     setLoading(false);
-  }
+  }, [id]);
 
-  async function linkTransactionToInvoice(transactionId: string) {
-    if (!id) return;
+  useEffect(() => {
+    if (id) fetchData();
+  }, [id, fetchData]);
+
+  async function createMatch(invoiceId: string, transactionId: string) {
+    setLinking(transactionId);
     
-    await supabase.from("bank_transactions").update({ package_id: id }).eq("id", transactionId);
-    toast.success("Η κίνηση συνδέθηκε");
-    fetchData();
+    try {
+      // Check if match already exists
+      const existingMatch = matches.find(
+        m => m.invoice_id === invoiceId && m.transaction_id === transactionId
+      );
+      
+      if (existingMatch) {
+        toast.info("This match already exists");
+        setLinking(null);
+        return;
+      }
+
+      const { error } = await supabase.from("invoice_transaction_matches").insert([{
+        invoice_id: invoiceId,
+        transaction_id: transactionId,
+        status: "confirmed"
+      }]);
+
+      if (error) {
+        console.error("Match error:", error);
+        toast.error(`Failed to create match: ${error.message}`);
+        setLinking(null);
+        return;
+      }
+
+      toast.success("Match created successfully");
+      await fetchData();
+    } catch (error) {
+      console.error("Match error:", error);
+      toast.error("Failed to create match");
+    }
+    
+    setLinking(null);
   }
 
-  const unlinkedTransactions = transactions.filter((txn) => {
-    const hasMatch = invoices.some(
-      (inv) => inv.amount && Math.abs(txn.amount - inv.amount) <= 1
-    );
-    return !hasMatch;
-  });
+  async function openInvoicePreview(inv: Invoice) {
+    try {
+      // Generate a fresh signed URL
+      const { data, error } = await supabase.storage
+        .from("invoices")
+        .createSignedUrl(inv.file_path, 3600);
+      
+      if (error || !data?.signedUrl) {
+        toast.error("Failed to get file URL");
+        return;
+      }
+      
+      window.open(data.signedUrl, "_blank");
+    } catch (error) {
+      console.error("Preview error:", error);
+      toast.error("Failed to open preview");
+    }
+  }
 
-  const suggestedMatches = transactions.filter((txn) => {
-    return invoices.some(
-      (inv) => inv.amount && Math.abs(txn.amount - inv.amount) <= 1 && !inv.matchedTransaction
+  // Find unmatched invoices and transactions for suggestions
+  const unmatchedInvoices = invoices.filter(inv => !inv.matchedTransaction && inv.amount);
+  const unmatchedTransactions = transactions.filter(txn => 
+    !matches.some(m => m.transaction_id === txn.id)
+  );
+
+  // Generate suggested matches based on amount tolerance
+  const suggestedMatches = unmatchedTransactions.map(txn => {
+    const matchingInvoice = unmatchedInvoices.find(
+      inv => inv.amount && Math.abs(txn.amount - inv.amount) <= 1
     );
-  });
+    return matchingInvoice ? { transaction: txn, invoice: matchingInvoice } : null;
+  }).filter(Boolean) as { transaction: BankTransaction; invoice: Invoice }[];
 
   if (loading) {
     return (
@@ -154,6 +213,10 @@ export default function PackageDetail() {
               <FileText className="h-5 w-5 text-primary" />
               Παραστατικά
             </h2>
+            <Button size="sm" onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-1.5">
+              <Upload className="h-4 w-4" />
+              Upload
+            </Button>
           </div>
           
           {invoices.length === 0 ? (
@@ -161,8 +224,12 @@ export default function PackageDetail() {
               <Upload className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="font-medium">Δεν υπάρχουν παραστατικά</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Πατήστε το + για να ανεβάσετε
+                Πατήστε Upload για να ανεβάσετε
               </p>
+              <Button onClick={() => setUploadModalOpen(true)} className="mt-4 rounded-xl">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Invoice
+              </Button>
             </Card>
           ) : (
             <Card className="rounded-3xl overflow-hidden divide-y divide-border">
@@ -172,7 +239,8 @@ export default function PackageDetail() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-4 hover:bg-muted/50 transition-colors"
+                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => openInvoicePreview(inv)}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -183,6 +251,7 @@ export default function PackageDetail() {
                       <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
                         <span className="capitalize">{inv.category === "airline" ? "✈️" : inv.category === "hotel" ? "🏨" : inv.category === "tolls" ? "🛣️" : "📄"} {inv.category}</span>
                         {inv.invoice_date && <span>{format(new Date(inv.invoice_date), "dd/MM/yyyy")}</span>}
+                        <ExternalLink className="h-3 w-3" />
                       </div>
                       {inv.matchedTransaction && (
                         <p className="mt-1.5 text-xs text-green-600 flex items-center gap-1">
@@ -228,39 +297,32 @@ export default function PackageDetail() {
                     <span className="text-sm font-medium text-primary">Προτεινόμενες Αντιστοιχίσεις</span>
                   </div>
                   <div className="divide-y divide-primary/10">
-                    {suggestedMatches.map((txn) => {
-                      const matchingInvoice = invoices.find(
-                        (inv) => inv.amount && Math.abs(txn.amount - inv.amount) <= 1
-                      );
-                      
-                      return (
-                        <div key={txn.id} className="p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{txn.description}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(txn.transaction_date), "dd/MM/yyyy")}
-                              </p>
-                            </div>
-                            <p className="font-semibold shrink-0">€{Math.abs(txn.amount).toFixed(2)}</p>
-                            <Button
-                              size="sm"
-                              className="shrink-0 rounded-xl gap-1.5"
-                              onClick={() => linkTransactionToInvoice(txn.id)}
-                            >
-                              <Link2 className="h-3.5 w-3.5" />
-                              Link
-                            </Button>
-                          </div>
-                          {matchingInvoice && (
-                            <p className="mt-2 text-xs text-primary flex items-center gap-1">
-                              <Sparkles className="h-3 w-3" />
-                              Ταιριάζει με: {matchingInvoice.merchant || matchingInvoice.file_name}
+                    {suggestedMatches.map(({ transaction, invoice }) => (
+                      <div key={transaction.id} className="p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{transaction.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(transaction.transaction_date), "dd/MM/yyyy")}
                             </p>
-                          )}
+                          </div>
+                          <p className="font-semibold shrink-0">€{Math.abs(transaction.amount).toFixed(2)}</p>
+                          <Button
+                            size="sm"
+                            className="shrink-0 rounded-xl gap-1.5"
+                            onClick={() => createMatch(invoice.id, transaction.id)}
+                            disabled={linking === transaction.id}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            {linking === transaction.id ? "Linking..." : "Link ✅"}
+                          </Button>
                         </div>
-                      );
-                    })}
+                        <p className="mt-2 text-xs text-primary flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Ταιριάζει με: {invoice.merchant || invoice.file_name}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </Card>
               )}
@@ -268,9 +330,7 @@ export default function PackageDetail() {
               {/* All Transactions */}
               <Card className="rounded-3xl overflow-hidden divide-y divide-border">
                 {transactions.map((txn, i) => {
-                  const isMatched = invoices.some(
-                    (inv) => inv.matchedTransaction?.id === txn.id
-                  );
+                  const isMatched = matches.some(m => m.transaction_id === txn.id);
                   
                   return (
                     <motion.div
@@ -304,6 +364,14 @@ export default function PackageDetail() {
           )}
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <UploadModal 
+        open={uploadModalOpen} 
+        onOpenChange={setUploadModalOpen}
+        packageId={id}
+        onUploadComplete={fetchData}
+      />
     </div>
   );
 }
