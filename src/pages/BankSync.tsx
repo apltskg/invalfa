@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { Upload, Link2, Check, Download, FileSpreadsheet, HelpCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, Check, Download, FileSpreadsheet, HelpCircle, AlertTriangle, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { BankTransaction, Package, Invoice } from "@/types/database";
 import { toast } from "sonner";
@@ -15,11 +16,32 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/shared/EmptyState";
 
+interface ParsedTransaction {
+  date: string;
+  description: string;
+  amount: number;
+  error?: string;
+}
+
+interface PDFExtractedRow {
+  date: string;
+  description: string;
+  amount: number;
+}
+
 export default function BankSync() {
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // PDF import state
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [pdfExtracting, setPdfExtracting] = useState(false);
+  const [pdfExtractedRows, setPdfExtractedRows] = useState<PDFExtractedRow[]>([]);
+  const [pdfImporting, setPdfImporting] = useState(false);
+  
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -53,40 +75,206 @@ export default function BankSync() {
     toast.success("Sample CSV downloaded");
   }
 
+  function parseAmount(amountStr: string): number | null {
+    if (!amountStr || typeof amountStr !== "string") return null;
+    
+    // Remove currency symbols and whitespace
+    let cleaned = amountStr.replace(/[€$£\s]/g, "").trim();
+    
+    // Handle European format (1.234,56) vs US format (1,234.56)
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastPeriod = cleaned.lastIndexOf(".");
+    
+    if (lastComma > lastPeriod) {
+      // European format: remove periods (thousands), replace comma with period
+      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+    } else {
+      // US format or simple: just remove commas
+      cleaned = cleaned.replace(/,/g, "");
+    }
+    
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+
   function handleCSVUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     Papa.parse(file, {
       header: true,
+      skipEmptyLines: true,
       complete: async (results) => {
-        const rows = results.data as any[];
-        const validRows = rows.filter((r) => r.date && r.description && r.amount);
-
-        const toInsert = validRows.map((r) => ({
-          transaction_date: r.date,
-          description: r.description,
-          amount: parseFloat(r.amount.replace(/[€$,]/g, "")),
-        }));
-
-        if (toInsert.length === 0) {
-          toast.error("No valid rows found. Expected columns: date, description, amount");
+        const rows = results.data as Record<string, string>[];
+        
+        // Check for required headers
+        if (rows.length === 0) {
+          toast.error("CSV file is empty");
+          return;
+        }
+        
+        const firstRow = rows[0];
+        const headers = Object.keys(firstRow).map(h => h.toLowerCase().trim());
+        
+        const hasDate = headers.includes("date");
+        const hasDescription = headers.includes("description");
+        const hasAmount = headers.includes("amount");
+        
+        if (!hasDate || !hasDescription || !hasAmount) {
+          const missing = [];
+          if (!hasDate) missing.push("date");
+          if (!hasDescription) missing.push("description");
+          if (!hasAmount) missing.push("amount");
+          
+          toast.error(`Missing required columns: ${missing.join(", ")}. CSV must have: date, description, amount`);
           return;
         }
 
+        const parsed: ParsedTransaction[] = [];
+        const errors: string[] = [];
+
+        rows.forEach((r, idx) => {
+          // Find columns case-insensitively
+          const dateKey = Object.keys(r).find(k => k.toLowerCase().trim() === "date");
+          const descKey = Object.keys(r).find(k => k.toLowerCase().trim() === "description");
+          const amountKey = Object.keys(r).find(k => k.toLowerCase().trim() === "amount");
+          
+          const date = dateKey ? r[dateKey]?.trim() : "";
+          const description = descKey ? r[descKey]?.trim() : "";
+          const amountStr = amountKey ? r[amountKey] : "";
+          const amount = parseAmount(amountStr);
+
+          if (!date || !description) {
+            errors.push(`Row ${idx + 2}: Missing date or description`);
+            return;
+          }
+          
+          if (amount === null) {
+            errors.push(`Row ${idx + 2}: Invalid amount "${amountStr}"`);
+            return;
+          }
+
+          parsed.push({ date, description, amount });
+        });
+
+        if (parsed.length === 0) {
+          toast.error(`No valid rows found. ${errors.length} errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? "..." : ""}`);
+          return;
+        }
+
+        const toInsert = parsed.map((r) => ({
+          transaction_date: r.date,
+          description: r.description,
+          amount: r.amount,
+        }));
+
         const { error } = await supabase.from("bank_transactions").insert(toInsert);
         if (error) {
-          toast.error("Failed to import transactions");
+          console.error("Insert error:", error);
+          toast.error(`Failed to import: ${error.message}`);
         } else {
-          toast.success(`Imported ${toInsert.length} transactions`);
+          const successMsg = `Imported ${toInsert.length} transactions`;
+          const errorSuffix = errors.length > 0 ? ` (${errors.length} rows skipped due to errors)` : "";
+          toast.success(successMsg + errorSuffix);
           fetchData();
         }
       },
+      error: (err) => {
+        console.error("Parse error:", err);
+        toast.error(`Failed to parse CSV: ${err.message}`);
+      }
     });
+    
+    // Reset input
+    e.target.value = "";
+  }
+
+  async function handlePDFUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setPdfDialogOpen(true);
+    setPdfExtracting(true);
+    setPdfExtractedRows([]);
+    
+    try {
+      // Upload PDF to bank-statements bucket
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "pdf";
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const filePath = `statements/${uniqueId}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("bank-statements")
+        .upload(filePath, file);
+      
+      if (uploadError) {
+        console.error("PDF upload error:", uploadError);
+        toast.error(`Failed to upload PDF: ${uploadError.message}`);
+        setPdfExtracting(false);
+        return;
+      }
+      
+      // Call extraction edge function
+      const { data, error } = await supabase.functions.invoke("extract-bank-pdf", {
+        body: { filePath, fileName: file.name }
+      });
+      
+      if (error) {
+        console.error("PDF extraction error:", error);
+        toast.error("Failed to extract transactions from PDF");
+        setPdfExtracting(false);
+        return;
+      }
+      
+      if (data?.transactions && Array.isArray(data.transactions)) {
+        setPdfExtractedRows(data.transactions);
+        if (data.transactions.length === 0) {
+          toast.warning("No transactions found in PDF");
+        }
+      } else {
+        toast.warning("No transactions could be extracted");
+      }
+    } catch (err) {
+      console.error("PDF processing error:", err);
+      toast.error("Failed to process PDF");
+    }
+    
+    setPdfExtracting(false);
+    e.target.value = "";
+  }
+
+  async function importPDFTransactions() {
+    if (pdfExtractedRows.length === 0) return;
+    
+    setPdfImporting(true);
+    
+    const toInsert = pdfExtractedRows.map(r => ({
+      transaction_date: r.date,
+      description: r.description,
+      amount: r.amount,
+    }));
+    
+    const { error } = await supabase.from("bank_transactions").insert(toInsert);
+    
+    if (error) {
+      console.error("Import error:", error);
+      toast.error(`Failed to import: ${error.message}`);
+    } else {
+      toast.success(`Imported ${toInsert.length} transactions`);
+      setPdfDialogOpen(false);
+      setPdfExtractedRows([]);
+      fetchData();
+    }
+    
+    setPdfImporting(false);
   }
 
   async function linkToPackage(txnId: string, packageId: string | null) {
-    await supabase.from("bank_transactions").update({ package_id: packageId }).eq("id", txnId);
+    const { error } = await supabase.from("bank_transactions").update({ package_id: packageId }).eq("id", txnId);
+    if (error) {
+      toast.error(`Failed to link: ${error.message}`);
+      return;
+    }
     toast.success("Transaction linked");
     fetchData();
   }
@@ -124,6 +312,7 @@ export default function BankSync() {
             </TooltipTrigger>
             <TooltipContent>Download a sample CSV file with the correct format</TooltipContent>
           </Tooltip>
+          
           <div>
             <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" id="csv-upload" />
             <label htmlFor="csv-upload">
@@ -133,6 +322,30 @@ export default function BankSync() {
                   Import CSV
                 </span>
               </Button>
+            </label>
+          </div>
+          
+          <div>
+            <input 
+              type="file" 
+              accept=".pdf" 
+              onChange={handlePDFUpload} 
+              className="hidden" 
+              id="pdf-upload"
+              ref={pdfInputRef}
+            />
+            <label htmlFor="pdf-upload">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="outline" className="rounded-xl cursor-pointer gap-2">
+                    <span>
+                      <FileText className="h-4 w-4" />
+                      PDF (beta)
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Upload bank statement PDF - Beta feature, may need review</TooltipContent>
+              </Tooltip>
             </label>
           </div>
         </div>
@@ -225,6 +438,78 @@ export default function BankSync() {
           </div>
         </Card>
       )}
+
+      {/* PDF Extraction Dialog */}
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="max-w-2xl rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Bank PDF Import (Beta)
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-4 w-4" />
+              Beta feature - extracted data may need manual review
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pdfExtracting ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground">Extracting transactions from PDF...</p>
+            </div>
+          ) : pdfExtractedRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+              <p className="text-muted-foreground">No transactions could be extracted from this PDF.</p>
+            </div>
+          ) : (
+            <div className="max-h-96 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 sticky top-0">
+                  <tr>
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-left p-3 font-medium">Description</th>
+                    <th className="text-right p-3 font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {pdfExtractedRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-muted/30">
+                      <td className="p-3">{row.date}</td>
+                      <td className="p-3 truncate max-w-xs">{row.description}</td>
+                      <td className="p-3 text-right font-medium">€{row.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPdfDialogOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button 
+              onClick={importPDFTransactions} 
+              disabled={pdfExtractedRows.length === 0 || pdfImporting}
+              className="rounded-xl gap-2"
+            >
+              {pdfImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  Import {pdfExtractedRows.length} Transactions
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

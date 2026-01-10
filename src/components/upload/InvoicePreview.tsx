@@ -20,14 +20,15 @@ interface InvoicePreviewProps {
     packageId: string | null;
   }) => void;
   onCancel: () => void;
+  defaultPackageId?: string;
 }
 
-export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel }: InvoicePreviewProps) {
+export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId }: InvoicePreviewProps) {
   const [merchant, setMerchant] = useState(extractedData?.merchant || "");
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
-  const [packageId, setPackageId] = useState<string | null>(null);
+  const [packageId, setPackageId] = useState<string | null>(defaultPackageId || null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
 
@@ -42,8 +43,14 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       if (data) {
         setPackages(data as Package[]);
         
-        // Auto-suggest package based on merchant name
-        if (extractedData?.merchant) {
+        // If we have a default package, use it
+        if (defaultPackageId) {
+          const defaultPkg = data.find((p: Package) => p.id === defaultPackageId);
+          if (defaultPkg) {
+            setSuggestedPackage(defaultPkg as Package);
+          }
+        } else if (extractedData?.merchant) {
+          // Auto-suggest package based on merchant name
           const merchantLower = extractedData.merchant.toLowerCase();
           const match = data.find((pkg: Package) => 
             merchantLower.includes(pkg.client_name.toLowerCase()) ||
@@ -57,7 +64,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       }
     }
     fetchPackages();
-  }, [extractedData]);
+  }, [extractedData, defaultPackageId]);
 
   const handleSave = () => {
     onSave({
@@ -174,7 +181,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
             {suggestedPackage && (
               <p className="text-xs text-primary flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                Suggested: {suggestedPackage.client_name}
+                {defaultPackageId ? "Current package" : "Suggested"}: {suggestedPackage.client_name}
               </p>
             )}
             <Select value={packageId || "none"} onValueChange={(v) => setPackageId(v === "none" ? null : v)}>

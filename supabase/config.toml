@@ -2,3 +2,6 @@ project_id = "fpbvnrxrmesxgnaxkiua"
 
 [functions.extract-invoice]
 verify_jwt = false
+
+[functions.extract-bank-pdf]
+verify_jwt = false

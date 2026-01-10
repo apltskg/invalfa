@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, FileText, Loader2 } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,9 +11,11 @@ import { ExtractedData, InvoiceCategory } from "@/types/database";
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  packageId?: string;
+  onUploadComplete?: () => void;
 }
 
-export function UploadModal({ open, onOpenChange }: UploadModalProps) {
+export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{
@@ -30,35 +32,53 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     setUploading(true);
     
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "pdf";
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      // Use packageId folder if available, otherwise use "unassigned"
+      const folder = packageId || "unassigned";
+      const filePath = `${folder}/${uniqueId}.${fileExt}`;
+
+      console.log("Uploading to path:", filePath);
 
       const { error: uploadError } = await supabase.storage
         .from("invoices")
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error details:", uploadError);
+        toast.error(`Upload failed: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
 
-      // Use signed URL for private bucket
-      const { data: signedUrlData } = await supabase.storage
+      // Generate signed URL for preview (60 minutes)
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from("invoices")
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
+        .createSignedUrl(filePath, 3600);
       
-      const fileUrl = signedUrlData?.signedUrl || "";
+      if (signedUrlError) {
+        console.error("Signed URL error:", signedUrlError);
+        toast.error(`Failed to get preview URL: ${signedUrlError.message}`);
+        setUploading(false);
+        return;
+      }
+
+      const fileUrl = signedUrlData.signedUrl;
+      console.log("File uploaded, signed URL obtained");
 
       setUploading(false);
       setExtracting(true);
 
-      // Call AI extraction edge function
+      // Call AI extraction edge function with file_path (not URL)
       const { data: extractionData, error: extractionError } = await supabase.functions
         .invoke("extract-invoice", {
-          body: { fileUrl: fileUrl, fileName: file.name }
+          body: { filePath: filePath, fileName: file.name }
         });
 
       if (extractionError) {
         console.error("Extraction error:", extractionError);
-        toast.error("AI extraction failed, but file was uploaded");
+        toast.warning("AI extraction failed, you can fill in details manually");
       }
 
       setUploadedFile({
@@ -71,11 +91,12 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
       setExtracting(false);
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload file");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to upload file: ${errorMessage}`);
       setUploading(false);
       setExtracting(false);
     }
-  }, []);
+  }, [packageId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -105,21 +126,27 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
       const { error } = await supabase.from("invoices").insert([{
         file_path: uploadedFile.path,
         file_name: uploadedFile.file.name,
-        merchant: data.merchant,
+        merchant: data.merchant || null,
         amount: data.amount,
         invoice_date: data.date,
         category: data.category,
-        package_id: data.packageId,
+        package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any
       }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Save error:", error);
+        toast.error(`Failed to save invoice: ${error.message}`);
+        return;
+      }
 
       toast.success("Invoice saved successfully");
+      onUploadComplete?.();
       handleClose();
     } catch (error) {
       console.error("Save error:", error);
-      toast.error("Failed to save invoice");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to save invoice: ${errorMessage}`);
     }
   };
 
@@ -179,6 +206,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               extractedData={uploadedFile.extractedData}
               onSave={handleSave}
               onCancel={handleClose}
+              defaultPackageId={packageId}
             />
           )}
         </AnimatePresence>
