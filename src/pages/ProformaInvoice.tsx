@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-import { Plus, Trash2, Languages, Printer, Send, Percent, X } from "lucide-react";
+import { Languages, Printer, Send, Percent, X, Plus, Phone, Mail, Globe, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,7 @@ import { Label } from "@/components/ui/label";
 import type { Json } from "@/integrations/supabase/types";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import alfaLogo from "@/assets/alfa-logo.jpg";
 
 // Company details (fixed)
 const COMPANY_INFO = {
@@ -63,11 +56,18 @@ const BANK_ACCOUNTS = [
   },
 ];
 
-const TERMS_CONDITIONS = [
-  "Please note that this booking is not yet confirmed. It will be finalized only after full payment has been received.",
-  "Due to high demand, availability cannot be guaranteed until the payment is completed.",
-  "In case of cancellation less than 3 days prior to the scheduled date, a 10% fee will be retained.",
-];
+const TERMS_CONDITIONS = {
+  en: [
+    "Please note that this booking is not yet confirmed. It will be finalized only after full payment has been received.",
+    "Due to high demand, availability cannot be guaranteed until the payment is completed.",
+    "In case of cancellation less than 3 days prior to the scheduled date, a 10% fee will be retained.",
+  ],
+  el: [
+    "Σημειώστε ότι αυτή η κράτηση δεν έχει ακόμη επιβεβαιωθεί. Θα οριστικοποιηθεί μόνο μετά την ολική πληρωμή.",
+    "Λόγω υψηλής ζήτησης, η διαθεσιμότητα δεν μπορεί να εγγυηθεί μέχρι να ολοκληρωθεί η πληρωμή.",
+    "Σε περίπτωση ακύρωσης λιγότερο από 3 ημέρες πριν την προγραμματισμένη ημερομηνία, θα παρακρατηθεί τέλος 10%.",
+  ],
+};
 
 interface LineItem {
   id: string;
@@ -133,11 +133,11 @@ const translations = {
     services: "AIR TICKETS | BUS TRANSFERS | ACCOMMODATIONS - all over the world",
     contact: "Have a question? Contact us:",
     thanks: "Thank you for traveling with us, see you soon!",
-    language: "Language",
     print: "Print",
     send: "Send",
     ceo: "CEO",
     save: "Save",
+    bankTransferTitle: "Bank Transfer:",
   },
   el: {
     title: "Προτιμολόγιο",
@@ -173,11 +173,11 @@ const translations = {
     services: "ΑΕΡΟΠΟΡΙΚΑ | ΜΕΤΑΦΟΡΕΣ | ΔΙΑΜΟΝΗ - σε όλο τον κόσμο",
     contact: "Έχετε απορία; Επικοινωνήστε μαζί μας:",
     thanks: "Ευχαριστούμε που ταξιδεύετε μαζί μας, τα λέμε σύντομα!",
-    language: "Γλώσσα",
     print: "Εκτύπωση",
     send: "Αποστολή",
     ceo: "Διευθύνων Σύμβουλος",
     save: "Αποθήκευση",
+    bankTransferTitle: "Τραπεζική Μεταφορά:",
   },
 };
 
@@ -194,9 +194,8 @@ export default function ProformaInvoice() {
 
   const generateInvoiceNumber = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
-    return `INV-${year}-${random}`;
+    const seq = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
+    return `INV-${seq}`;
   };
 
   const [data, setData] = useState<ProformaData>({
@@ -220,23 +219,21 @@ export default function ProformaInvoice() {
     notes: "",
   });
 
-  // Recalculate totals when line items or discount change
   useEffect(() => {
     const subtotal = data.lineItems.reduce((sum, item) => sum + item.price, 0);
     const discountAmount = (subtotal * data.discountPercent) / 100;
     const afterDiscount = subtotal - discountAmount;
     const taxAmount = data.lineItems.reduce(
-      (sum, item) => sum + (item.price * item.taxPercent) / 100,
+      (sum, item) => sum + ((item.price * (1 - data.discountPercent / 100)) * item.taxPercent) / 100,
       0
     );
-    const discountedTax = taxAmount * (1 - data.discountPercent / 100);
-    const total = afterDiscount + discountedTax;
+    const total = afterDiscount + taxAmount;
 
     setData((prev) => ({
       ...prev,
       subtotal,
       discountAmount,
-      taxAmount: discountedTax,
+      taxAmount,
       total,
       lineItems: prev.lineItems.map((item) => ({
         ...item,
@@ -300,7 +297,6 @@ export default function ProformaInvoice() {
       };
 
       const { error } = await supabase.from("proforma_invoices").insert([insertData]);
-
       if (error) throw error;
 
       toast({
@@ -308,7 +304,6 @@ export default function ProformaInvoice() {
         description: `Proforma ${data.invoiceNumber} saved successfully.`,
       });
 
-      // Generate new invoice number for next one
       setData((prev) => ({
         ...prev,
         invoiceNumber: generateInvoiceNumber(),
@@ -320,6 +315,8 @@ export default function ProformaInvoice() {
         notes: "",
         discountPercent: 0,
       }));
+      setShowDiscountInput(false);
+      setShowNotesInput(false);
     } catch (error) {
       console.error("Error saving proforma:", error);
       toast({
@@ -345,7 +342,6 @@ export default function ProformaInvoice() {
   };
 
   const confirmSend = () => {
-    // In a real app, this would send the email via backend
     toast({
       title: "Email Sent",
       description: `Proforma invoice sent to ${data.clientEmail}`,
@@ -355,136 +351,155 @@ export default function ProformaInvoice() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with actions */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-muted/30">
+      {/* Sticky Header Actions */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border print:hidden">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-foreground">{t.title}</h1>
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setLanguage(language === "en" ? "el" : "en")}
-              className="gap-2"
+              className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10"
             >
-              <Languages className="h-4 w-4" />
-              {language === "en" ? "EN" : "EL"}
+              <Languages className="h-4 w-4 mr-1.5" />
+              <span className="font-medium">{language === "en" ? "EN" : "EL"}</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              {t.print}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrint}
+              className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10"
+            >
+              <Printer className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">{t.print}</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSend} className="gap-2">
-              <Send className="h-4 w-4" />
-              {t.send}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSend}
+              className="h-9 px-3 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50"
+            >
+              <Send className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">{t.send}</span>
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={isSaving} className="gap-2">
-              {isSaving ? "Saving..." : t.save}
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-9 px-4 bg-primary hover:bg-primary/90"
+            >
+              {isSaving ? "..." : t.save}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Invoice Content */}
-      <div className="max-w-5xl mx-auto p-6 print:p-0">
-        <Card ref={printRef} className="p-8 print:shadow-none print:border-none">
-          {/* Header Section */}
-          <div className="flex justify-between items-start mb-8">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="text-4xl font-bold text-primary">
-                <span className="text-primary">A</span>
-                <span className="text-primary ml-2">ALFA</span>
+      {/* Invoice Document */}
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 print:p-0 print:max-w-none">
+        <div
+          ref={printRef}
+          className="bg-white rounded-2xl shadow-lg border border-border/50 overflow-hidden print:shadow-none print:border-none print:rounded-none"
+        >
+          {/* Invoice Header */}
+          <div className="p-6 sm:p-8 pb-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+              {/* Logo */}
+              <div className="flex-shrink-0">
+                <img
+                  src={alfaLogo}
+                  alt="ALFA Travel"
+                  className="h-14 sm:h-16 w-auto object-contain"
+                />
               </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                TRAVEL
-              </div>
-            </div>
 
-            {/* Invoice Info */}
-            <div className="text-right">
-              <h2 className="text-2xl font-bold text-primary mb-4">
-                {t.proformaInvoice}
-              </h2>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-end gap-4">
-                  <span className="text-muted-foreground">{t.invoiceNumber}</span>
-                  <span className="font-medium">{data.invoiceNumber}</span>
-                </div>
-                <div className="flex justify-end gap-4">
-                  <span className="text-muted-foreground">{t.issueDate}</span>
-                  <span className="font-medium">
+              {/* Invoice Meta */}
+              <div className="text-right sm:text-right w-full sm:w-auto">
+                <h2 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight mb-4">
+                  {t.proformaInvoice}
+                </h2>
+                <div className="inline-grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <span className="text-muted-foreground text-right">{t.invoiceNumber}</span>
+                  <span className="font-semibold text-left">{data.invoiceNumber}</span>
+                  <span className="text-muted-foreground text-right">{t.issueDate}</span>
+                  <span className="font-semibold text-left">
                     {format(new Date(data.issueDate), "dd MMMM yyyy")}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
 
-          <Separator className="my-6" />
+            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-          {/* Client & Company Info */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            {/* Invoice To */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">{t.invoiceTo}</h3>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.name}</Label>
-                  <Input
-                    value={data.clientName}
-                    onChange={(e) => setData({ ...data, clientName: e.target.value })}
-                    placeholder={t.clientPlaceholder}
-                    className="mt-1"
-                  />
+            {/* Client & Company Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8">
+              {/* Invoice To */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
+                  {t.invoiceTo}
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t.name}</Label>
+                    <Input
+                      value={data.clientName}
+                      onChange={(e) => setData({ ...data, clientName: e.target.value })}
+                      placeholder={t.clientPlaceholder}
+                      className="mt-1 h-10 border-muted-foreground/20 focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t.address}</Label>
+                    <Textarea
+                      value={data.clientAddress}
+                      onChange={(e) => setData({ ...data, clientAddress: e.target.value })}
+                      placeholder={t.addressPlaceholder}
+                      className="mt-1 min-h-[72px] resize-none border-muted-foreground/20 focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t.email}</Label>
+                    <Input
+                      type="email"
+                      value={data.clientEmail}
+                      onChange={(e) => setData({ ...data, clientEmail: e.target.value })}
+                      placeholder={t.emailPlaceholder}
+                      className="mt-1 h-10 border-muted-foreground/20 focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t.vatNumber}</Label>
+                    <Input
+                      value={data.clientVatNumber}
+                      onChange={(e) => setData({ ...data, clientVatNumber: e.target.value })}
+                      placeholder={t.vatPlaceholder}
+                      className="mt-1 h-10 border-muted-foreground/20 focus:border-primary"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.address}</Label>
-                  <Textarea
-                    value={data.clientAddress}
-                    onChange={(e) => setData({ ...data, clientAddress: e.target.value })}
-                    placeholder={t.addressPlaceholder}
-                    className="mt-1 min-h-[80px]"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.email}</Label>
-                  <Input
-                    type="email"
-                    value={data.clientEmail}
-                    onChange={(e) => setData({ ...data, clientEmail: e.target.value })}
-                    placeholder={t.emailPlaceholder}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.vatNumber}</Label>
-                  <Input
-                    value={data.clientVatNumber}
-                    onChange={(e) => setData({ ...data, clientVatNumber: e.target.value })}
-                    placeholder={t.vatPlaceholder}
-                    className="mt-1"
-                  />
+              </div>
+
+              {/* Pay To */}
+              <div className="md:text-right">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
+                  {t.payTo}
+                </h3>
+                <div className="space-y-1.5 text-sm">
+                  <p className="font-semibold text-foreground">{COMPANY_INFO.name}</p>
+                  <p className="text-muted-foreground">{COMPANY_INFO.address}</p>
+                  <p className="text-muted-foreground">{COMPANY_INFO.phone}</p>
+                  <p className="text-muted-foreground">{COMPANY_INFO.email}</p>
+                  <p className="text-muted-foreground font-medium">VAT: {COMPANY_INFO.vat}</p>
                 </div>
               </div>
             </div>
-
-            {/* Pay To */}
-            <div className="text-right">
-              <h3 className="font-semibold text-lg mb-4">{t.payTo}</h3>
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">{COMPANY_INFO.name}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.address}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.phone}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.email}</p>
-                <p className="text-muted-foreground">VAT: {COMPANY_INFO.vat}</p>
-              </div>
-            </div>
           </div>
 
-          {/* Line Items */}
-          <div className="mb-6">
-            <div className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-4 mb-2 text-sm font-medium text-muted-foreground">
+          {/* Line Items Section */}
+          <div className="px-6 sm:px-8">
+            {/* Table Header */}
+            <div className="grid grid-cols-[1fr_100px_70px_90px_36px] gap-3 py-3 border-y border-muted bg-muted/30 px-3 -mx-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               <span>{t.serviceDescription}</span>
               <span className="text-right">{t.price}</span>
               <span className="text-right">{t.tax}</span>
@@ -492,159 +507,173 @@ export default function ProformaInvoice() {
               <span></span>
             </div>
 
-            {data.lineItems.map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-4 mb-2 items-center"
-              >
-                <Input
-                  value={item.description}
-                  onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
-                  placeholder={t.servicePlaceholder}
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price || ""}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "price", parseFloat(e.target.value) || 0)
-                  }
-                  className="text-right"
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={item.taxPercent}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "taxPercent", parseFloat(e.target.value) || 0)
-                  }
-                  className="text-right"
-                />
-                <div className="text-right font-medium">
-                  €{item.total.toFixed(2)}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeLineItem(item.id)}
-                  className="h-8 w-8"
-                  disabled={data.lineItems.length === 1}
+            {/* Line Items */}
+            <div className="divide-y divide-muted/50">
+              {data.lineItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1fr_100px_70px_90px_36px] gap-3 py-3 items-center"
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <Input
+                    value={item.description}
+                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                    placeholder={t.servicePlaceholder}
+                    className="h-9 border-muted-foreground/20"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.price || ""}
+                    onChange={(e) =>
+                      updateLineItem(item.id, "price", parseFloat(e.target.value) || 0)
+                    }
+                    className="h-9 text-right border-muted-foreground/20"
+                    placeholder="0.00"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={item.taxPercent}
+                    onChange={(e) =>
+                      updateLineItem(item.id, "taxPercent", parseFloat(e.target.value) || 0)
+                    }
+                    className="h-9 text-right border-muted-foreground/20"
+                  />
+                  <div className="text-right font-medium text-foreground pr-1">
+                    €{item.total.toFixed(2)}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeLineItem(item.id)}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    disabled={data.lineItems.length === 1}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
 
-            <Button variant="outline" size="sm" onClick={addLineItem} className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addLineItem}
+              className="mt-3 mb-6 h-9 px-4 border-dashed hover:border-primary hover:text-primary"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
               {t.addService}
             </Button>
           </div>
 
-          {/* Terms & Totals Row */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            {/* Terms & Conditions */}
+          {/* Terms & Totals */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-6 sm:px-8 py-6 bg-muted/20">
+            {/* Terms */}
             <div>
-              <h4 className="font-semibold mb-3">{t.termsConditions}</h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                {TERMS_CONDITIONS.map((term, i) => (
+              <h4 className="text-sm font-semibold text-foreground mb-3">{t.termsConditions}</h4>
+              <ol className="list-decimal list-outside ml-4 space-y-2 text-sm text-muted-foreground leading-relaxed">
+                {TERMS_CONDITIONS[language].map((term, i) => (
                   <li key={i}>{term}</li>
                 ))}
               </ol>
 
               {showNotesInput ? (
-                <div className="mt-4">
-                  <Textarea
-                    value={data.notes}
-                    onChange={(e) => setData({ ...data, notes: e.target.value })}
-                    placeholder="Additional notes..."
-                    className="min-h-[80px]"
-                  />
-                </div>
+                <Textarea
+                  value={data.notes}
+                  onChange={(e) => setData({ ...data, notes: e.target.value })}
+                  placeholder="Additional notes..."
+                  className="mt-4 min-h-[80px] resize-none"
+                />
               ) : (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowNotesInput(true)}
-                  className="mt-4"
+                  className="mt-3 h-8 px-3 text-primary hover:text-primary hover:bg-primary/10"
                 >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
                   {t.addNotes}
                 </Button>
               )}
             </div>
 
             {/* Totals */}
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>{t.subtotal}</span>
-                <span className="font-medium">€{data.subtotal.toFixed(2)}</span>
-              </div>
-
-              {showDiscountInput ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Discount:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={data.discountPercent || ""}
-                    onChange={(e) =>
-                      setData({ ...data, discountPercent: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-20 text-right"
-                  />
-                  <span className="text-sm">%</span>
-                  <span className="ml-auto font-medium">
-                    -€{data.discountAmount.toFixed(2)}
-                  </span>
+            <div className="bg-white rounded-xl p-5 border border-border/50 shadow-sm">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t.subtotal}</span>
+                  <span className="font-medium">€{data.subtotal.toFixed(2)}</span>
                 </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDiscountInput(true)}
-                  className="gap-2"
-                >
-                  <Percent className="h-3 w-3" />
-                  {t.addDiscount}
-                </Button>
-              )}
 
-              <div className="flex justify-between text-sm">
-                <span>{t.taxAmount} ({data.lineItems[0]?.taxPercent || 13}%):</span>
-                <span className="font-medium">€{data.taxAmount.toFixed(2)}</span>
-              </div>
+                {showDiscountInput ? (
+                  <div className="flex items-center justify-between gap-2 py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Discount</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={data.discountPercent || ""}
+                        onChange={(e) =>
+                          setData({ ...data, discountPercent: parseFloat(e.target.value) || 0 })
+                        }
+                        className="w-16 h-8 text-right text-sm"
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                    </div>
+                    <span className="font-medium text-destructive">
+                      -€{data.discountAmount.toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDiscountInput(true)}
+                    className="h-8 px-3 text-xs"
+                  >
+                    <Percent className="h-3 w-3 mr-1.5" />
+                    {t.addDiscount}
+                  </Button>
+                )}
 
-              <Separator />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {t.taxAmount} ({data.lineItems[0]?.taxPercent || 13}%):
+                  </span>
+                  <span className="font-medium">€{data.taxAmount.toFixed(2)}</span>
+                </div>
 
-              <div className="flex justify-between text-lg font-bold">
-                <span>{t.total}:</span>
-                <span>€{data.total.toFixed(2)}</span>
+                <div className="h-px bg-border my-2" />
+
+                <div className="flex justify-between items-baseline">
+                  <span className="text-lg font-semibold">{t.total}:</span>
+                  <span className="text-2xl font-bold text-primary">€{data.total.toFixed(2)}</span>
+                </div>
               </div>
 
               {/* Stamp & Signature */}
-              <div className="mt-6 pt-4 flex justify-between items-end">
-                <div className="text-xs text-muted-foreground whitespace-pre-line">
-                  <p className="font-bold">{COMPANY_INFO.stampName}</p>
-                  {COMPANY_INFO.stampDetails}
+              <div className="mt-6 pt-5 border-t border-dashed border-muted-foreground/30 flex justify-between items-end gap-4">
+                <div className="text-[10px] text-muted-foreground leading-tight">
+                  <p className="font-bold text-foreground text-xs">{COMPANY_INFO.stampName}</p>
+                  <p className="whitespace-pre-line mt-0.5">{COMPANY_INFO.stampDetails}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-script text-primary mb-1">AP</div>
-                  <p className="text-sm">{COMPANY_INFO.ceo}</p>
-                  <p className="text-xs text-muted-foreground">{t.ceo}</p>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-3xl font-bold text-primary/80 font-serif italic">AP</div>
+                  <p className="text-xs font-medium text-foreground">{COMPANY_INFO.ceo}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.ceo}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <Separator className="my-6" />
-
           {/* Payment Methods */}
-          <div className="mb-8">
-            <h4 className="font-semibold mb-3">{t.waysToPay}</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+          <div className="px-6 sm:px-8 py-6 border-t border-border/50">
+            <h4 className="text-sm font-semibold text-foreground mb-3">{t.waysToPay}</h4>
+            <div className="flex flex-wrap gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <Checkbox
                   id="cash"
                   checked={data.acceptCash}
@@ -652,9 +681,9 @@ export default function ProformaInvoice() {
                     setData({ ...data, acceptCash: checked as boolean })
                   }
                 />
-                <Label htmlFor="cash">{t.cash}</Label>
-              </div>
-              <div className="flex items-center gap-2">
+                <span className="text-sm">{t.cash}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <Checkbox
                   id="bank"
                   checked={data.acceptBankTransfer}
@@ -662,81 +691,108 @@ export default function ProformaInvoice() {
                     setData({ ...data, acceptBankTransfer: checked as boolean })
                   }
                 />
-                <Label htmlFor="bank">{t.bankTransfer}</Label>
-              </div>
+                <span className="text-sm">{t.bankTransfer}</span>
+              </label>
             </div>
 
             {data.acceptBankTransfer && (
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-4">
-                  {t.sendConfirmation} {COMPANY_INFO.email}
+                  {t.sendConfirmation}{" "}
+                  <a href={`mailto:${COMPANY_INFO.email}`} className="text-primary font-medium hover:underline">
+                    {COMPANY_INFO.email}
+                  </a>
                 </p>
 
-                <h5 className="font-semibold mb-3">Bank Transfer:</h5>
-                <div className="grid gap-4">
+                <h5 className="text-sm font-semibold text-foreground mb-3">{t.bankTransferTitle}</h5>
+                <div className="grid gap-3 sm:grid-cols-3">
                   {BANK_ACCOUNTS.map((account, i) => (
-                    <Card key={i} className="p-4">
-                      <h6 className="font-semibold text-primary">{account.bank}</h6>
+                    <div
+                      key={i}
+                      className="p-4 rounded-lg border border-border/70 bg-muted/20 text-sm"
+                    >
+                      <h6 className="font-semibold text-primary mb-2">{account.bank}</h6>
                       {account.accountName && (
-                        <p className="text-sm">
-                          {t.accountName}: {account.accountName}
+                        <p className="text-muted-foreground">
+                          <span className="text-foreground">Account Name:</span> {account.accountName}
                         </p>
                       )}
-                      <p className="text-sm">IBAN: {account.iban}</p>
-                      {account.bic && <p className="text-sm">BIC: {account.bic}</p>}
-                      {account.swift && <p className="text-sm">SWIFT: {account.swift}</p>}
-                      {account.bankAddress && (
-                        <p className="text-sm">Bank: {account.bankAddress}</p>
+                      <p className="text-muted-foreground break-all">
+                        <span className="text-foreground">IBAN:</span> {account.iban}
+                      </p>
+                      {account.bic && (
+                        <p className="text-muted-foreground">
+                          <span className="text-foreground">BIC:</span> {account.bic}
+                        </p>
                       )}
-                    </Card>
+                      {account.swift && (
+                        <p className="text-muted-foreground">
+                          <span className="text-foreground">SWIFT:</span> {account.swift}
+                        </p>
+                      )}
+                      {account.bankAddress && (
+                        <p className="text-muted-foreground text-xs mt-1">{account.bankAddress}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
 
-          <Separator className="my-6" />
-
           {/* Footer */}
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-2xl font-bold text-primary">A</span>
-              <span className="text-xl font-bold text-primary">ALFA</span>
-              <span className="text-xs text-muted-foreground uppercase">TRAVEL</span>
-            </div>
-            <p className="text-sm text-primary uppercase tracking-wide">
+          <div className="bg-gradient-to-b from-muted/30 to-muted/50 px-6 sm:px-8 py-8 text-center">
+            <img
+              src={alfaLogo}
+              alt="ALFA Travel"
+              className="h-10 w-auto mx-auto mb-4 opacity-90"
+            />
+            <p className="text-xs text-primary font-semibold uppercase tracking-widest mb-4">
               {t.services}
             </p>
-            <div>
-              <p className="font-semibold mb-1">{t.contact}</p>
-              <p className="text-sm text-muted-foreground">
-                📞 {COMPANY_INFO.phone} | ✉ {COMPANY_INFO.email} | 🌐{" "}
-                {COMPANY_INFO.website} | follow us {COMPANY_INFO.social}
-              </p>
-              <p className="text-sm text-muted-foreground">
+
+            <div className="mb-4">
+              <p className="text-sm font-medium text-foreground mb-2">{t.contact}</p>
+              <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  {COMPANY_INFO.phone}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3.5 w-3.5" />
+                  {COMPANY_INFO.email}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Globe className="h-3.5 w-3.5" />
+                  {COMPANY_INFO.website}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
                 IATA TIDS Agency: {COMPANY_INFO.iata} | {COMPANY_INFO.license}
               </p>
             </div>
-            <Separator />
-            <p className="text-primary font-medium">{t.thanks}</p>
+
+            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-4" />
+
+            <p className="text-sm font-medium text-primary">{t.thanks}</p>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Send Dialog */}
       <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Send Proforma Invoice</DialogTitle>
             <DialogDescription>
-              Send this proforma invoice to {data.clientEmail}?
+              Send this proforma invoice to <span className="font-medium">{data.clientEmail}</span>?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={confirmSend}>
+            <Button onClick={confirmSend} className="bg-emerald-600 hover:bg-emerald-700">
               <Send className="h-4 w-4 mr-2" />
               Send Email
             </Button>
@@ -747,20 +803,12 @@ export default function ProformaInvoice() {
       {/* Print Styles */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body {
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .print\\:shadow-none,
-          .print\\:shadow-none * {
-            visibility: visible;
-          }
-          .print\\:shadow-none {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .sticky {
+          .print\\:hidden {
             display: none !important;
           }
         }
