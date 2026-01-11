@@ -8,6 +8,7 @@ import Packages from "./pages/Packages";
 import PackageDetail from "./pages/PackageDetail";
 import BankSync from "./pages/BankSync";
 import ExportHub from "./pages/ExportHub";
+import ProformaInvoice from "./pages/ProformaInvoice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/packages/:id" element={<PackageDetail />} />
             <Route path="/bank-sync" element={<BankSync />} />
             <Route path="/export-hub" element={<ExportHub />} />
+            <Route path="/proforma" element={<ProformaInvoice />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>

@@ -231,6 +231,72 @@ export type Database = {
         }
         Relationships: []
       }
+      proforma_invoices: {
+        Row: {
+          accept_bank_transfer: boolean
+          accept_cash: boolean
+          client_address: string | null
+          client_email: string | null
+          client_name: string | null
+          client_vat_number: string | null
+          created_at: string
+          discount_amount: number | null
+          discount_percent: number | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          line_items: Json
+          notes: string | null
+          subtotal: number
+          tax_amount: number
+          tax_percent: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          accept_bank_transfer?: boolean
+          accept_cash?: boolean
+          client_address?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_vat_number?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          discount_percent?: number | null
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_percent?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          accept_bank_transfer?: boolean
+          accept_cash?: boolean
+          client_address?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_vat_number?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          discount_percent?: number | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_percent?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
