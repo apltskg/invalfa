@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.extract-bank-pdf]
 verify_jwt = false
+
+[functions.send-proforma-email]
+verify_jwt = false
