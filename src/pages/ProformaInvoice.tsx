@@ -189,6 +189,7 @@ export default function ProformaInvoice() {
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const t = translations[language];
 
@@ -344,14 +345,61 @@ export default function ProformaInvoice() {
     setSendDialogOpen(true);
   };
 
-  const confirmSend = () => {
-    // In a real app, this would send the email via backend
-    toast({
-      title: "Email Sent",
-      description: `Proforma invoice sent to ${data.clientEmail}`,
-    });
-    setSendDialogOpen(false);
-    handleSave();
+  const confirmSend = async () => {
+    setIsSending(true);
+    try {
+      const { data: response, error } = await supabase.functions.invoke('send-proforma-email', {
+        body: {
+          invoiceNumber: data.invoiceNumber,
+          issueDate: data.issueDate,
+          clientName: data.clientName,
+          clientAddress: data.clientAddress,
+          clientEmail: data.clientEmail,
+          clientVatNumber: data.clientVatNumber,
+          lineItems: data.lineItems,
+          subtotal: data.subtotal,
+          discountPercent: data.discountPercent,
+          discountAmount: data.discountAmount,
+          taxAmount: data.taxAmount,
+          total: data.total,
+          acceptCash: data.acceptCash,
+          acceptBankTransfer: data.acceptBankTransfer,
+          notes: data.notes,
+          language,
+        },
+      });
+
+      if (error) throw error;
+      
+      if (response?.error) {
+        if (response.code === 'MISSING_API_KEY') {
+          toast({
+            title: "Email Service Not Configured",
+            description: "Please add the RESEND_API_KEY to enable email sending.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(response.error);
+        }
+        return;
+      }
+
+      toast({
+        title: "Email Sent!",
+        description: `Proforma invoice sent to ${data.clientEmail}`,
+      });
+      setSendDialogOpen(false);
+      await handleSave();
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast({
+        title: "Failed to Send",
+        description: error instanceof Error ? error.message : "Could not send email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -733,12 +781,12 @@ export default function ProformaInvoice() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setSendDialogOpen(false)} disabled={isSending}>
               Cancel
             </Button>
-            <Button onClick={confirmSend}>
+            <Button onClick={confirmSend} disabled={isSending}>
               <Send className="h-4 w-4 mr-2" />
-              Send Email
+              {isSending ? "Sending..." : "Send Email"}
             </Button>
           </div>
         </DialogContent>
