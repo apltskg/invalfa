@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { ContextualFAB } from "./ContextualFAB";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,8 +13,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
-          <div className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background/80 px-6 backdrop-blur-sm">
+          <div className="sticky top-0 z-10 flex h-16 items-center gap-4 justify-between border-b border-border bg-background/80 px-6 backdrop-blur-sm">
             <SidebarTrigger className="h-9 w-9 rounded-xl" />
+            <NotificationBell />
           </div>
           <div className="p-6">
             {children}
