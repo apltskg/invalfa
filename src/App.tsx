@@ -12,6 +12,7 @@ import ProformaInvoice from "./pages/ProformaInvoice";
 import ManageProformas from "./pages/ManageProformas";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
+import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/packages/:id" element={<PackageDetail />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/bank-sync" element={<BankSync />} />
             <Route path="/export-hub" element={<ExportHub />} />
             <Route path="/proforma" element={<ProformaInvoice />} />

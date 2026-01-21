@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users, BarChart3 } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +17,7 @@ const menuItems = [
   { title: "Packages", icon: Package, url: "/packages" },
   { title: "Suppliers", icon: Truck, url: "/suppliers" },
   { title: "Customers", icon: Users, url: "/customers" },
+  { title: "Analytics", icon: BarChart3, url: "/analytics" },
   { title: "Bank Sync", icon: Building2, url: "/bank-sync" },
   { title: "Export Hub", icon: FileSpreadsheet, url: "/export-hub" },
   { title: "New Proforma", icon: FileText, url: "/proforma" },
