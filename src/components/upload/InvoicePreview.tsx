@@ -116,29 +116,29 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         <div className="border-b border-border p-6">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Extracted Details</h3>
+            <h3 className="text-lg font-semibold">Αναγνωρισμένα Στοιχεία</h3>
           </div>
           {extractedData?.confidence && (
             <p className="mt-1 text-sm text-muted-foreground">
-              AI confidence: {Math.round(extractedData.confidence * 100)}%
+              Ακρίβεια AI: {Math.round(extractedData.confidence * 100)}%
             </p>
           )}
         </div>
 
         <div className="flex-1 overflow-auto p-6 space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="merchant">Merchant / Payee</Label>
+            <Label htmlFor="merchant">Έμπορος / Εκδότης</Label>
             <Input
               id="merchant"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder="e.g., Aegean Airlines"
+              placeholder="π.χ. Aegean Airlines"
               className="rounded-xl"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount (€)</Label>
+            <Label htmlFor="amount">Ποσό (€)</Label>
             <Input
               id="amount"
               type="number"
@@ -151,7 +151,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Ημερομηνία</Label>
             <Input
               id="date"
               type="date"
@@ -162,34 +162,34 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Κατηγορία</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as InvoiceCategory)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="airline">✈️ Airline</SelectItem>
-                <SelectItem value="hotel">🏨 Hotel</SelectItem>
-                <SelectItem value="tolls">🛣️ Tolls/Transport</SelectItem>
-                <SelectItem value="other">📄 Other</SelectItem>
+                <SelectItem value="airline">✈️ Αεροπορικά</SelectItem>
+                <SelectItem value="hotel">🏨 Διαμονή</SelectItem>
+                <SelectItem value="tolls">🛣️ Διόδια/Μεταφορικά</SelectItem>
+                <SelectItem value="other">📄 Άλλα</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="package">Link to Package</Label>
+            <Label htmlFor="package">Σύνδεση με Φάκελο</Label>
             {suggestedPackage && (
               <p className="text-xs text-primary flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                {defaultPackageId ? "Current package" : "Suggested"}: {suggestedPackage.client_name}
+                {defaultPackageId ? "Τρέχων φάκελος" : "Προτεινόμενο"}: {suggestedPackage.client_name}
               </p>
             )}
             <Select value={packageId || "none"} onValueChange={(v) => setPackageId(v === "none" ? null : v)}>
               <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="Select a package" />
+                <SelectValue placeholder="Επιλογή φακέλου" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No package</SelectItem>
+                <SelectItem value="none">Κανένας φάκελος</SelectItem>
                 {packages.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>
                     {pkg.client_name}
@@ -203,11 +203,11 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         <div className="border-t border-border p-6 flex gap-3">
           <Button variant="outline" onClick={onCancel} className="flex-1 rounded-xl">
             <X className="h-4 w-4 mr-2" />
-            Cancel
+            Άκυρο
           </Button>
           <Button onClick={handleSave} className="flex-1 rounded-xl">
             <Check className="h-4 w-4 mr-2" />
-            Save Document
+            Αποθήκευση
           </Button>
         </div>
       </div>
