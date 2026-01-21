@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +17,8 @@ import { toast } from "sonner";
 
 const menuItems = [
   { title: "Φάκελοι", icon: Package, url: "/packages" },
+  { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
+  { title: "Πελάτες", icon: Users, url: "/customers" },
   { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
   { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },

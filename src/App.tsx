@@ -19,6 +19,8 @@ import AccountantPortal from "./pages/AccountantPortal";
 import NotFound from "./pages/NotFound";
 import GeneralExpenses from "./pages/GeneralExpenses";
 import GeneralIncome from "./pages/GeneralIncome";
+import Suppliers from "./pages/Suppliers";
+import Customers from "./pages/Customers";
 
 const queryClient = new QueryClient();
 

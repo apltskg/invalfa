@@ -12,6 +12,30 @@ export interface Package {
   updated_at: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  invoice_instructions: string | null;
+  created_at: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  vat_number: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface Invoice {
   id: string;
   package_id: string | null;
@@ -22,6 +46,9 @@ export interface Invoice {
   file_path: string;
   file_name: string;
   extracted_data: ExtractedData | null;
+  supplier_id?: string | null;
+  customer_id?: string | null;
+  payment_status?: 'paid' | 'pending';
   created_at: string;
   updated_at: string;
 }

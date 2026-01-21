@@ -434,34 +434,34 @@ export default function ProformaInvoice() {
       </div>
 
       {/* Invoice Content */}
-      <div className="max-w-5xl mx-auto p-6 print:p-0">
-        <Card ref={printRef} className="p-8 print:shadow-none print:border-none">
+      <div className="max-w-5xl mx-auto p-8 print:p-0">
+        <Card ref={printRef} className="p-12 print:shadow-none print:border-none shadow-sm border-gray-100 rounded-3xl bg-white/80 backdrop-blur-sm">
           {/* Header Section */}
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-start mb-12">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="text-4xl font-bold text-primary">
+              <div className="text-4xl font-bold tracking-tight text-primary">
                 <span className="text-primary">A</span>
                 <span className="text-primary ml-2">ALFA</span>
               </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">
+              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em] mt-2">
                 TRAVEL
               </div>
             </div>
 
             {/* Invoice Info */}
             <div className="text-right">
-              <h2 className="text-2xl font-bold text-primary mb-4">
+              <h2 className="text-3xl font-light tracking-tight text-gray-900 mb-6 uppercase">
                 {t.proformaInvoice}
               </h2>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-end gap-4">
-                  <span className="text-muted-foreground">{t.invoiceNumber}</span>
-                  <span className="font-medium">{data.invoiceNumber}</span>
+              <div className="space-y-2 text-sm text-gray-500 font-medium">
+                <div className="flex justify-end gap-8 border-b border-gray-100 pb-2">
+                  <span className="text-gray-400 uppercase tracking-wider text-xs">{t.invoiceNumber}</span>
+                  <span className="text-gray-900">{data.invoiceNumber}</span>
                 </div>
-                <div className="flex justify-end gap-4">
-                  <span className="text-muted-foreground">{t.issueDate}</span>
-                  <span className="font-medium">
+                <div className="flex justify-end gap-8 border-b border-gray-100 pb-2">
+                  <span className="text-gray-400 uppercase tracking-wider text-xs">{t.issueDate}</span>
+                  <span className="text-gray-900">
                     {format(new Date(data.issueDate), "dd MMMM yyyy")}
                   </span>
                 </div>
@@ -469,49 +469,41 @@ export default function ProformaInvoice() {
             </div>
           </div>
 
-          <Separator className="my-6" />
-
           {/* Client & Company Info */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-2 gap-16 mb-16">
             {/* Invoice To */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">{t.invoiceTo}</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.invoiceTo}</h3>
               <div className="space-y-3">
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.name}</Label>
-                  <Input
-                    value={data.clientName}
-                    onChange={(e) => setData({ ...data, clientName: e.target.value })}
-                    placeholder={t.clientPlaceholder}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.address}</Label>
-                  <Textarea
-                    value={data.clientAddress}
-                    onChange={(e) => setData({ ...data, clientAddress: e.target.value })}
-                    placeholder={t.addressPlaceholder}
-                    className="mt-1 min-h-[80px]"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.email}</Label>
+                <Input
+                  value={data.clientName}
+                  onChange={(e) => setData({ ...data, clientName: e.target.value })}
+                  placeholder={t.clientPlaceholder}
+                  className="border-none shadow-none text-2xl font-semibold px-0 h-auto placeholder:text-gray-200 focus-visible:ring-0 rounded-none bg-transparent"
+                />
+                <Textarea
+                  value={data.clientAddress}
+                  onChange={(e) => setData({ ...data, clientAddress: e.target.value })}
+                  placeholder={t.addressPlaceholder}
+                  className="min-h-[60px] border-none shadow-none text-gray-500 px-0 resize-none focus-visible:ring-0 rounded-none bg-transparent p-0"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-300 uppercase w-12">Email</span>
                   <Input
                     type="email"
                     value={data.clientEmail}
                     onChange={(e) => setData({ ...data, clientEmail: e.target.value })}
                     placeholder={t.emailPlaceholder}
-                    className="mt-1"
+                    className="border-none shadow-none text-gray-600 px-0 h-8 focus-visible:ring-0 rounded-none bg-transparent"
                   />
                 </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">{t.vatNumber}</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-300 uppercase w-12 text-nowrap">{t.vatNumber}</span>
                   <Input
                     value={data.clientVatNumber}
                     onChange={(e) => setData({ ...data, clientVatNumber: e.target.value })}
                     placeholder={t.vatPlaceholder}
-                    className="mt-1"
+                    className="border-none shadow-none text-gray-600 px-0 h-8 focus-visible:ring-0 rounded-none bg-transparent"
                   />
                 </div>
               </div>
@@ -519,20 +511,20 @@ export default function ProformaInvoice() {
 
             {/* Pay To */}
             <div className="text-right">
-              <h3 className="font-semibold text-lg mb-4">{t.payTo}</h3>
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">{COMPANY_INFO.name}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.address}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.phone}</p>
-                <p className="text-muted-foreground">{COMPANY_INFO.email}</p>
-                <p className="text-muted-foreground">VAT: {COMPANY_INFO.vat}</p>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.payTo}</h3>
+              <div className="space-y-1 text-sm text-gray-600 leading-relaxed">
+                <p className="font-semibold text-gray-900 text-lg mb-2">{COMPANY_INFO.name}</p>
+                <p>{COMPANY_INFO.address}</p>
+                <p>{COMPANY_INFO.phone}</p>
+                <p className="text-primary">{COMPANY_INFO.email}</p>
+                <p className="font-mono text-xs mt-2 text-gray-400">VAT: {COMPANY_INFO.vat}</p>
               </div>
             </div>
           </div>
 
           {/* Line Items */}
-          <div className="mb-6">
-            <div className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-4 mb-2 text-sm font-medium text-muted-foreground">
+          <div className="mb-12">
+            <div className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-6 mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">
               <span>{t.serviceDescription}</span>
               <span className="text-right">{t.price}</span>
               <span className="text-right">{t.tax}</span>
@@ -543,12 +535,13 @@ export default function ProformaInvoice() {
             {data.lineItems.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-4 mb-2 items-center"
+                className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-6 mb-2 items-center group"
               >
                 <Input
                   value={item.description}
                   onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
                   placeholder={t.servicePlaceholder}
+                  className="font-medium bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2"
                 />
                 <Input
                   type="number"
@@ -558,7 +551,7 @@ export default function ProformaInvoice() {
                   onChange={(e) =>
                     updateLineItem(item.id, "price", parseFloat(e.target.value) || 0)
                   }
-                  className="text-right"
+                  className="text-right bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2"
                 />
                 <Input
                   type="number"
@@ -568,16 +561,16 @@ export default function ProformaInvoice() {
                   onChange={(e) =>
                     updateLineItem(item.id, "taxPercent", parseFloat(e.target.value) || 0)
                   }
-                  className="text-right"
+                  className="text-right bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2 text-gray-500"
                 />
-                <div className="text-right font-medium">
+                <div className="text-right font-semibold text-gray-900 px-2">
                   €{item.total.toFixed(2)}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => removeLineItem(item.id)}
-                  className="h-8 w-8"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-destructive hover:bg-red-50"
                   disabled={data.lineItems.length === 1}
                 >
                   <X className="h-4 w-4" />
@@ -585,37 +578,38 @@ export default function ProformaInvoice() {
               </div>
             ))}
 
-            <Button variant="outline" size="sm" onClick={addLineItem} className="mt-2">
+            <Button variant="ghost" size="sm" onClick={addLineItem} className="mt-4 text-primary hover:text-primary hover:bg-primary/5 text-xs font-medium uppercase tracking-wider">
               {t.addService}
             </Button>
           </div>
 
           {/* Terms & Totals Row */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-2 gap-16 mb-12">
             {/* Terms & Conditions */}
             <div>
-              <h4 className="font-semibold mb-3">{t.termsConditions}</h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.termsConditions}</h4>
+              <ul className="space-y-3 text-sm text-gray-500 list-disc list-outside pl-4 marker:text-gray-300">
                 {TERMS_CONDITIONS.map((term, i) => (
-                  <li key={i}>{term}</li>
+                  <li key={i} className="leading-relaxed">{term}</li>
                 ))}
-              </ol>
+              </ul>
 
               {showNotesInput ? (
-                <div className="mt-4">
+                <div className="mt-6 bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                  <h5 className="text-xs font-semibold uppercase tracking-widest text-yellow-600/70 mb-2">Notes</h5>
                   <Textarea
                     value={data.notes}
                     onChange={(e) => setData({ ...data, notes: e.target.value })}
                     placeholder="Additional notes..."
-                    className="min-h-[80px]"
+                    className="min-h-[80px] border-none bg-transparent shadow-none resize-none p-0 focus-visible:ring-0 text-gray-700"
                   />
                 </div>
               ) : (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowNotesInput(true)}
-                  className="mt-4"
+                  className="mt-6 text-gray-400 hover:text-gray-600 text-xs uppercase tracking-wider pl-0"
                 >
                   {t.addNotes}
                 </Button>
@@ -623,15 +617,15 @@ export default function ProformaInvoice() {
             </div>
 
             {/* Totals */}
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
+            <div className="space-y-4 bg-gray-50/50 p-8 rounded-3xl">
+              <div className="flex justify-between text-sm text-gray-600">
                 <span>{t.subtotal}</span>
                 <span className="font-medium">€{data.subtotal.toFixed(2)}</span>
               </div>
 
               {showDiscountInput ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Discount:</span>
+                <div className="flex items-center gap-2 text-sm text-emerald-600">
+                  <span>Discount:</span>
                   <Input
                     type="number"
                     min="0"
@@ -640,133 +634,126 @@ export default function ProformaInvoice() {
                     onChange={(e) =>
                       setData({ ...data, discountPercent: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-20 text-right"
+                    className="w-16 text-right h-6 px-1 py-0 text-sm border-emerald-200 bg-white"
                   />
-                  <span className="text-sm">%</span>
+                  <span>%</span>
                   <span className="ml-auto font-medium">
                     -€{data.discountAmount.toFixed(2)}
                   </span>
                 </div>
               ) : (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowDiscountInput(true)}
-                  className="gap-2"
+                  className="h-6 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-xs"
                 >
-                  <Percent className="h-3 w-3" />
+                  <Percent className="h-3 w-3 mr-1" />
                   {t.addDiscount}
                 </Button>
               )}
 
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm text-gray-500">
                 <span>{t.taxAmount} ({data.lineItems[0]?.taxPercent || 13}%):</span>
-                <span className="font-medium">€{data.taxAmount.toFixed(2)}</span>
+                <span>€{data.taxAmount.toFixed(2)}</span>
               </div>
 
-              <Separator />
+              <div className="border-t border-gray-200 my-4" />
 
-              <div className="flex justify-between text-lg font-bold">
-                <span>{t.total}:</span>
-                <span>€{data.total.toFixed(2)}</span>
+              <div className="flex justify-between text-2xl font-light text-primary">
+                <span>{t.total}</span>
+                <span className="font-semibold">€{data.total.toFixed(2)}</span>
               </div>
 
               {/* Stamp & Signature */}
-              <div className="mt-6 pt-4 flex justify-between items-end">
-                <div className="text-xs text-muted-foreground whitespace-pre-line">
-                  <p className="font-bold">{COMPANY_INFO.stampName}</p>
+              <div className="mt-12 pt-8 flex justify-between items-end border-t border-dashed border-gray-300 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-50 px-2 text-[10px] text-gray-400 uppercase tracking-widest">Authorized Signature</div>
+                <div className="text-xs text-gray-400 whitespace-pre-line leading-relaxed">
                   {COMPANY_INFO.stampDetails}
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-script text-primary mb-1">AP</div>
-                  <p className="text-sm">{COMPANY_INFO.ceo}</p>
-                  <p className="text-xs text-muted-foreground">{t.ceo}</p>
+                  <div className="text-4xl font-script text-primary/80 mb-2 rotate-[-5deg]">AP</div>
+                  <p className="text-sm font-medium text-gray-900">{COMPANY_INFO.ceo}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <Separator className="my-6" />
+          <div className="border-t border-gray-100 my-10" />
 
           {/* Payment Methods */}
           <div className="mb-8">
-            <h4 className="font-semibold mb-3">{t.waysToPay}</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-6">{t.waysToPay}</h4>
+            <div className="flex gap-8 mb-8">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                 <Checkbox
                   id="cash"
                   checked={data.acceptCash}
                   onCheckedChange={(checked) =>
                     setData({ ...data, acceptCash: checked as boolean })
                   }
+                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                 />
-                <Label htmlFor="cash">{t.cash}</Label>
+                <Label htmlFor="cash" className="font-medium text-gray-700 cursor-pointer">{t.cash}</Label>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                 <Checkbox
                   id="bank"
                   checked={data.acceptBankTransfer}
                   onCheckedChange={(checked) =>
                     setData({ ...data, acceptBankTransfer: checked as boolean })
                   }
+                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                 />
-                <Label htmlFor="bank">{t.bankTransfer}</Label>
+                <Label htmlFor="bank" className="font-medium text-gray-700 cursor-pointer">{t.bankTransfer}</Label>
               </div>
             </div>
 
             {data.acceptBankTransfer && (
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  {t.sendConfirmation} {COMPANY_INFO.email}
-                </p>
-
-                <h5 className="font-semibold mb-3">Bank Transfer:</h5>
-                <div className="grid gap-4">
-                  {BANK_ACCOUNTS.map((account, i) => (
-                    <Card key={i} className="p-4">
-                      <h6 className="font-semibold text-primary">{account.bank}</h6>
+              <div className="grid md:grid-cols-3 gap-6">
+                {BANK_ACCOUNTS.map((account, i) => (
+                  <div key={i} className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-primary/20 transition-colors">
+                    <h6 className="font-bold text-gray-900 mb-3">{account.bank}</h6>
+                    <div className="space-y-1.5 text-xs text-gray-600 font-mono">
                       {account.accountName && (
-                        <p className="text-sm">
-                          {t.accountName}: {account.accountName}
-                        </p>
+                        <p className="truncate"><span className="text-gray-400 select-none">NAME:</span> {account.accountName}</p>
                       )}
-                      <p className="text-sm">IBAN: {account.iban}</p>
-                      {account.bic && <p className="text-sm">BIC: {account.bic}</p>}
-                      {account.swift && <p className="text-sm">SWIFT: {account.swift}</p>}
-                      {account.bankAddress && (
-                        <p className="text-sm">Bank: {account.bankAddress}</p>
-                      )}
-                    </Card>
-                  ))}
-                </div>
+                      <p className="truncate"><span className="text-gray-400 select-none">IBAN:</span> {account.iban}</p>
+                      {account.bic && <p><span className="text-gray-400 select-none">BIC:</span> {account.bic}</p>}
+                      {account.swift && <p><span className="text-gray-400 select-none">SWIFT:</span> {account.swift}</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+
+            {data.acceptBankTransfer && (
+              <p className="text-xs text-gray-400 mt-6 text-center italic">
+                {t.sendConfirmation} <span className="text-primary not-italic">{COMPANY_INFO.email}</span>
+              </p>
             )}
           </div>
 
-          <Separator className="my-6" />
-
           {/* Footer */}
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-2xl font-bold text-primary">A</span>
-              <span className="text-xl font-bold text-primary">ALFA</span>
-              <span className="text-xs text-muted-foreground uppercase">TRAVEL</span>
+          <div className="text-center space-y-6 pt-12 border-t border-gray-100 mt-12 pb-4">
+            <div className="text-[10px] items-center justify-center gap-4 text-gray-400 uppercase tracking-[0.2em] hidden print:flex">
+              <span>TravelDocs</span>
             </div>
-            <p className="text-sm text-primary uppercase tracking-wide">
+
+            <p className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">
               {t.services}
             </p>
-            <div>
-              <p className="font-semibold mb-1">{t.contact}</p>
-              <p className="text-sm text-muted-foreground">
-                📞 {COMPANY_INFO.phone} | ✉ {COMPANY_INFO.email} | 🌐{" "}
-                {COMPANY_INFO.website} | follow us {COMPANY_INFO.social}
+            <div className="text-xs text-gray-500 leading-relaxed font-light">
+              <p>
+                {COMPANY_INFO.phone} &nbsp;•&nbsp; {COMPANY_INFO.email} &nbsp;•&nbsp; {COMPANY_INFO.website}
               </p>
-              <p className="text-sm text-muted-foreground">
-                IATA TIDS Agency: {COMPANY_INFO.iata} | {COMPANY_INFO.license}
+              <p className="mt-1 text-gray-400">
+                IATA TIDS: {COMPANY_INFO.iata} &nbsp;|&nbsp; {COMPANY_INFO.license}
               </p>
             </div>
-            <Separator />
-            <p className="text-primary font-medium">{t.thanks}</p>
+            <p className="text-2xl font-script text-primary/40 pt-4 transform -rotate-2 select-none">
+              Thank you!
+            </p>
           </div>
         </Card>
       </div>
