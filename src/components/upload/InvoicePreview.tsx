@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Check, X, Sparkles } from "lucide-react";
-import { ExtractedData, InvoiceCategory, InvoiceType, Package } from "@/types/database";
+import { ExtractedData, InvoiceCategory, Package } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvoicePreviewProps {
@@ -18,19 +18,16 @@ interface InvoicePreviewProps {
     date: string | null;
     category: InvoiceCategory;
     packageId: string | null;
-    type: InvoiceType;
   }) => void;
   onCancel: () => void;
   defaultPackageId?: string;
-  defaultType?: InvoiceType;
 }
 
-export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId, defaultType = 'expense' }: InvoicePreviewProps) {
+export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId }: InvoicePreviewProps) {
   const [merchant, setMerchant] = useState(extractedData?.merchant || "");
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
-  const [type, setType] = useState<InvoiceType>(defaultType);
   const [packageId, setPackageId] = useState<string | null>(defaultPackageId || null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
@@ -75,8 +72,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       amount: amount ? parseFloat(amount) : null,
       date: date || null,
       category,
-      packageId,
-      type
+      packageId
     });
   };
 
@@ -131,25 +127,12 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
 
         <div className="flex-1 overflow-auto p-6 space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="type">Document Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as InvoiceType)}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expense">Expense (Out)</SelectItem>
-                <SelectItem value="income">Income (In)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="merchant">{type === 'income' ? 'Client / Payer' : 'Merchant / Payee'}</Label>
+            <Label htmlFor="merchant">Merchant / Payee</Label>
             <Input
               id="merchant"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder={type === 'income' ? "e.g., John Doe" : "e.g., Aegean Airlines"}
+              placeholder="e.g., Aegean Airlines"
               className="rounded-xl"
             />
           </div>

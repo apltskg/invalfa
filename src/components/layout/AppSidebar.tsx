@@ -1,5 +1,5 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users, BarChart3 } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut } from "lucide-react";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -12,21 +12,28 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { toast } from "sonner";
 
 const menuItems = [
   { title: "Packages", icon: Package, url: "/packages" },
-  { title: "Suppliers", icon: Truck, url: "/suppliers" },
-  { title: "Customers", icon: Users, url: "/customers" },
   { title: "Analytics", icon: BarChart3, url: "/analytics" },
   { title: "Bank Sync", icon: Building2, url: "/bank-sync" },
   { title: "Export Hub", icon: FileSpreadsheet, url: "/export-hub" },
   { title: "New Proforma", icon: FileText, url: "/proforma" },
   { title: "Manage Proformas", icon: List, url: "/proformas" },
-  { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/login");
+  };
 
   return (
     <Sidebar className="border-r border-border bg-sidebar-background">
@@ -71,7 +78,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-3 space-y-1">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -84,7 +91,21 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleSignOut}
+              className="h-11 rounded-xl transition-all duration-200 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">Sign Out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
+        {user && (
+          <div className="px-3 py-2 text-xs text-muted-foreground truncate">
+            {user.email}
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
