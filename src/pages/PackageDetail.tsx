@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, CreditCard, CheckCircle2, AlertCircle, Link2, Sparkles, Upload, ExternalLink, TrendingUp, DollarSign } from "lucide-react";
+import { ArrowLeft, FileText, CreditCard, CheckCircle2, Link2, Sparkles, Upload, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Invoice, BankTransaction, InvoiceTransactionMatch } from "@/types/database";
 import { toast } from "sonner";
@@ -25,7 +24,6 @@ export default function PackageDetail() {
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [linking, setLinking] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("expenses");
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -51,7 +49,6 @@ export default function PackageDetail() {
         ...inv,
         matchedTransaction,
         matchId: match?.id,
-        type: inv.type || 'expense' // Default to expense
       } as InvoiceWithMatch;
     });
 
@@ -115,21 +112,8 @@ export default function PackageDetail() {
     }
   }
 
-  // Calculated Financials
-  const expenses = invoices.filter(i => i.type === 'expense');
-  const income = invoices.filter(i => i.type === 'income');
-
-  const totalExpenses = expenses.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const totalIncome = income.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const profit = totalIncome - totalExpenses;
-  const margin = totalIncome > 0 ? (profit / totalIncome) * 100 : 0;
-
-  // Quote Mode Logic
-  const targetMargin = pkg?.target_margin_percent || 10;
-  const suggestedPrice = totalExpenses * (1 + targetMargin / 100);
-
-  const matchedDocs = invoices.filter(i => i.matchedTransaction).length;
-  const matchRate = invoices.length > 0 ? (matchedDocs / invoices.length) * 100 : 0;
+  // Calculated Financials (all invoices are treated as expenses for this package)
+  const totalExpenses = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
   const getStatusBadge = (inv: InvoiceWithMatch) => {
     if (inv.matchedTransaction) {
@@ -141,266 +125,232 @@ export default function PackageDetail() {
     return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 rounded-lg">Extracted</Badge>;
   };
 
-  // Filter lists based on matches
-  const unmatchedInvoices = invoices.filter(inv => !inv.matchedTransaction && inv.amount && inv.type === (activeTab === 'income' ? 'income' : 'expense'));
+  // Filter unmatched items
+  const unmatchedInvoices = invoices.filter(inv => !inv.matchedTransaction && inv.amount);
   const unmatchedTransactions = transactions.filter(txn =>
-    !matches.some(m => m.transaction_id === txn.id) &&
-    // Try to filter transactions by direction (roughly)
-    (activeTab === 'income' ? txn.amount > 0 : txn.amount < 0)
+    !matches.some(m => m.transaction_id === txn.id)
   );
 
   // Suggested Matches
   const suggestedMatches = unmatchedTransactions.map(txn => {
     const matchingInvoice = unmatchedInvoices.find(
-      inv => inv.amount && Math.abs(txn.amount) === inv.amount // Simple exact match for now, could be fuzzy
+      inv => inv.amount && Math.abs(Math.abs(txn.amount) - inv.amount) < 0.01
     );
     return matchingInvoice ? { transaction: txn, invoice: matchingInvoice } : null;
   }).filter(Boolean) as { transaction: BankTransaction; invoice: Invoice }[];
 
 
   if (loading) {
-    return <div className="p-8">Φόρτωση...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="h-32 animate-pulse rounded-3xl bg-muted" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="h-96 animate-pulse rounded-3xl bg-muted" />
+          <div className="h-96 animate-pulse rounded-3xl bg-muted" />
+        </div>
+      </div>
+    );
   }
 
-  if (!pkg) {
-    return <div className="p-8">Δεν βρέθηκε ο φάκελος</div>;
-  }
-
-
+  if (!pkg) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/packages")} className="rounded-xl">
-          <ArrowLeft className="h-5 w-5" />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Navigation & Header */}
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 hover:bg-muted/50">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Packages
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{pkg.client_name}</h1>
-          <p className="text-muted-foreground flex items-center gap-2">
-            {format(new Date(pkg.start_date), "dd/MM/yyyy")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
-            <Badge variant={pkg.status === 'active' ? 'default' : 'secondary'} className="ml-2 capitalize">
-              {pkg.status === 'active' ? 'Ενεργό' : 'Ολοκληρωμένο'}
-            </Badge>
-          </p>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Main Info Card */}
+          <Card className="md:col-span-2 rounded-3xl p-6 bg-gradient-to-br from-card to-secondary/30 border-border/50">
+            <div className="flex justify-between items-start">
+              <div>
+                <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg capitalize">
+                  {pkg.status}
+                </Badge>
+                <h1 className="text-3xl font-bold tracking-tight">{pkg.client_name}</h1>
+                <p className="text-muted-foreground mt-1 flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary/50"></span>
+                  {format(new Date(pkg.start_date), "MMM d")} - {format(new Date(pkg.end_date), "MMM d, yyyy")}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Summary Dashboard */}
+          <Card className="rounded-3xl p-6 bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+              <TrendingUp className="w-24 h-24" />
+            </div>
+            <div className="relative z-10 space-y-4">
+              <div>
+                <p className="text-primary-foreground/80 text-sm font-medium">Total Expenses</p>
+                <h2 className="text-3xl font-bold tracking-tight">€{totalExpenses.toFixed(2)}</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
+                <div>
+                  <p className="text-xs text-primary-foreground/70">Invoices</p>
+                  <p className="font-semibold text-lg">{invoices.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary-foreground/70">Transactions</p>
+                  <p className="font-semibold text-lg">{transactions.length}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-6 rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50 border-none shadow-sm">
-          <p className="text-sm font-medium text-red-600 mb-1">Συνολικά Έξοδα</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-red-700">€{totalExpenses.toFixed(2)}</span>
-            <span className="text-xs text-red-500 font-medium">εκτίμηση</span>
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column: Invoices */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Invoices
+            </h2>
+            <Button size="sm" onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2">
+              <Upload className="h-4 w-4" />
+              Upload
+            </Button>
           </div>
-        </Card>
 
-        <Card className="p-6 rounded-3xl bg-gradient-to-br from-green-50 to-green-100/50 border-none shadow-sm">
-          <p className="text-sm font-medium text-green-600 mb-1">Συνολικά Έσοδα</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-green-700">€{totalIncome.toFixed(2)}</span>
-            <span className="text-xs text-green-500 font-medium">+ΦΠΑ</span>
-          </div>
-        </Card>
-
-        <Card className="p-6 rounded-3xl bg-gradient-to-br from-blue-50 to-blue-100/50 border-none shadow-sm">
-          <p className="text-sm font-medium text-blue-600 mb-1">Εκτιμώμενο Κέρδος</p>
-          <div className="flex items-baseline gap-1">
-            <span className={`text-2xl font-bold ${profit >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
-              €{profit.toFixed(2)}
-            </span>
-            <Badge variant="outline" className="bg-white/50 border-blue-200 text-blue-700">
-              {margin.toFixed(1)}%
-            </Badge>
-          </div>
-        </Card>
-
-        <Card className="p-6 rounded-3xl bg-gradient-to-br from-purple-50 to-purple-100/50 border-none shadow-sm">
-          <p className="text-sm font-medium text-purple-600 mb-1">Αντιστοίχιση Παραστατικών</p>
-          <div className="space-y-2">
-            <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-bold text-purple-700">{Math.round(matchRate)}%</span>
-              <span className="text-xs text-purple-600">{matchedDocs}/{invoices.length}</span>
-            </div>
-            <div className="h-1.5 bg-purple-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-600 rounded-full transition-all duration-500"
-                style={{ width: `${matchRate}%` }}
-              />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="expenses" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <TabsList className="bg-muted/50 p-1 rounded-2xl">
-            <TabsTrigger value="expenses" className="rounded-xl px-4 gap-2">
-              <FileText className="h-4 w-4" />
-              Έξοδα
-            </TabsTrigger>
-            <TabsTrigger value="income" className="rounded-xl px-4 gap-2">
-              <DollarSign className="h-4 w-4" />
-              Έσοδα
-            </TabsTrigger>
-            <TabsTrigger value="transactions" className="rounded-xl px-4 gap-2">
-              <CreditCard className="h-4 w-4" />
-              Συναλλαγές Τράπεζας
-            </TabsTrigger>
-          </TabsList>
-
-          <Button onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2 shadow-lg shadow-primary/20">
-            <Upload className="h-4 w-4" />
-            Μεταφόρτωση Αρχείων
-          </Button>
-
-          <TabsContent value={activeTab} className="grid gap-6 lg:grid-cols-2 animate-in slide-in-from-bottom-4 duration-500">
-            {/* Left Column: Invoices */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  {activeTab === 'expenses' ? 'Supplier Invoices' : 'Client Invoices'}
-                </h2>
-                <Button size="sm" onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2">
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {invoices.filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income')).length === 0 ? (
-                  <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
-                    <p className="text-muted-foreground">No documents found</p>
-                  </Card>
-                ) : (
-                  invoices
-                    .filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income'))
-                    .map((inv, i) => (
-                      <motion.div
-                        key={inv.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                      >
-                        <Card
-                          className="p-4 rounded-2xl hover:bg-muted/50 cursor-pointer transition-colors border-border/50"
-                          onClick={() => openInvoicePreview(inv)}
-                        >
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium truncate">{inv.merchant || 'Unknown Merchant'}</span>
-                                {getStatusBadge(inv)}
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="bg-secondary px-2 py-0.5 rounded text-secondary-foreground capitalize">
-                                  {inv.category}
-                                </span>
-                                <span>{inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : 'No date'}</span>
-                              </div>
-                              {inv.matchedTransaction && (
-                                <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 bg-green-50 w-fit px-2 py-0.5 rounded-full">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Matched
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-lg">€{inv.amount?.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </Card>
-                      </motion.div>
-                    ))
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Bank Transactions */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  Bank Transactions
-                </h2>
-                <Badge variant="outline" className="rounded-lg">
-                  Show {activeTab === 'expenses' ? 'Debits' : 'Credits'}
-                </Badge>
-              </div>
-
-              {/* Suggestions Area */}
-              {suggestedMatches.length > 0 && (
-                <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
-                  <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
-                  </div>
-                  <div className="divide-y divide-primary/10">
-                    {suggestedMatches.map(({ transaction, invoice }) => (
-                      <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{transaction.description}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
+          <div className="space-y-3">
+            {invoices.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
+                <p className="text-muted-foreground">No documents found</p>
+              </Card>
+            ) : (
+              invoices.map((inv, i) => (
+                <motion.div
+                  key={inv.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Card
+                    className="p-4 rounded-2xl hover:bg-muted/50 cursor-pointer transition-colors border-border/50"
+                    onClick={() => openInvoicePreview(inv)}
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium truncate">{inv.merchant || 'Unknown Merchant'}</span>
+                          {getStatusBadge(inv)}
                         </div>
-                        <Button
-                          size="sm"
-                          className="rounded-xl h-8 text-xs gap-1"
-                          onClick={() => createMatch(invoice.id, transaction.id)}
-                          disabled={linking === transaction.id}
-                        >
-                          <Link2 className="h-3 w-3" />
-                          Link
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Transactions List */}
-              <div className="space-y-3">
-                {transactions
-                  .filter(t => activeTab === 'expenses' ? t.amount < 0 : t.amount > 0)
-                  .map((txn, i) => {
-                    const isMatched = matches.some(m => m.transaction_id === txn.id);
-                    return (
-                      <Card
-                        key={txn.id}
-                        className={cn(
-                          "p-4 rounded-2xl border-border/50 transition-colors",
-                          isMatched ? "bg-muted/30 opacity-60" : "bg-card"
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="bg-secondary px-2 py-0.5 rounded text-secondary-foreground capitalize">
+                            {inv.category}
+                          </span>
+                          <span>{inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : 'No date'}</span>
+                        </div>
+                        {inv.matchedTransaction && (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 bg-green-50 w-fit px-2 py-0.5 rounded-full">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Matched
+                          </div>
                         )}
-                      >
-                        <div className="flex justify-between items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm truncate">{txn.description}</p>
-                              {isMatched && <CheckCircle2 className="h-3 w-3 text-green-500" />}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(txn.transaction_date), "dd MMM")}
-                            </p>
-                          </div>
-                          <p className={cn("font-semibold", txn.amount < 0 ? "text-foreground" : "text-green-600")}>
-                            {txn.amount < 0 ? '-' : '+'}€{Math.abs(txn.amount).toFixed(2)}
-                          </p>
-                        </div>
-                      </Card>
-                    );
-                  })
-                }
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-lg">€{inv.amount?.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Bank Transactions */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Bank Transactions
+            </h2>
+          </div>
+
+          {/* Suggestions Area */}
+          {suggestedMatches.length > 0 && (
+            <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
+              <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
               </div>
-            </div>
-          </TabsContent>
-      </Tabs >
+              <div className="divide-y divide-primary/10">
+                {suggestedMatches.map(({ transaction, invoice }) => (
+                  <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{transaction.description}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="rounded-xl h-8 text-xs gap-1"
+                      onClick={() => createMatch(invoice.id, transaction.id)}
+                      disabled={linking === transaction.id}
+                    >
+                      <Link2 className="h-3 w-3" />
+                      Link
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Transactions List */}
+          <div className="space-y-3">
+            {transactions.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
+                <p className="text-muted-foreground">No transactions found</p>
+              </Card>
+            ) : (
+              transactions.map((txn) => {
+                const isMatched = matches.some(m => m.transaction_id === txn.id);
+                return (
+                  <Card
+                    key={txn.id}
+                    className={cn(
+                      "p-4 rounded-2xl border-border/50 transition-colors",
+                      isMatched ? "bg-muted/30 opacity-60" : "bg-card"
+                    )}
+                  >
+                    <div className="flex justify-between items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm truncate">{txn.description}</p>
+                          {isMatched && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(txn.transaction_date), "dd MMM")}
+                        </p>
+                      </div>
+                      <p className={cn("font-semibold", txn.amount < 0 ? "text-foreground" : "text-green-600")}>
+                        {txn.amount < 0 ? '-' : '+'}€{Math.abs(txn.amount).toFixed(2)}
+                      </p>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
 
       <UploadModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
         packageId={id}
         onUploadComplete={fetchData}
-        defaultType={activeTab === 'expenses' ? 'expense' : 'income'}
       />
-    </div >
+    </div>
   );
 }
