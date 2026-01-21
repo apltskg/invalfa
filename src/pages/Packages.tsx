@@ -143,96 +143,88 @@ export default function Packages() {
     : packages.filter(p => p.status === activeTab);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Travel Packages
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage your trips, expenses, and profitability.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Φάκελοι Ταξιδιών</h1>
+          <p className="mt-1 text-muted-foreground">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+            <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-5 w-5" />
-              New Package
+              Νέος Φάκελος
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] rounded-3xl p-6">
+          <DialogContent className="sm:max-w-[425px] rounded-3xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Create New Package</DialogTitle>
-              <p className="text-muted-foreground">
-                Set up a new trip to track expenses and income.
-              </p>
-            </DialogHeader>
-
-            <div className="space-y-6 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="client" className="text-sm font-medium">Client / Group Name</Label>
-                <div className="relative">
-                  <Input
-                    id="client"
-                    value={newPackage.client_name}
-                    onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
-                    placeholder="e.g. Acme Corp Retreat or John Doe Family"
-                    className="pl-10 rounded-xl h-11"
-                  />
-                  <Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                </div>
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <PackageIcon className="h-6 w-6 text-primary" />
               </div>
-
+              <DialogTitle className="text-center text-xl">Δημιουργία Νέου Φακέλου</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="client_name">Όνομα Πελάτη / Γκρουπ</Label>
+                <Input
+                  id="client_name"
+                  value={newPackage.client_name}
+                  onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
+                  placeholder="π.χ. Σύλλογος Γονέων, Οικογένεια Παπαδόπουλου"
+                  className="rounded-xl"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start">Start Date</Label>
+                  <Label htmlFor="start_date">Έναρξη</Label>
                   <Input
-                    id="start"
+                    id="start_date"
                     type="date"
                     value={newPackage.start_date}
                     onChange={(e) => setNewPackage({ ...newPackage, start_date: e.target.value })}
-                    className="rounded-xl h-11"
+                    className="rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end">End Date</Label>
+                  <Label htmlFor="end_date">Λήξη</Label>
                   <Input
-                    id="end"
+                    id="end_date"
                     type="date"
                     value={newPackage.end_date}
                     onChange={(e) => setNewPackage({ ...newPackage, end_date: e.target.value })}
-                    className="rounded-xl h-11"
+                    className="rounded-xl"
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="margin">Target Margin (%)</Label>
+                <Label htmlFor="margin">Στόχος Κέρδους (%)</Label>
                 <div className="relative">
                   <Input
                     id="margin"
                     type="number"
-                    min="0"
-                    max="100"
                     value={newPackage.target_margin_percent}
                     onChange={(e) => setNewPackage({ ...newPackage, target_margin_percent: e.target.value })}
-                    className="pl-10 rounded-xl h-11"
+                    placeholder="10"
+                    className="rounded-xl pl-10"
                   />
-                  <TrendingUp className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <span className="absolute left-3 top-2.5 text-muted-foreground">%</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Used to suggest billing amounts based on expenses.
-                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Περιγραφή (Προαιρετικό)</Label>
+                <Input
+                  id="description"
+                  value={newPackage.description}
+                  onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
+                  placeholder="Λεπτομέρειες ταξιδιού..."
+                  className="rounded-xl"
+                />
               </div>
             </div>
-
-            <DialogFooter className="pt-4">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
-                Cancel
-              </Button>
-              <Button onClick={createPackage} className="rounded-xl h-11 px-8">
-                Create Package
+            <DialogFooter>
+              <Button onClick={createPackage} className="w-full rounded-xl" size="lg">
+                Δημιουργία Φακέλου
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -240,10 +232,10 @@ export default function Packages() {
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-6">
-          <TabsTrigger value="all" className="rounded-xl">All Packages</TabsTrigger>
-          <TabsTrigger value="active" className="rounded-xl">Active</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-xl">Completed</TabsTrigger>
+        <TabsList className="w-full sm:w-auto p-1 bg-muted/50 rounded-2xl border border-white/10">
+          <TabsTrigger value="all" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρωμένα</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
@@ -258,12 +250,12 @@ export default function Packages() {
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
                 <PackageIcon className="h-10 w-10 text-primary" />
               </div>
-              <h3 className="text-xl font-medium mb-2">No packages found</h3>
+              <h3 className="text-xl font-medium mb-2">Δεν βρέθηκαν φάκελοι</h3>
               <p className="text-muted-foreground mb-6 text-center max-w-sm">
-                Get started by creating your first travel package to track expenses and calculate profits.
+                Ξεκινήστε δημιουργώντας τον πρώτο σας φάκελο ταξιδιού για να παρακολουθείτε έξοδα και κέρδη.
               </p>
               <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
-                Create First Package
+                Δημιουργία Πρώτου Φακέλου
               </Button>
             </Card>
           ) : (
@@ -286,7 +278,7 @@ export default function Packages() {
                     <div className="mb-6 space-y-4">
                       <div className="flex justify-between items-start">
                         <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm">
-                          {pkg.status}
+                          {pkg.status === "active" ? "Ενεργό" : "Ολοκληρωμένο"}
                         </Badge>
                       </div>
 
@@ -297,7 +289,7 @@ export default function Packages() {
                         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            {format(new Date(pkg.start_date), "MMM d")} - {format(new Date(pkg.end_date), "MMM d, yyyy")}
+                            {format(new Date(pkg.start_date), "dd/MM")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
                           </span>
                         </div>
                       </div>
@@ -306,11 +298,11 @@ export default function Packages() {
                     <div className="space-y-4 pt-4 border-t border-border/50">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Expenses</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Έξοδα</p>
                           <p className="font-semibold text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Profit (Est.)</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Κέρδος (Εκτ.)</p>
                           <p className={`font-semibold ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
                           </p>
@@ -320,7 +312,7 @@ export default function Packages() {
                       {/* Progress Bar for Matching */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Docs Matched</span>
+                          <span>Αντιστοίχιση</span>
                           <span>{pkg.stats.total > 0 ? Math.round((pkg.stats.matched / pkg.stats.total) * 100) : 0}%</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">

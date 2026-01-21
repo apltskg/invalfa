@@ -17,6 +17,8 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import AccountantPortal from "./pages/AccountantPortal";
 import NotFound from "./pages/NotFound";
+import GeneralExpenses from "./pages/GeneralExpenses";
+import GeneralIncome from "./pages/GeneralIncome";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +34,7 @@ const App = () => (
             <Route path="/accountant/:token" element={<AccountantPortal />} />
 
             {/* Main app routes */}
-            <Route path="/" element={<Navigate to="/packages" replace />} />
+            <Route path="/" element={<Navigate to="/analytics" replace />} />
             <Route element={<AppLayout />}>
               <Route path="/packages" element={<Packages />} />
               <Route path="/packages/:id" element={<PackageDetail />} />
@@ -44,6 +46,8 @@ const App = () => (
               <Route path="/proforma" element={<ProformaInvoice />} />
               <Route path="/proformas" element={<ManageProformas />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/general-expenses" element={<GeneralExpenses />} />
+              <Route path="/general-income" element={<GeneralIncome />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

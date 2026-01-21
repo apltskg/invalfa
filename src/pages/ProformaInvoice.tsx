@@ -64,9 +64,9 @@ const BANK_ACCOUNTS = [
 ];
 
 const TERMS_CONDITIONS = [
-  "Please note that this booking is not yet confirmed. It will be finalized only after full payment has been received.",
-  "Due to high demand, availability cannot be guaranteed until the payment is completed.",
-  "In case of cancellation less than 3 days prior to the scheduled date, a 10% fee will be retained.",
+  "Σημειώστε ότι αυτή η κράτηση δεν έχει επιβεβαιωθεί ακόμα. Θα οριστικοποιηθεί μόνο μετά την πλήρη εξόφληση.",
+  "Λόγω υψηλής ζήτησης, η διαθεσιμότητα δεν μπορεί να εγγυηθεί μέχρι την ολοκλήρωση της πληρωμής.",
+  "Σε περίπτωση ακύρωσης λιγότερο από 3 ημέρες πριν την προγραμματισμένη ημερομηνία, θα παρακρατηθεί τέλος 10%.",
 ];
 
 interface LineItem {
@@ -184,7 +184,7 @@ const translations = {
 export default function ProformaInvoice() {
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguage] = useState<Language>("el");
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -370,7 +370,7 @@ export default function ProformaInvoice() {
       });
 
       if (error) throw error;
-      
+
       if (response?.error) {
         if (response.code === 'MISSING_API_KEY') {
           toast({

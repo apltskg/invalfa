@@ -134,8 +134,8 @@ export default function Customers() {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-                    <p className="mt-1 text-muted-foreground">Manage your clients and travelers</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Πελάτες</h1>
+                    <p className="mt-1 text-muted-foreground">Διαχείριση πελατών και ταξιδιωτών</p>
                 </div>
 
                 <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -145,33 +145,33 @@ export default function Customers() {
                     <DialogTrigger asChild>
                         <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
                             <Plus className="h-5 w-5" />
-                            Add Customer
+                            Προσθήκη Πελάτη
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px] rounded-3xl">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl">{editingCustomer ? "Edit Customer" : "Add New Customer"}</DialogTitle>
+                            <DialogTitle className="text-2xl">{editingCustomer ? "Επεξεργασία Πελάτη" : "Νέος Πελάτης"}</DialogTitle>
                         </DialogHeader>
 
                         <div className="space-y-4 pt-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Name / Company *</Label>
+                                <Label htmlFor="name">Όνομα / Εταιρεία *</Label>
                                 <Input
                                     id="name"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g., John Doe or Acme Corp"
+                                    placeholder="π.χ. Γιάννης Παπαδόπουλος ή Acme Corp"
                                     className="rounded-xl h-11"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="contact">Contact Person</Label>
+                                <Label htmlFor="contact">Υπεύθυνος Επικοινωνίας</Label>
                                 <Input
                                     id="contact"
                                     value={formData.contact_person}
                                     onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                                    placeholder="e.g., Jane Smith"
+                                    placeholder="π.χ. Μαρία Δημητρίου"
                                     className="rounded-xl h-11"
                                 />
                             </div>
@@ -190,7 +190,7 @@ export default function Customers() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone</Label>
+                                    <Label htmlFor="phone">Τηλέφωνο</Label>
                                     <Input
                                         id="phone"
                                         value={formData.phone}
@@ -202,23 +202,23 @@ export default function Customers() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="address">Address</Label>
+                                <Label htmlFor="address">Διεύθυνση</Label>
                                 <Input
                                     id="address"
                                     value={formData.address}
                                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="Street, City, Country"
+                                    placeholder="Οδός, Πόλη, Χώρα"
                                     className="rounded-xl h-11"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="notes">Notes</Label>
+                                <Label htmlFor="notes">Σημειώσεις</Label>
                                 <Textarea
                                     id="notes"
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    placeholder="Additional information..."
+                                    placeholder="Πρόσθετες πληροφορίες..."
                                     className="rounded-xl min-h-[80px]"
                                 />
                             </div>
@@ -226,10 +226,10 @@ export default function Customers() {
 
                         <DialogFooter className="pt-4">
                             <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
-                                Cancel
+                                Ακύρωση
                             </Button>
                             <Button onClick={handleSave} className="rounded-xl h-11 px-8">
-                                {editingCustomer ? "Update" : "Create"}
+                                {editingCustomer ? "Ενημέρωση" : "Δημιουργία"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -241,7 +241,7 @@ export default function Customers() {
                 <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search customers..."
+                    placeholder="Αναζήτηση πελατών..."
                     className="pl-10 rounded-2xl h-12 bg-muted/50"
                 />
             </div>
@@ -255,13 +255,13 @@ export default function Customers() {
             ) : filteredCustomers.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
                     <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No customers found</h3>
+                    <h3 className="text-xl font-medium mb-2">Δεν βρέθηκαν πελάτες</h3>
                     <p className="text-muted-foreground text-center max-w-sm mb-6">
-                        {searchQuery ? "Try adjusting your search terms" : "Get started by adding your first customer"}
+                        {searchQuery ? "Δοκιμάστε διαφορετικούς όρους αναζήτησης" : "Ξεκινήστε προσθέτοντας τον πρώτο σας πελάτη"}
                     </p>
                     {!searchQuery && (
                         <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
-                            Add First Customer
+                            Προσθήκη Πρώτου Πελάτη
                         </Button>
                     )}
                 </Card>

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { 
-  Search, 
-  Filter, 
-  Trash2, 
-  Edit2, 
-  Eye, 
+import {
+  Search,
+  Filter,
+  Trash2,
+  Edit2,
+  Eye,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -191,15 +191,15 @@ export default function ManageProformas() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Manage Proformas</h1>
+              <h1 className="text-2xl font-bold text-foreground">Διαχείριση Προτιμολογίων</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {proformas.length} proforma invoice{proformas.length !== 1 ? "s" : ""} total
+                {proformas.length} προτιμολόγια συνολικά
               </p>
             </div>
             <Button asChild>
               <Link to="/proforma">
                 <Plus className="h-4 w-4 mr-2" />
-                New Proforma
+                Νέο Προτιμολόγιο
               </Link>
             </Button>
           </div>
@@ -213,7 +213,7 @@ export default function ManageProformas() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by invoice number, client name, or email..."
+                placeholder="Αναζήτηση με αριθμό, πελάτη ή email..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -226,12 +226,12 @@ export default function ManageProformas() {
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
                 <SelectTrigger className="w-[140px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder="Ταξινόμηση" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="amount">Amount</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="date">Ημερομηνία</SelectItem>
+                  <SelectItem value="amount">Ποσό</SelectItem>
+                  <SelectItem value="client">Πελάτης</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -250,15 +250,15 @@ export default function ManageProformas() {
           searchQuery ? (
             <EmptyState
               icon={FileText}
-              title="No results found"
-              description="Try adjusting your search query"
+              title="Δεν βρέθηκαν αποτελέσματα"
+              description="Δοκιμάστε διαφορετικούς όρους αναζήτησης"
             />
           ) : (
             <EmptyState
               icon={FileText}
-              title="No proforma invoices yet"
-              description="Create your first proforma invoice to get started"
-              actionLabel="Create Proforma"
+              title="Δεν υπάρχουν προτιμολόγια"
+              description="Δημιουργήστε το πρώτο σας προτιμολόγιο για να ξεκινήσετε"
+              actionLabel="Δημιουργία"
               onAction={() => navigate("/proforma")}
             />
           )
@@ -267,12 +267,12 @@ export default function ManageProformas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Services</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Αρ. Τιμολογίου</TableHead>
+                  <TableHead>Ημερομηνία</TableHead>
+                  <TableHead>Πελάτης</TableHead>
+                  <TableHead>Υπηρεσίες</TableHead>
+                  <TableHead className="text-right">Σύνολο</TableHead>
+                  <TableHead className="text-right">Ενέργειες</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,13 +300,13 @@ export default function ManageProformas() {
                         <div className="flex flex-wrap gap-1">
                           {lineItems.slice(0, 2).map((item, i) => (
                             <Badge key={i} variant="secondary" className="text-xs">
-                              {item.description?.slice(0, 20) || "Service"}
+                              {item.description?.slice(0, 20) || "Υπηρεσία"}
                               {item.description && item.description.length > 20 ? "..." : ""}
                             </Badge>
                           ))}
                           {lineItems.length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{lineItems.length - 2} more
+                              +{lineItems.length - 2} ακόμη
                             </Badge>
                           )}
                         </div>
@@ -320,7 +320,7 @@ export default function ManageProformas() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setViewProforma(proforma)}
-                            title="View details"
+                            title="Προβολή"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -328,7 +328,7 @@ export default function ManageProformas() {
                             variant="ghost"
                             size="icon"
                             onClick={() => navigate(`/proforma?edit=${proforma.id}`)}
-                            title="Edit"
+                            title="Επεξεργασία"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -336,7 +336,7 @@ export default function ManageProformas() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeleteId(proforma.id)}
-                            title="Delete"
+                            title="Διαγραφή"
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -355,8 +355,8 @@ export default function ManageProformas() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-              {Math.min(currentPage * ITEMS_PER_PAGE, filteredProformas.length)} of{" "}
+              Προβολή {(currentPage - 1) * ITEMS_PER_PAGE + 1} έως{" "}
+              {Math.min(currentPage * ITEMS_PER_PAGE, filteredProformas.length)} από{" "}
               {filteredProformas.length}
             </p>
             <div className="flex gap-2">
@@ -367,7 +367,7 @@ export default function ManageProformas() {
                 disabled={currentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                Προηγούμενο
               </Button>
               <Button
                 variant="outline"
@@ -375,7 +375,7 @@ export default function ManageProformas() {
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                Next
+                Επόμενο
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -387,15 +387,15 @@ export default function ManageProformas() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Proforma Invoice?</AlertDialogTitle>
+            <AlertDialogTitle>Διαγραφή Προτιμολογίου;</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The proforma invoice will be permanently deleted.
+              Αυτή η ενέργεια δεν μπορεί να αναιρεθεί. Το προτιμολόγιο θα διαγραφεί οριστικά.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              Διαγραφή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -405,7 +405,7 @@ export default function ManageProformas() {
       <Dialog open={!!viewProforma} onOpenChange={() => setViewProforma(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Proforma Invoice Details</DialogTitle>
+            <DialogTitle>Λεπτομέρειες Προτιμολογίου</DialogTitle>
             <DialogDescription>
               {viewProforma?.invoice_number}
             </DialogDescription>
@@ -415,13 +415,13 @@ export default function ManageProformas() {
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Issue Date</p>
+                  <p className="text-sm text-muted-foreground">Ημερομηνία Έκδοσης</p>
                   <p className="font-medium">
                     {format(new Date(viewProforma.issue_date), "dd MMMM yyyy")}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-sm text-muted-foreground">Σύνολο</p>
                   <p className="text-2xl font-bold text-primary">
                     €{viewProforma.total.toFixed(2)}
                   </p>
@@ -430,10 +430,10 @@ export default function ManageProformas() {
 
               {/* Client Info */}
               <div className="bg-muted/50 rounded-lg p-4">
-                <h4 className="font-medium mb-2">Client Details</h4>
+                <h4 className="font-medium mb-2">Στοιχεία Πελάτη</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Name:</span>{" "}
+                    <span className="text-muted-foreground">Όνομα:</span>{" "}
                     {viewProforma.client_name || "-"}
                   </div>
                   <div>
@@ -441,12 +441,12 @@ export default function ManageProformas() {
                     {viewProforma.client_email || "-"}
                   </div>
                   <div className="col-span-2">
-                    <span className="text-muted-foreground">Address:</span>{" "}
+                    <span className="text-muted-foreground">Διεύθυνση:</span>{" "}
                     {viewProforma.client_address || "-"}
                   </div>
                   {viewProforma.client_vat_number && (
                     <div>
-                      <span className="text-muted-foreground">VAT:</span>{" "}
+                      <span className="text-muted-foreground">ΑΦΜ:</span>{" "}
                       {viewProforma.client_vat_number}
                     </div>
                   )}
@@ -455,14 +455,14 @@ export default function ManageProformas() {
 
               {/* Line Items */}
               <div>
-                <h4 className="font-medium mb-2">Services</h4>
+                <h4 className="font-medium mb-2">Υπηρεσίες</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Tax</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Περιγραφή</TableHead>
+                      <TableHead className="text-right">Τιμή</TableHead>
+                      <TableHead className="text-right">ΦΠΑ</TableHead>
+                      <TableHead className="text-right">Σύνολο</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -482,21 +482,21 @@ export default function ManageProformas() {
               <div className="flex justify-end">
                 <div className="w-64 space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span className="text-muted-foreground">Υποσύνολο:</span>
                     <span>€{viewProforma.subtotal.toFixed(2)}</span>
                   </div>
                   {viewProforma.discount_percent && viewProforma.discount_percent > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Discount ({viewProforma.discount_percent}%):</span>
+                      <span>Έκπτωση ({viewProforma.discount_percent}%):</span>
                       <span>-€{viewProforma.discount_amount?.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax:</span>
+                    <span className="text-muted-foreground">ΦΠΑ:</span>
                     <span>€{viewProforma.tax_amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                    <span>Total:</span>
+                    <span>Σύνολο:</span>
                     <span className="text-primary">€{viewProforma.total.toFixed(2)}</span>
                   </div>
                 </div>
@@ -505,17 +505,17 @@ export default function ManageProformas() {
               {/* Notes */}
               {viewProforma.notes && (
                 <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4">
-                  <h4 className="font-medium mb-1">Notes</h4>
+                  <h4 className="font-medium mb-1">Σημειώσεις</h4>
                   <p className="text-sm">{viewProforma.notes}</p>
                 </div>
               )}
 
               {/* Payment Methods */}
               <div className="flex gap-4 text-sm">
-                <span className="text-muted-foreground">Accepted:</span>
-                {viewProforma.accept_cash && <Badge variant="outline">Cash</Badge>}
+                <span className="text-muted-foreground">Αποδεκτοί Τρόποι:</span>
+                {viewProforma.accept_cash && <Badge variant="outline">Μετρητά</Badge>}
                 {viewProforma.accept_bank_transfer && (
-                  <Badge variant="outline">Bank Transfer</Badge>
+                  <Badge variant="outline">Τραπεζική Κατάθεση</Badge>
                 )}
               </div>
             </div>

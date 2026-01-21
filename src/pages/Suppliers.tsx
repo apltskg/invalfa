@@ -158,8 +158,8 @@ export default function Suppliers() {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
-                    <p className="mt-1 text-muted-foreground">Manage your travel service providers</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Προμηθευτές</h1>
+                    <p className="mt-1 text-muted-foreground">Διαχείριση παρόχων ταξιδιωτικών υπηρεσιών</p>
                 </div>
 
                 <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -169,33 +169,33 @@ export default function Suppliers() {
                     <DialogTrigger asChild>
                         <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
                             <Plus className="h-5 w-5" />
-                            Add Supplier
+                            Προσθήκη Προμηθευτή
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px] rounded-3xl">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl">{editingSupplier ? "Edit Supplier" : "Add New Supplier"}</DialogTitle>
+                            <DialogTitle className="text-2xl">{editingId ? "Επεξεργασία Προμηθευτή" : "Νέος Προμηθευτής"}</DialogTitle>
                         </DialogHeader>
 
                         <div className="space-y-4 pt-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Company Name *</Label>
+                                <Label htmlFor="name">Επωνυμία Εταιρείας *</Label>
                                 <Input
                                     id="name"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g., Aegean Airlines"
+                                    placeholder="π.χ., Aegean Airlines"
                                     className="rounded-xl h-11"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="contact">Contact Person</Label>
+                                <Label htmlFor="contact">Υπεύθυνος Επικοινωνίας</Label>
                                 <Input
                                     id="contact"
                                     value={formData.contact_person}
                                     onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                                    placeholder="e.g., John Doe"
+                                    placeholder="π.χ., Γιάννης Παπαδόπουλος"
                                     className="rounded-xl h-11"
                                 />
                             </div>
@@ -214,7 +214,7 @@ export default function Suppliers() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone</Label>
+                                    <Label htmlFor="phone">Τηλέφωνο</Label>
                                     <Input
                                         id="phone"
                                         value={formData.phone}
@@ -226,23 +226,34 @@ export default function Suppliers() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="address">Address</Label>
+                                <Label htmlFor="address">Διεύθυνση</Label>
                                 <Input
                                     id="address"
                                     value={formData.address}
                                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="Street, City, Country"
+                                    placeholder="Οδός, Πόλη, Χώρα"
                                     className="rounded-xl h-11"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="notes">Notes</Label>
+                                <Label htmlFor="invoice_instructions">Οδηγίες Παραλαβής Τιμολογίων</Label>
+                                <Textarea
+                                    id="invoice_instructions"
+                                    value={formData.invoice_instructions}
+                                    onChange={(e) => setFormData({ ...formData, invoice_instructions: e.target.value })}
+                                    placeholder="π.χ., Αποστολή με email στο invoices@company.com"
+                                    className="rounded-xl min-h-[60px]"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="notes">Σημειώσεις</Label>
                                 <Textarea
                                     id="notes"
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    placeholder="Additional information..."
+                                    placeholder="Πρόσθετες πληροφορίες..."
                                     className="rounded-xl min-h-[80px]"
                                 />
                             </div>
@@ -250,10 +261,10 @@ export default function Suppliers() {
 
                         <DialogFooter className="pt-4">
                             <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
-                                Cancel
+                                Ακύρωση
                             </Button>
-                            <Button onClick={handleSave} className="rounded-xl h-11 px-8">
-                                {editingSupplier ? "Update" : "Create"}
+                            <Button onClick={handleSave} disabled={saving} className="rounded-xl h-11 px-8">
+                                {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -265,7 +276,7 @@ export default function Suppliers() {
                 <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search suppliers..."
+                    placeholder="Αναζήτηση προμηθευτών..."
                     className="pl-10 rounded-2xl h-12 bg-muted/50"
                 />
             </div>
@@ -279,13 +290,13 @@ export default function Suppliers() {
             ) : filteredSuppliers.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
                     <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No suppliers found</h3>
+                    <h3 className="text-xl font-medium mb-2">Δεν βρέθηκαν προμηθευτές</h3>
                     <p className="text-muted-foreground text-center max-w-sm mb-6">
-                        {searchQuery ? "Try adjusting your search terms" : "Get started by adding your first supplier"}
+                        {searchQuery ? "Δοκιμάστε διαφορετικούς όρους αναζήτησης" : "Ξεκινήστε προσθέτοντας τον πρώτο σας προμηθευτή"}
                     </p>
                     {!searchQuery && (
                         <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
-                            Add First Supplier
+                            Προσθήκη Πρώτου Προμηθευτή
                         </Button>
                     )}
                 </Card>
@@ -316,7 +327,7 @@ export default function Suppliers() {
                                         <Button
                                             size="icon"
                                             variant="ghost"
-                                            onClick={() => openEditDialog(supplier)}
+                                            onClick={() => handleEdit(supplier)}
                                             className="h-8 w-8 rounded-xl"
                                         >
                                             <Edit className="h-4 w-4" />

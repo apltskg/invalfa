@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users, BarChart3 } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users, BarChart3, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Sidebar,
@@ -17,11 +17,13 @@ const menuItems = [
   { title: "Φάκελοι", icon: Package, url: "/packages" },
   { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
   { title: "Πελάτες", icon: Users, url: "/customers" },
+  { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
+  { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
   { title: "Συγχρονισμός Τράπεζας", icon: Building2, url: "/bank-sync" },
-  { title: "Εξαγωγές", icon: FileSpreadsheet, url: "/export-hub" },
-  { title: "Νέο Προτιμολόγιο", icon: FileText, url: "/proforma" },
-  { title: "Διαχείριση Προτιμολογίων", icon: List, url: "/proformas" },
+  { title: "Κέντρο Εξαγωγών", icon: FileSpreadsheet, url: "/export-hub" },
+  { title: "Νέο Proforma", icon: FileText, url: "/proforma" },
+  { title: "Διαχείριση Proforma", icon: List, url: "/proformas" },
   { title: "Ρυθμίσεις", icon: Settings, url: "/settings" },
 ];
 
@@ -37,7 +39,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground">TravelDocs</h1>
-            <p className="text-xs text-muted-foreground">Invoice Manager</p>
+            <p className="text-xs text-muted-foreground">Διαχείριση Τιμολογίων</p>
           </div>
         </div>
       </SidebarHeader>
@@ -45,7 +47,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Navigation
+            Πλοήγηση
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-3">
@@ -80,7 +82,7 @@ export function AppSidebar() {
             >
               <Link to="/settings">
                 <Settings className="h-5 w-5" />
-                <span className="font-medium">Settings</span>
+                <span className="font-medium">Ρυθμίσεις</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

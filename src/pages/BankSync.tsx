@@ -34,13 +34,13 @@ export default function BankSync() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // PDF import state
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfExtracting, setPdfExtracting] = useState(false);
   const [pdfExtractedRows, setPdfExtractedRows] = useState<PDFExtractedRow[]>([]);
   const [pdfImporting, setPdfImporting] = useState(false);
-  
+
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function BankSync() {
 2024-01-15,AEGEAN AIRLINES SA,245.50
 2024-01-16,BOOKING.COM HOTEL,189.00
 2024-01-17,ATTIKI ODOS TOLLS,12.80`;
-    
+
     const blob = new Blob([sample], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -77,14 +77,14 @@ export default function BankSync() {
 
   function parseAmount(amountStr: string): number | null {
     if (!amountStr || typeof amountStr !== "string") return null;
-    
+
     // Remove currency symbols and whitespace
     let cleaned = amountStr.replace(/[€$£\s]/g, "").trim();
-    
+
     // Handle European format (1.234,56) vs US format (1,234.56)
     const lastComma = cleaned.lastIndexOf(",");
     const lastPeriod = cleaned.lastIndexOf(".");
-    
+
     if (lastComma > lastPeriod) {
       // European format: remove periods (thousands), replace comma with period
       cleaned = cleaned.replace(/\./g, "").replace(",", ".");
@@ -92,7 +92,7 @@ export default function BankSync() {
       // US format or simple: just remove commas
       cleaned = cleaned.replace(/,/g, "");
     }
-    
+
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? null : parsed;
   }
@@ -106,26 +106,26 @@ export default function BankSync() {
       skipEmptyLines: true,
       complete: async (results) => {
         const rows = results.data as Record<string, string>[];
-        
+
         // Check for required headers
         if (rows.length === 0) {
           toast.error("CSV file is empty");
           return;
         }
-        
+
         const firstRow = rows[0];
         const headers = Object.keys(firstRow).map(h => h.toLowerCase().trim());
-        
+
         const hasDate = headers.includes("date");
         const hasDescription = headers.includes("description");
         const hasAmount = headers.includes("amount");
-        
+
         if (!hasDate || !hasDescription || !hasAmount) {
           const missing = [];
           if (!hasDate) missing.push("date");
           if (!hasDescription) missing.push("description");
           if (!hasAmount) missing.push("amount");
-          
+
           toast.error(`Missing required columns: ${missing.join(", ")}. CSV must have: date, description, amount`);
           return;
         }
@@ -138,7 +138,7 @@ export default function BankSync() {
           const dateKey = Object.keys(r).find(k => k.toLowerCase().trim() === "date");
           const descKey = Object.keys(r).find(k => k.toLowerCase().trim() === "description");
           const amountKey = Object.keys(r).find(k => k.toLowerCase().trim() === "amount");
-          
+
           const date = dateKey ? r[dateKey]?.trim() : "";
           const description = descKey ? r[descKey]?.trim() : "";
           const amountStr = amountKey ? r[amountKey] : "";
@@ -148,7 +148,7 @@ export default function BankSync() {
             errors.push(`Row ${idx + 2}: Missing date or description`);
             return;
           }
-          
+
           if (amount === null) {
             errors.push(`Row ${idx + 2}: Invalid amount "${amountStr}"`);
             return;
@@ -184,7 +184,7 @@ export default function BankSync() {
         toast.error(`Failed to parse CSV: ${err.message}`);
       }
     });
-    
+
     // Reset input
     e.target.value = "";
   }
@@ -192,40 +192,40 @@ export default function BankSync() {
   async function handlePDFUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     setPdfDialogOpen(true);
     setPdfExtracting(true);
     setPdfExtractedRows([]);
-    
+
     try {
       // Upload PDF to bank-statements bucket
       const fileExt = file.name.split(".").pop()?.toLowerCase() || "pdf";
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const filePath = `statements/${uniqueId}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from("bank-statements")
         .upload(filePath, file);
-      
+
       if (uploadError) {
         console.error("PDF upload error:", uploadError);
         toast.error(`Failed to upload PDF: ${uploadError.message}`);
         setPdfExtracting(false);
         return;
       }
-      
+
       // Call extraction edge function
       const { data, error } = await supabase.functions.invoke("extract-bank-pdf", {
         body: { filePath, fileName: file.name }
       });
-      
+
       if (error) {
         console.error("PDF extraction error:", error);
         toast.error("Failed to extract transactions from PDF");
         setPdfExtracting(false);
         return;
       }
-      
+
       if (data?.transactions && Array.isArray(data.transactions)) {
         setPdfExtractedRows(data.transactions);
         if (data.transactions.length === 0) {
@@ -238,24 +238,24 @@ export default function BankSync() {
       console.error("PDF processing error:", err);
       toast.error("Failed to process PDF");
     }
-    
+
     setPdfExtracting(false);
     e.target.value = "";
   }
 
   async function importPDFTransactions() {
     if (pdfExtractedRows.length === 0) return;
-    
+
     setPdfImporting(true);
-    
+
     const toInsert = pdfExtractedRows.map(r => ({
       transaction_date: r.date,
       description: r.description,
       amount: r.amount,
     }));
-    
+
     const { error } = await supabase.from("bank_transactions").insert(toInsert);
-    
+
     if (error) {
       console.error("Import error:", error);
       toast.error(`Failed to import: ${error.message}`);
@@ -265,7 +265,7 @@ export default function BankSync() {
       setPdfExtractedRows([]);
       fetchData();
     }
-    
+
     setPdfImporting(false);
   }
 
@@ -299,7 +299,7 @@ export default function BankSync() {
     <div>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Bank Sync</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Συγχρονισμός Τράπεζας</h1>
           <p className="mt-1 text-muted-foreground">Εισαγωγή και αντιστοίχιση τραπεζικών κινήσεων</p>
         </div>
         <div className="flex gap-3">
@@ -307,30 +307,30 @@ export default function BankSync() {
             <TooltipTrigger asChild>
               <Button variant="outline" onClick={downloadSampleCSV} className="rounded-xl gap-2">
                 <Download className="h-4 w-4" />
-                Sample CSV
+                Δείγμα CSV
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Download a sample CSV file with the correct format</TooltipContent>
+            <TooltipContent>Κατεβάστε δείγμα αρχείου CSV με τη σωστή μορφή</TooltipContent>
           </Tooltip>
-          
+
           <div>
             <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" id="csv-upload" />
             <label htmlFor="csv-upload">
               <Button asChild className="rounded-xl cursor-pointer gap-2">
                 <span>
                   <Upload className="h-4 w-4" />
-                  Import CSV
+                  Εισαγωγή CSV
                 </span>
               </Button>
             </label>
           </div>
-          
+
           <div>
-            <input 
-              type="file" 
-              accept=".pdf" 
-              onChange={handlePDFUpload} 
-              className="hidden" 
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handlePDFUpload}
+              className="hidden"
               id="pdf-upload"
               ref={pdfInputRef}
             />
@@ -344,7 +344,7 @@ export default function BankSync() {
                     </span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Upload bank statement PDF - Beta feature, may need review</TooltipContent>
+                <TooltipContent>Μεταφόρτωση PDF τράπεζας - Beta λειτουργία</TooltipContent>
               </Tooltip>
             </label>
           </div>
@@ -370,8 +370,8 @@ export default function BankSync() {
         <EmptyState
           icon={FileSpreadsheet}
           title="Δεν υπάρχουν κινήσεις"
-          description="Εισάγετε ένα αρχείο CSV με τις τραπεζικές σας κινήσεις για να ξεκινήσετε την αντιστοίχιση με παραστατικά."
-          actionLabel="Download Sample"
+          description="Εισάγετε ένα αρχείο CSV ή PDF με τις τραπεζικές σας κινήσεις για να ξεκινήσετε την αντιστοίχιση με παραστατικά."
+          actionLabel="Λήψη Δείγματος CSV"
           onAction={downloadSampleCSV}
         />
       ) : (
@@ -398,11 +398,11 @@ export default function BankSync() {
                       <p className="font-medium truncate">{txn.description}</p>
                       {txn.needs_invoice && (
                         <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200">
-                          Needs Invoice
+                          Λείπει Τιμολόγιο
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{format(new Date(txn.transaction_date), "dd MMM yyyy")}</p>
+                    <p className="text-sm text-muted-foreground">{format(new Date(txn.transaction_date), "dd/MM/yyyy")}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className={cn("font-semibold text-lg", txn.amount < 0 ? "text-destructive" : "")}>
@@ -411,16 +411,16 @@ export default function BankSync() {
                     {match && (
                       <p className="text-xs text-green-600 flex items-center justify-end gap-1">
                         <Check className="h-3 w-3" />
-                        {confidence === "high" ? "Exact match" : "Close match"}
+                        Ταίριασμα
                       </p>
                     )}
                   </div>
                   <Select value={txn.package_id || "none"} onValueChange={(v) => linkToPackage(txn.id, v === "none" ? null : v)}>
                     <SelectTrigger className="w-40 rounded-xl">
-                      <SelectValue placeholder="Link to..." />
+                      <SelectValue placeholder="Σύνδεση με..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No link</SelectItem>
+                      <SelectItem value="none">Καμία σύνδεση</SelectItem>
                       {packages.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.client_name}
@@ -430,7 +430,7 @@ export default function BankSync() {
                   </Select>
                   <div className="flex items-center gap-2">
                     <Switch checked={txn.needs_invoice} onCheckedChange={() => toggleNeedsInvoice(txn)} />
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">Invoice</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Τιμολόγιο;</span>
                   </div>
                 </motion.div>
               );
@@ -445,32 +445,32 @@ export default function BankSync() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Bank PDF Import (Beta)
+              Εισαγωγή PDF Τράπεζας (Beta)
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-4 w-4" />
-              Beta feature - extracted data may need manual review
+              Beta λειτουργία - ελέγξτε τα δεδομένα πριν την εισαγωγή
             </DialogDescription>
           </DialogHeader>
-          
+
           {pdfExtracting ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-              <p className="text-muted-foreground">Extracting transactions from PDF...</p>
+              <p className="text-muted-foreground">Εξαγωγή κινήσεων από PDF...</p>
             </div>
           ) : pdfExtractedRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
-              <p className="text-muted-foreground">No transactions could be extracted from this PDF.</p>
+              <p className="text-muted-foreground">Δεν βρέθηκαν κινήσεις στο PDF.</p>
             </div>
           ) : (
             <div className="max-h-96 overflow-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
-                    <th className="text-left p-3 font-medium">Date</th>
-                    <th className="text-left p-3 font-medium">Description</th>
-                    <th className="text-right p-3 font-medium">Amount</th>
+                    <th className="text-left p-3 font-medium">Ημερομηνία</th>
+                    <th className="text-left p-3 font-medium">Περιγραφή</th>
+                    <th className="text-right p-3 font-medium">Ποσό</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -485,25 +485,25 @@ export default function BankSync() {
               </table>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setPdfDialogOpen(false)} className="rounded-xl">
-              Cancel
+              Ακύρωση
             </Button>
-            <Button 
-              onClick={importPDFTransactions} 
+            <Button
+              onClick={importPDFTransactions}
               disabled={pdfExtractedRows.length === 0 || pdfImporting}
               className="rounded-xl gap-2"
             >
               {pdfImporting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Importing...
+                  Εισαγωγή...
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4" />
-                  Import {pdfExtractedRows.length} Transactions
+                  Εισαγωγή {pdfExtractedRows.length} Κινήσεων
                 </>
               )}
             </Button>

@@ -128,6 +128,9 @@ export default function PackageDetail() {
   const targetMargin = pkg?.target_margin_percent || 10;
   const suggestedPrice = totalExpenses * (1 + targetMargin / 100);
 
+  const matchedDocs = invoices.filter(i => i.matchedTransaction).length;
+  const matchRate = invoices.length > 0 ? (matchedDocs / invoices.length) * 100 : 0;
+
   const getStatusBadge = (inv: InvoiceWithMatch) => {
     if (inv.matchedTransaction) {
       return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 rounded-lg">Matched</Badge>;
@@ -156,242 +159,240 @@ export default function PackageDetail() {
 
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-32 animate-pulse rounded-3xl bg-muted" />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="h-96 animate-pulse rounded-3xl bg-muted" />
-          <div className="h-96 animate-pulse rounded-3xl bg-muted" />
-        </div>
-      </div>
-    );
+    return <div className="p-8">Φόρτωση...</div>;
   }
 
-  if (!pkg) return null;
+  if (!pkg) {
+    return <div className="p-8">Δεν βρέθηκε ο φάκελος</div>;
+  }
+
+
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Navigation & Header */}
-      <div className="flex flex-col gap-4">
-        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 hover:bg-muted/50">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Packages
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/packages")} className="rounded-xl">
+          <ArrowLeft className="h-5 w-5" />
         </Button>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Main Info Card */}
-          <Card className="md:col-span-2 rounded-3xl p-6 bg-gradient-to-br from-card to-secondary/30 border-border/50">
-            <div className="flex justify-between items-start">
-              <div>
-                <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg capitalize">
-                  {pkg.status}
-                </Badge>
-                <h1 className="text-3xl font-bold tracking-tight">{pkg.client_name}</h1>
-                <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-primary/50"></span>
-                  {format(new Date(pkg.start_date), "MMM d")} - {format(new Date(pkg.end_date), "MMM d, yyyy")}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Profit Dashboard */}
-          <Card className="rounded-3xl p-6 bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <TrendingUp className="w-24 h-24" />
-            </div>
-            <div className="relative z-10 space-y-4">
-              <div>
-                <p className="text-primary-foreground/80 text-sm font-medium">Net Profit</p>
-                <h2 className="text-3xl font-bold tracking-tight">€{profit.toFixed(2)}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none">
-                    {margin.toFixed(1)}% Margin
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
-                <div>
-                  <p className="text-xs text-primary-foreground/70">Expenses</p>
-                  <p className="font-semibold text-lg">€{totalExpenses.toFixed(0)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-primary-foreground/70">Revenue</p>
-                  <p className="font-semibold text-lg">€{totalIncome.toFixed(0)}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{pkg.client_name}</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            {format(new Date(pkg.start_date), "dd/MM/yyyy")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
+            <Badge variant={pkg.status === 'active' ? 'default' : 'secondary'} className="ml-2 capitalize">
+              {pkg.status === 'active' ? 'Ενεργό' : 'Ολοκληρωμένο'}
+            </Badge>
+          </p>
         </div>
       </div>
 
-      {/* Quote Mode Suggestion */}
-      {pkg.status === 'quote' && (
-        <Card className="rounded-2xl p-4 bg-amber-500/10 border-amber-500/20 text-amber-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="font-medium">Quote Suggestion</p>
-              <p className="text-sm opacity-80">Based on {targetMargin}% markup on {totalExpenses} expenses.</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-sm opacity-80">Suggested Price</p>
-            <p className="text-xl font-bold">€{suggestedPrice.toFixed(0)}</p>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-6 rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50 border-none shadow-sm">
+          <p className="text-sm font-medium text-red-600 mb-1">Συνολικά Έξοδα</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-red-700">€{totalExpenses.toFixed(2)}</span>
+            <span className="text-xs text-red-500 font-medium">εκτίμηση</span>
           </div>
         </Card>
-      )}
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="expenses" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-muted p-1 rounded-2xl mb-6 w-full max-w-md mx-auto grid grid-cols-2">
-          <TabsTrigger value="expenses" className="rounded-xl">Expenses (Out)</TabsTrigger>
-          <TabsTrigger value="income" className="rounded-xl">Income (In)</TabsTrigger>
-        </TabsList>
+        <Card className="p-6 rounded-3xl bg-gradient-to-br from-green-50 to-green-100/50 border-none shadow-sm">
+          <p className="text-sm font-medium text-green-600 mb-1">Συνολικά Έσοδα</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-green-700">€{totalIncome.toFixed(2)}</span>
+            <span className="text-xs text-green-500 font-medium">+ΦΠΑ</span>
+          </div>
+        </Card>
 
-        <TabsContent value={activeTab} className="grid gap-6 lg:grid-cols-2 animate-in slide-in-from-bottom-4 duration-500">
-          {/* Left Column: Invoices */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                {activeTab === 'expenses' ? 'Supplier Invoices' : 'Client Invoices'}
-              </h2>
-              <Button size="sm" onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2">
-                <Upload className="h-4 w-4" />
-                Upload
-              </Button>
+        <Card className="p-6 rounded-3xl bg-gradient-to-br from-blue-50 to-blue-100/50 border-none shadow-sm">
+          <p className="text-sm font-medium text-blue-600 mb-1">Εκτιμώμενο Κέρδος</p>
+          <div className="flex items-baseline gap-1">
+            <span className={`text-2xl font-bold ${profit >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+              €{profit.toFixed(2)}
+            </span>
+            <Badge variant="outline" className="bg-white/50 border-blue-200 text-blue-700">
+              {margin.toFixed(1)}%
+            </Badge>
+          </div>
+        </Card>
+
+        <Card className="p-6 rounded-3xl bg-gradient-to-br from-purple-50 to-purple-100/50 border-none shadow-sm">
+          <p className="text-sm font-medium text-purple-600 mb-1">Αντιστοίχιση Παραστατικών</p>
+          <div className="space-y-2">
+            <div className="flex justify-between items-baseline">
+              <span className="text-2xl font-bold text-purple-700">{Math.round(matchRate)}%</span>
+              <span className="text-xs text-purple-600">{matchedDocs}/{invoices.length}</span>
             </div>
-
-            <div className="space-y-3">
-              {invoices.filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income')).length === 0 ? (
-                <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
-                  <p className="text-muted-foreground">No documents found</p>
-                </Card>
-              ) : (
-                invoices
-                  .filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income'))
-                  .map((inv, i) => (
-                    <motion.div
-                      key={inv.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <Card
-                        className="p-4 rounded-2xl hover:bg-muted/50 cursor-pointer transition-colors border-border/50"
-                        onClick={() => openInvoicePreview(inv)}
-                      >
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium truncate">{inv.merchant || 'Unknown Merchant'}</span>
-                              {getStatusBadge(inv)}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span className="bg-secondary px-2 py-0.5 rounded text-secondary-foreground capitalize">
-                                {inv.category}
-                              </span>
-                              <span>{inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : 'No date'}</span>
-                            </div>
-                            {inv.matchedTransaction && (
-                              <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 bg-green-50 w-fit px-2 py-0.5 rounded-full">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Matched
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-lg">€{inv.amount?.toFixed(2)}</p>
-                          </div>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  ))
-              )}
+            <div className="h-1.5 bg-purple-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-600 rounded-full transition-all duration-500"
+                style={{ width: `${matchRate}%` }}
+              />
             </div>
           </div>
+        </Card>
+      </div>
 
-          {/* Right Column: Bank Transactions */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Bank Transactions
-              </h2>
-              <Badge variant="outline" className="rounded-lg">
-                Show {activeTab === 'expenses' ? 'Debits' : 'Credits'}
-              </Badge>
+      <Tabs defaultValue="expenses" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex justify-between items-center mb-6">
+          <TabsList className="bg-muted/50 p-1 rounded-2xl">
+            <TabsTrigger value="expenses" className="rounded-xl px-4 gap-2">
+              <FileText className="h-4 w-4" />
+              Έξοδα
+            </TabsTrigger>
+            <TabsTrigger value="income" className="rounded-xl px-4 gap-2">
+              <DollarSign className="h-4 w-4" />
+              Έσοδα
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="rounded-xl px-4 gap-2">
+              <CreditCard className="h-4 w-4" />
+              Συναλλαγές Τράπεζας
+            </TabsTrigger>
+          </TabsList>
+
+          <Button onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2 shadow-lg shadow-primary/20">
+            <Upload className="h-4 w-4" />
+            Μεταφόρτωση Αρχείων
+          </Button>
+
+          <TabsContent value={activeTab} className="grid gap-6 lg:grid-cols-2 animate-in slide-in-from-bottom-4 duration-500">
+            {/* Left Column: Invoices */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  {activeTab === 'expenses' ? 'Supplier Invoices' : 'Client Invoices'}
+                </h2>
+                <Button size="sm" onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {invoices.filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income')).length === 0 ? (
+                  <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
+                    <p className="text-muted-foreground">No documents found</p>
+                  </Card>
+                ) : (
+                  invoices
+                    .filter(i => i.type === (activeTab === 'expenses' ? 'expense' : 'income'))
+                    .map((inv, i) => (
+                      <motion.div
+                        key={inv.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <Card
+                          className="p-4 rounded-2xl hover:bg-muted/50 cursor-pointer transition-colors border-border/50"
+                          onClick={() => openInvoicePreview(inv)}
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium truncate">{inv.merchant || 'Unknown Merchant'}</span>
+                                {getStatusBadge(inv)}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="bg-secondary px-2 py-0.5 rounded text-secondary-foreground capitalize">
+                                  {inv.category}
+                                </span>
+                                <span>{inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : 'No date'}</span>
+                              </div>
+                              {inv.matchedTransaction && (
+                                <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 bg-green-50 w-fit px-2 py-0.5 rounded-full">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Matched
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-lg">€{inv.amount?.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </Card>
+                      </motion.div>
+                    ))
+                )}
+              </div>
             </div>
 
-            {/* Suggestions Area */}
-            {suggestedMatches.length > 0 && (
-              <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
-                <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
-                </div>
-                <div className="divide-y divide-primary/10">
-                  {suggestedMatches.map(({ transaction, invoice }) => (
-                    <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{transaction.description}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="rounded-xl h-8 text-xs gap-1"
-                        onClick={() => createMatch(invoice.id, transaction.id)}
-                        disabled={linking === transaction.id}
-                      >
-                        <Link2 className="h-3 w-3" />
-                        Link
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
+            {/* Right Column: Bank Transactions */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Bank Transactions
+                </h2>
+                <Badge variant="outline" className="rounded-lg">
+                  Show {activeTab === 'expenses' ? 'Debits' : 'Credits'}
+                </Badge>
+              </div>
 
-            {/* Transactions List */}
-            <div className="space-y-3">
-              {transactions
-                .filter(t => activeTab === 'expenses' ? t.amount < 0 : t.amount > 0)
-                .map((txn, i) => {
-                  const isMatched = matches.some(m => m.transaction_id === txn.id);
-                  return (
-                    <Card
-                      key={txn.id}
-                      className={cn(
-                        "p-4 rounded-2xl border-border/50 transition-colors",
-                        isMatched ? "bg-muted/30 opacity-60" : "bg-card"
-                      )}
-                    >
-                      <div className="flex justify-between items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm truncate">{txn.description}</p>
-                            {isMatched && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+              {/* Suggestions Area */}
+              {suggestedMatches.length > 0 && (
+                <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
+                  <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
+                  </div>
+                  <div className="divide-y divide-primary/10">
+                    {suggestedMatches.map(({ transaction, invoice }) => (
+                      <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{transaction.description}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="rounded-xl h-8 text-xs gap-1"
+                          onClick={() => createMatch(invoice.id, transaction.id)}
+                          disabled={linking === transaction.id}
+                        >
+                          <Link2 className="h-3 w-3" />
+                          Link
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Transactions List */}
+              <div className="space-y-3">
+                {transactions
+                  .filter(t => activeTab === 'expenses' ? t.amount < 0 : t.amount > 0)
+                  .map((txn, i) => {
+                    const isMatched = matches.some(m => m.transaction_id === txn.id);
+                    return (
+                      <Card
+                        key={txn.id}
+                        className={cn(
+                          "p-4 rounded-2xl border-border/50 transition-colors",
+                          isMatched ? "bg-muted/30 opacity-60" : "bg-card"
+                        )}
+                      >
+                        <div className="flex justify-between items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">{txn.description}</p>
+                              {isMatched && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(txn.transaction_date), "dd MMM")}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(txn.transaction_date), "dd MMM")}
+                          <p className={cn("font-semibold", txn.amount < 0 ? "text-foreground" : "text-green-600")}>
+                            {txn.amount < 0 ? '-' : '+'}€{Math.abs(txn.amount).toFixed(2)}
                           </p>
                         </div>
-                        <p className={cn("font-semibold", txn.amount < 0 ? "text-foreground" : "text-green-600")}>
-                          {txn.amount < 0 ? '-' : '+'}€{Math.abs(txn.amount).toFixed(2)}
-                        </p>
-                      </div>
-                    </Card>
-                  );
-                })
-              }
+                      </Card>
+                    );
+                  })
+                }
+              </div>
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+      </Tabs >
 
       <UploadModal
         open={uploadModalOpen}
@@ -400,6 +401,6 @@ export default function PackageDetail() {
         onUploadComplete={fetchData}
         defaultType={activeTab === 'expenses' ? 'expense' : 'income'}
       />
-    </div>
+    </div >
   );
 }
