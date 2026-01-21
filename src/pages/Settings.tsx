@@ -70,7 +70,7 @@ export default function Settings() {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
-                <p className="text-muted-foreground">Loading settings...</p>
+                <p className="text-muted-foreground">Φόρτωση ρυθμίσεων...</p>
             </div>
         );
     }
@@ -78,8 +78,8 @@ export default function Settings() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                <p className="mt-1 text-muted-foreground">Manage your agency information and bank details</p>
+                <h1 className="text-3xl font-bold tracking-tight">Ρυθμίσεις</h1>
+                <p className="mt-1 text-muted-foreground">Διαχείριση στοιχείων γραφείου και τραπεζικών λεπτομερειών</p>
             </div>
 
             <Card className="p-8 rounded-3xl">
@@ -88,50 +88,50 @@ export default function Settings() {
                         <Building2 className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-semibold">Agency Details</h2>
-                        <p className="text-sm text-muted-foreground">Information shown on invoices and documents</p>
+                        <h2 className="text-xl font-semibold">Στοιχεία Γραφείου</h2>
+                        <p className="text-sm text-muted-foreground">Πληροφορίες που εμφανίζονται στα τιμολόγια και έγγραφα</p>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="company_name">Company Name *</Label>
+                            <Label htmlFor="company_name">Επωνυμία Εταιρείας *</Label>
                             <Input
                                 id="company_name"
                                 value={settings.company_name}
                                 onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                                placeholder="e.g., Travel Agency Ltd"
+                                placeholder="π.χ., Τουριστικό Γραφείο ΕΠΕ"
                                 className="rounded-xl h-11"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="vat_number">VAT Number</Label>
+                            <Label htmlFor="vat_number">ΑΦΜ</Label>
                             <Input
                                 id="vat_number"
                                 value={settings.vat_number}
                                 onChange={(e) => setSettings({ ...settings, vat_number: e.target.value })}
-                                placeholder="e.g., GR123456789"
+                                placeholder="π.χ., EL123456789"
                                 className="rounded-xl h-11"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
+                        <Label htmlFor="address">Διεύθυνση</Label>
                         <Textarea
                             id="address"
                             value={settings.address}
                             onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                            placeholder="Street, City, Postal Code, Country"
+                            placeholder="Οδός, Πόλη, Τ.Κ., Χώρα"
                             className="rounded-xl min-h-[80px]"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
+                            <Label htmlFor="phone">Τηλέφωνο</Label>
                             <Input
                                 id="phone"
                                 value={settings.phone}
@@ -155,15 +155,15 @@ export default function Settings() {
                     </div>
 
                     <div className="pt-6 border-t">
-                        <h3 className="text-lg font-semibold mb-4">Bank Details</h3>
+                        <h3 className="text-lg font-semibold mb-4">Τραπεζικά Στοιχεία</h3>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="bank_name">Bank Name</Label>
+                                <Label htmlFor="bank_name">Όνομα Τράπεζας</Label>
                                 <Input
                                     id="bank_name"
                                     value={settings.bank_name}
                                     onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
-                                    placeholder="e.g., National Bank of Greece"
+                                    placeholder="π.χ., Εθνική Τράπεζα της Ελλάδος"
                                     className="rounded-xl h-11"
                                 />
                             </div>
@@ -186,7 +186,7 @@ export default function Settings() {
                                         id="swift"
                                         value={settings.swift}
                                         onChange={(e) => setSettings({ ...settings, swift: e.target.value })}
-                                        placeholder="e.g., ETHNGRAA"
+                                        placeholder="π.χ., ETHNGRAA"
                                         className="rounded-xl h-11"
                                     />
                                 </div>
@@ -195,9 +195,9 @@ export default function Settings() {
                     </div>
 
                     <div className="pt-6 border-t">
-                        <h3 className="text-lg font-semibold mb-4">Branding</h3>
+                        <h3 className="text-lg font-semibold mb-4">Λογότυπο</h3>
                         <div className="space-y-2">
-                            <Label htmlFor="logo_url">Logo URL</Label>
+                            <Label htmlFor="logo_url">URL Λογότυπου</Label>
                             <Input
                                 id="logo_url"
                                 value={settings.logo_url}
@@ -206,7 +206,7 @@ export default function Settings() {
                                 className="rounded-xl h-11"
                             />
                             <p className="text-xs text-muted-foreground">
-                                Upload your logo to a cloud service and paste the URL here
+                                Ανεβάστε το λογότυπό σας σε υπηρεσία cloud και επικολλήστε το URL εδώ
                             </p>
                         </div>
                     </div>
@@ -219,7 +219,7 @@ export default function Settings() {
                             size="lg"
                         >
                             <Save className="h-4 w-4" />
-                            {saving ? "Saving..." : "Save Settings"}
+                            {saving ? "Αποθήκευση..." : "Αποθήκευση Ρυθμίσεων"}
                         </Button>
                     </div>
                 </div>

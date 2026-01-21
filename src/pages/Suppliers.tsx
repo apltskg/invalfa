@@ -14,8 +14,9 @@ import { motion } from "framer-motion";
 export default function Suppliers() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false); // Added saving state
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null); // Changed to editingId
     const [searchQuery, setSearchQuery] = useState("");
 
     const [formData, setFormData] = useState({
@@ -24,7 +25,8 @@ export default function Suppliers() {
         email: "",
         phone: "",
         address: "",
-        notes: ""
+        notes: "",
+        invoice_instructions: "", // NEW: How to receive invoices from this supplier
     });
 
     useEffect(() => {
@@ -39,10 +41,10 @@ export default function Suppliers() {
                 .order("name", { ascending: true });
 
             if (error) throw error;
-            setSuppliers(data as Supplier[]);
+            setSuppliers((data as Supplier[]) || []); // Changed error handling slightly
         } catch (error: any) {
             console.error("Error fetching suppliers:", error);
-            toast.error("Failed to load suppliers");
+            toast.error("Αποτυχία φόρτωσης προμηθευτών"); // Translated
         } finally {
             setLoading(false);
         }
@@ -50,39 +52,59 @@ export default function Suppliers() {
 
     async function handleSave() {
         if (!formData.name.trim()) {
-            toast.error("Supplier name is required");
+            toast.error("Το όνομα προμηθευτή είναι υποχρεωτικό"); // Translated
             return;
         }
-
+        setSaving(true); // Set saving to true
         try {
-            if (editingSupplier) {
+            if (editingId) { // Changed to editingId
                 const { error } = await supabase
                     .from("suppliers")
-                    .update(formData)
-                    .eq("id", editingSupplier.id);
+                    .update({ // Explicitly list fields
+                        name: formData.name,
+                        contact_person: formData.contact_person,
+                        email: formData.email,
+                        phone: formData.phone,
+                        address: formData.address,
+                        notes: formData.notes,
+                        invoice_instructions: formData.invoice_instructions,
+                    })
+                    .eq("id", editingId); // Changed to editingId
 
                 if (error) throw error;
-                toast.success("Supplier updated successfully");
+                toast.success("Προμηθευτής ενημερώθηκε!"); // Translated
             } else {
                 const { error } = await supabase
                     .from("suppliers")
-                    .insert([formData]);
+                    .insert([ // Explicitly list fields
+                        {
+                            name: formData.name,
+                            contact_person: formData.contact_person,
+                            email: formData.email,
+                            phone: formData.phone,
+                            address: formData.address,
+                            notes: formData.notes,
+                            invoice_instructions: formData.invoice_instructions,
+                        },
+                    ]);
 
                 if (error) throw error;
-                toast.success("Supplier created successfully");
+                toast.success("Προμηθευτής προστέθηκε!"); // Translated
             }
 
             setDialogOpen(false);
-            resetForm();
+            resetForm(); // Use resetForm to clear form and editingId
             fetchSuppliers();
         } catch (error: any) {
             console.error("Save error:", error);
-            toast.error(`Failed to save supplier: ${error.message}`);
+            toast.error(error.message || "Αποτυχία αποθήκευσης"); // Translated
+        } finally {
+            setSaving(false); // Reset saving
         }
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Are you sure you want to delete this supplier?")) return;
+        if (!confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον προμηθευτή;")) return; // Translated
 
         try {
             const { error } = await supabase
@@ -91,36 +113,38 @@ export default function Suppliers() {
                 .eq("id", id);
 
             if (error) throw error;
-            toast.success("Supplier deleted successfully");
+            toast.success("Προμηθευτής διαγράφηκε!"); // Translated
             fetchSuppliers();
         } catch (error: any) {
             console.error("Delete error:", error);
-            toast.error(`Failed to delete supplier: ${error.message}`);
+            toast.error(`Αποτυχία διαγραφής προμηθευτή: ${error.message}`); // Translated
         }
     }
 
-    function openEditDialog(supplier: Supplier) {
-        setEditingSupplier(supplier);
+    function handleEdit(supplier: Supplier) { // Renamed from openEditDialog
+        setEditingId(supplier.id); // Changed to setEditingId
         setFormData({
             name: supplier.name,
             contact_person: supplier.contact_person || "",
             email: supplier.email || "",
             phone: supplier.phone || "",
             address: supplier.address || "",
-            notes: supplier.notes || ""
+            notes: supplier.notes || "",
+            invoice_instructions: supplier.invoice_instructions || "", // Added
         });
         setDialogOpen(true);
     }
 
     function resetForm() {
-        setEditingSupplier(null);
+        setEditingId(null); // Changed to setEditingId
         setFormData({
             name: "",
             contact_person: "",
             email: "",
             phone: "",
             address: "",
-            notes: ""
+            notes: "",
+            invoice_instructions: "", // Added
         });
     }
 
