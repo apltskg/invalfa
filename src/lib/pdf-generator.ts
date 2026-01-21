@@ -23,7 +23,8 @@ export interface ProformaData {
     lineItems: Array<{
         description: string;
         price: number;
-        taxPercent: number total: number;
+        taxPercent: number;
+        total: number;
     }>;
     subtotal: number;
     discountPercent: number;
@@ -106,7 +107,7 @@ export function generateProformaPDF(data: ProformaData, agencySettings: AgencySe
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text(`TOTAL: €${data.total.toFixed(2)}`, 200, final Y + (data.discountAmount > 0 ? 18 : 13), { align: "right" });
+    doc.text(`TOTAL: €${data.total.toFixed(2)}`, 200, finalY + (data.discountAmount > 0 ? 18 : 13), { align: "right" });
 
     // Bank Details
     if (data.acceptBankTransfer && agencySettings.iban) {

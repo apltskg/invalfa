@@ -1,22 +1,21 @@
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, Loader2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
-import { ExtractedData, InvoiceCategory, InvoiceType } from "@/types/database";
+import { ExtractedData, InvoiceCategory } from "@/types/database";
 
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   packageId?: string;
   onUploadComplete?: () => void;
-  defaultType?: string; // string mainly because it might come from tab value "income" | "expenses"
 }
 
-export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, defaultType = 'expense' }: UploadModalProps) {
+export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{
@@ -72,10 +71,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       setExtracting(true);
 
       // Call AI extraction edge function with file_path (not URL)
-      // Note: We'll ask it to extract considering the type (Merchant vs Customer) if possible
       const { data: extractionData, error: extractionError } = await supabase.functions
         .invoke("extract-invoice", {
-          body: { filePath: filePath, fileName: file.name, type: defaultType }
+          body: { filePath: filePath, fileName: file.name }
         });
 
       if (extractionError) {
@@ -98,7 +96,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       setUploading(false);
       setExtracting(false);
     }
-  }, [packageId, defaultType]);
+  }, [packageId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -121,7 +119,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     date: string | null;
     category: InvoiceCategory;
     packageId: string | null;
-    type: InvoiceType;
   }) => {
     if (!uploadedFile) return;
 
@@ -134,8 +131,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         invoice_date: data.date,
         category: data.category,
         package_id: data.packageId || packageId || null,
-        extracted_data: uploadedFile.extractedData as any,
-        type: data.type || (defaultType === 'income' ? 'income' : 'expense')
+        extracted_data: uploadedFile.extractedData as any
       }]);
 
       if (error) {
@@ -168,8 +164,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
             >
               <DialogHeader className="mb-6">
                 <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                  {defaultType === 'income' ? <ArrowDownCircle className="h-5 w-5 text-green-600" /> : <ArrowUpCircle className="h-5 w-5 text-red-600" />}
-                  Upload {defaultType === 'income' ? 'Income Invoice' : 'Expense Receipt'}
+                  <Upload className="h-5 w-5 text-primary" />
+                  Upload Invoice
                 </DialogTitle>
               </DialogHeader>
 
@@ -214,7 +210,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
               onSave={handleSave}
               onCancel={handleClose}
               defaultPackageId={packageId}
-              defaultType={defaultType as InvoiceType}
             />
           )}
         </AnimatePresence>
