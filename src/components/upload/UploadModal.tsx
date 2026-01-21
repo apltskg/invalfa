@@ -1,21 +1,22 @@
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
-import { ExtractedData, InvoiceCategory } from "@/types/database";
+import { ExtractedData, InvoiceCategory, InvoiceType } from "@/types/database";
 
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   packageId?: string;
   onUploadComplete?: () => void;
+  defaultType?: string; // string mainly because it might come from tab value "income" | "expenses"
 }
 
-export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }: UploadModalProps) {
+export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, defaultType = 'expense' }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{
@@ -30,11 +31,11 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
     if (!file) return;
 
     setUploading(true);
-    
+
     try {
       const fileExt = file.name.split(".").pop()?.toLowerCase() || "pdf";
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      
+
       // Use packageId folder if available, otherwise use "unassigned"
       const folder = packageId || "unassigned";
       const filePath = `${folder}/${uniqueId}.${fileExt}`;
@@ -56,7 +57,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from("invoices")
         .createSignedUrl(filePath, 3600);
-      
+
       if (signedUrlError) {
         console.error("Signed URL error:", signedUrlError);
         toast.error(`Failed to get preview URL: ${signedUrlError.message}`);
@@ -71,9 +72,10 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
       setExtracting(true);
 
       // Call AI extraction edge function with file_path (not URL)
+      // Note: We'll ask it to extract considering the type (Merchant vs Customer) if possible
       const { data: extractionData, error: extractionError } = await supabase.functions
         .invoke("extract-invoice", {
-          body: { filePath: filePath, fileName: file.name }
+          body: { filePath: filePath, fileName: file.name, type: defaultType }
         });
 
       if (extractionError) {
@@ -96,7 +98,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
       setUploading(false);
       setExtracting(false);
     }
-  }, [packageId]);
+  }, [packageId, defaultType]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -119,6 +121,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
     date: string | null;
     category: InvoiceCategory;
     packageId: string | null;
+    type: InvoiceType;
   }) => {
     if (!uploadedFile) return;
 
@@ -131,22 +134,23 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
         invoice_date: data.date,
         category: data.category,
         package_id: data.packageId || packageId || null,
-        extracted_data: uploadedFile.extractedData as any
+        extracted_data: uploadedFile.extractedData as any,
+        type: data.type || (defaultType === 'income' ? 'income' : 'expense')
       }]);
 
       if (error) {
         console.error("Save error:", error);
-        toast.error(`Failed to save invoice: ${error.message}`);
+        toast.error(`Failed to save document: ${error.message}`);
         return;
       }
 
-      toast.success("Invoice saved successfully");
+      toast.success("Document saved successfully");
       onUploadComplete?.();
       handleClose();
     } catch (error) {
       console.error("Save error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to save invoice: ${errorMessage}`);
+      toast.error(`Failed to save: ${errorMessage}`);
     }
   };
 
@@ -163,7 +167,10 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
               className="p-6"
             >
               <DialogHeader className="mb-6">
-                <DialogTitle className="text-xl font-semibold">Upload Invoice</DialogTitle>
+                <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                  {defaultType === 'income' ? <ArrowDownCircle className="h-5 w-5 text-green-600" /> : <ArrowUpCircle className="h-5 w-5 text-red-600" />}
+                  Upload {defaultType === 'income' ? 'Income Invoice' : 'Expense Receipt'}
+                </DialogTitle>
               </DialogHeader>
 
               <div
@@ -176,7 +183,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
                 `}
               >
                 <input {...getInputProps()} />
-                
+
                 {uploading || extracting ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-12 w-12 text-primary animate-spin" />
@@ -190,7 +197,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
                       <Upload className="h-8 w-8 text-primary" />
                     </div>
                     <p className="mb-2 text-lg font-medium">
-                      {isDragActive ? "Drop your file here" : "Drag & drop your invoice"}
+                      {isDragActive ? "Drop your file here" : "Drag & drop your file"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       or click to browse • PDF, PNG, JPG
@@ -207,6 +214,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete }:
               onSave={handleSave}
               onCancel={handleClose}
               defaultPackageId={packageId}
+              defaultType={defaultType as InvoiceType}
             />
           )}
         </AnimatePresence>

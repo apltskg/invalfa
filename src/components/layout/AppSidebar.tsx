@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, Truck, Users } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Sidebar,
@@ -15,10 +15,13 @@ import {
 
 const menuItems = [
   { title: "Packages", icon: Package, url: "/packages" },
+  { title: "Suppliers", icon: Truck, url: "/suppliers" },
+  { title: "Customers", icon: Users, url: "/customers" },
   { title: "Bank Sync", icon: Building2, url: "/bank-sync" },
   { title: "Export Hub", icon: FileSpreadsheet, url: "/export-hub" },
   { title: "New Proforma", icon: FileText, url: "/proforma" },
   { title: "Manage Proformas", icon: List, url: "/proformas" },
+  { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
 export function AppSidebar() {
@@ -37,7 +40,7 @@ export function AppSidebar() {
           </div>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">

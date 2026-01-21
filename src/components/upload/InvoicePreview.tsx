@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Check, X, Sparkles } from "lucide-react";
-import { ExtractedData, InvoiceCategory, Package } from "@/types/database";
+import { ExtractedData, InvoiceCategory, InvoiceType, Package } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvoicePreviewProps {
@@ -18,16 +18,19 @@ interface InvoicePreviewProps {
     date: string | null;
     category: InvoiceCategory;
     packageId: string | null;
+    type: InvoiceType;
   }) => void;
   onCancel: () => void;
   defaultPackageId?: string;
+  defaultType?: InvoiceType;
 }
 
-export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId }: InvoicePreviewProps) {
+export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId, defaultType = 'expense' }: InvoicePreviewProps) {
   const [merchant, setMerchant] = useState(extractedData?.merchant || "");
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
+  const [type, setType] = useState<InvoiceType>(defaultType);
   const [packageId, setPackageId] = useState<string | null>(defaultPackageId || null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
@@ -39,10 +42,10 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         .select("*")
         .eq("status", "active")
         .order("created_at", { ascending: false });
-      
+
       if (data) {
         setPackages(data as Package[]);
-        
+
         // If we have a default package, use it
         if (defaultPackageId) {
           const defaultPkg = data.find((p: Package) => p.id === defaultPackageId);
@@ -52,7 +55,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         } else if (extractedData?.merchant) {
           // Auto-suggest package based on merchant name
           const merchantLower = extractedData.merchant.toLowerCase();
-          const match = data.find((pkg: Package) => 
+          const match = data.find((pkg: Package) =>
             merchantLower.includes(pkg.client_name.toLowerCase()) ||
             pkg.client_name.toLowerCase().includes(merchantLower.split(" ")[0])
           );
@@ -72,7 +75,8 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       amount: amount ? parseFloat(amount) : null,
       date: date || null,
       category,
-      packageId
+      packageId,
+      type
     });
   };
 
@@ -127,12 +131,25 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
 
         <div className="flex-1 overflow-auto p-6 space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="merchant">Merchant</Label>
+            <Label htmlFor="type">Document Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as InvoiceType)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Expense (Out)</SelectItem>
+                <SelectItem value="income">Income (In)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="merchant">{type === 'income' ? 'Client / Payer' : 'Merchant / Payee'}</Label>
             <Input
               id="merchant"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder="e.g., Aegean Airlines"
+              placeholder={type === 'income' ? "e.g., John Doe" : "e.g., Aegean Airlines"}
               className="rounded-xl"
             />
           </div>
@@ -151,7 +168,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Invoice Date</Label>
+            <Label htmlFor="date">Date</Label>
             <Input
               id="date"
               type="date"
@@ -170,7 +187,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
               <SelectContent>
                 <SelectItem value="airline">✈️ Airline</SelectItem>
                 <SelectItem value="hotel">🏨 Hotel</SelectItem>
-                <SelectItem value="tolls">🛣️ Tolls</SelectItem>
+                <SelectItem value="tolls">🛣️ Tolls/Transport</SelectItem>
                 <SelectItem value="other">📄 Other</SelectItem>
               </SelectContent>
             </Select>
@@ -207,7 +224,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           </Button>
           <Button onClick={handleSave} className="flex-1 rounded-xl">
             <Check className="h-4 w-4 mr-2" />
-            Save Invoice
+            Save Document
           </Button>
         </div>
       </div>

@@ -1,29 +1,47 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Package as PackageIcon, FileText, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
+import { Plus, Package as PackageIcon, FileText, AlertCircle, CheckCircle2, Calendar, TrendingUp, Users, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Invoice } from "@/types/database";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
-type PackageWithInvoices = Package & { invoices: Invoice[] };
+type PackageWithStats = Package & {
+  invoices: Invoice[];
+  stats: {
+    total: number;
+    matched: number;
+    totalAmount: number;
+    income: number;
+    expenses: number;
+    profit: number;
+    margin: number;
+  }
+};
 
 export default function Packages() {
   const navigate = useNavigate();
-  const [packages, setPackages] = useState<PackageWithInvoices[]>([]);
+  const [packages, setPackages] = useState<PackageWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+
+  // New Package State
   const [newPackage, setNewPackage] = useState({
     client_name: "",
     start_date: "",
     end_date: "",
+    target_margin_percent: "10", // Default 10%
+    description: "",
   });
 
   useEffect(() => {
@@ -31,192 +49,297 @@ export default function Packages() {
   }, []);
 
   async function fetchData() {
-    const [{ data: pkgs }, { data: invs }] = await Promise.all([
-      supabase.from("packages").select("*").order("created_at", { ascending: false }),
-      supabase.from("invoices").select("*"),
-    ]);
+    try {
+      const [{ data: pkgs }, { data: invs }] = await Promise.all([
+        supabase.from("packages").select("*").order("created_at", { ascending: false }),
+        supabase.from("invoices").select("*"),
+      ]);
 
-    const packagesWithInvoices = ((pkgs as Package[]) || []).map((pkg) => ({
-      ...pkg,
-      invoices: ((invs as Invoice[]) || []).filter((inv) => inv.package_id === pkg.id),
-    }));
+      const processedPackages = ((pkgs as Package[]) || []).map((pkg) => {
+        // Cast and map invoices to match new interface with defaults
+        const pkgInvoices = ((invs as any[]) || [])
+          .filter((inv) => inv.package_id === pkg.id)
+          .map(inv => ({
+            ...inv,
+            type: inv.type || 'expense', // Default to expense if missing
+            payment_status: inv.payment_status || 'pending',
+            supplier_id: inv.supplier_id || null,
+            customer_id: inv.customer_id || null
+          })) as Invoice[];
 
-    setPackages(packagesWithInvoices);
-    setLoading(false);
+        // Calculate financial stats
+        // Note: We need to safely check 'type' as it might be missing in old data
+        const expenses = pkgInvoices
+          .filter(i => (i as any).type === 'expense' || !(i as any).type) // Assume expense if undefined for backward compat
+          .reduce((sum, i) => sum + (i.amount || 0), 0);
+
+        const income = pkgInvoices
+          .filter(i => (i as any).type === 'income')
+          .reduce((sum, i) => sum + (i.amount || 0), 0);
+
+        const profit = income - expenses;
+        const margin = income > 0 ? (profit / income) * 100 : 0;
+
+        return {
+          ...pkg,
+          invoices: pkgInvoices,
+          stats: {
+            total: pkgInvoices.length,
+            matched: pkgInvoices.filter((inv) => (inv as any).matchedTransaction).length, // simplified check
+            totalAmount: pkgInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
+            income,
+            expenses,
+            profit,
+            margin
+          }
+        };
+      });
+
+      setPackages(processedPackages);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load packages");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function createPackage() {
     if (!newPackage.client_name || !newPackage.start_date || !newPackage.end_date) {
-      toast.error("Please fill all fields");
+      toast.error("Please fill all required fields");
       return;
     }
 
-    const { error } = await supabase.from("packages").insert([newPackage]);
-    if (error) {
-      toast.error("Failed to create package");
-    } else {
-      toast.success("Package created");
+    try {
+      const { error } = await supabase.from("packages").insert([{
+        client_name: newPackage.client_name,
+        start_date: newPackage.start_date,
+        end_date: newPackage.end_date,
+        // @ts-ignore - Supabase types might not be updated yet
+        target_margin_percent: parseFloat(newPackage.target_margin_percent) || 0,
+        status: 'active'
+      }]);
+
+      if (error) throw error;
+
+      toast.success("Package created successfully");
       setDialogOpen(false);
-      setNewPackage({ client_name: "", start_date: "", end_date: "" });
+      setNewPackage({
+        client_name: "",
+        start_date: "",
+        end_date: "",
+        target_margin_percent: "10",
+        description: ""
+      });
       fetchData();
+    } catch (error) {
+      console.error("Create error:", error);
+      toast.error("Failed to create package");
     }
   }
 
-  const getPackageStats = (pkg: PackageWithInvoices) => {
-    const total = pkg.invoices.length;
-    const matched = pkg.invoices.filter((inv) => inv.amount).length;
-    const totalAmount = pkg.invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-    return { total, matched, totalAmount };
-  };
+  const filteredPackages = activeTab === "all"
+    ? packages
+    : packages.filter(p => p.status === activeTab);
 
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Πακέτα Ταξιδιών</h1>
-          <p className="mt-1 text-muted-foreground">Διαχείριση πακέτων και παραστατικών</p>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Travel Packages
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Manage your trips, expenses, and profitability.
+          </p>
         </div>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl gap-2">
-              <Plus className="h-4 w-4" />
-              Νέο Πακέτο
+            <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Plus className="h-5 w-5" />
+              New Package
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-3xl">
+          <DialogContent className="sm:max-w-[500px] rounded-3xl p-6">
             <DialogHeader>
-              <DialogTitle>Δημιουργία Πακέτου</DialogTitle>
+              <DialogTitle className="text-2xl">Create New Package</DialogTitle>
+              <p className="text-muted-foreground">
+                Set up a new trip to track expenses and income.
+              </p>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+
+            <div className="space-y-6 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="client">Όνομα Πελάτη</Label>
-                <Input
-                  id="client"
-                  value={newPackage.client_name}
-                  onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
-                  placeholder="π.χ. Παπαδόπουλος Ιωάννης"
-                  className="rounded-xl"
-                />
+                <Label htmlFor="client" className="text-sm font-medium">Client / Group Name</Label>
+                <div className="relative">
+                  <Input
+                    id="client"
+                    value={newPackage.client_name}
+                    onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
+                    placeholder="e.g. Acme Corp Retreat or John Doe Family"
+                    className="pl-10 rounded-xl h-11"
+                  />
+                  <Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start">Ημερομηνία Έναρξης</Label>
+                  <Label htmlFor="start">Start Date</Label>
                   <Input
                     id="start"
                     type="date"
                     value={newPackage.start_date}
                     onChange={(e) => setNewPackage({ ...newPackage, start_date: e.target.value })}
-                    className="rounded-xl"
+                    className="rounded-xl h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end">Ημερομηνία Λήξης</Label>
+                  <Label htmlFor="end">End Date</Label>
                   <Input
                     id="end"
                     type="date"
                     value={newPackage.end_date}
                     onChange={(e) => setNewPackage({ ...newPackage, end_date: e.target.value })}
-                    className="rounded-xl"
+                    className="rounded-xl h-11"
                   />
                 </div>
               </div>
-              <Button onClick={createPackage} className="w-full rounded-xl">
-                Δημιουργία
-              </Button>
+
+              <div className="space-y-2">
+                <Label htmlFor="margin">Target Margin (%)</Label>
+                <div className="relative">
+                  <Input
+                    id="margin"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newPackage.target_margin_percent}
+                    onChange={(e) => setNewPackage({ ...newPackage, target_margin_percent: e.target.value })}
+                    className="pl-10 rounded-xl h-11"
+                  />
+                  <TrendingUp className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Used to suggest billing amounts based on expenses.
+                </p>
+              </div>
             </div>
+
+            <DialogFooter className="pt-4">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
+                Cancel
+              </Button>
+              <Button onClick={createPackage} className="rounded-xl h-11 px-8">
+                Create Package
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-48 animate-pulse rounded-3xl bg-muted" />
-          ))}
-        </div>
-      ) : packages.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <PackageIcon className="h-8 w-8 text-primary" />
-          </div>
-          <p className="mb-2 text-lg font-medium">Δεν υπάρχουν πακέτα</p>
-          <p className="mb-6 text-center text-sm text-muted-foreground">
-            Ξεκινήστε δημιουργώντας ένα νέο πακέτο ταξιδιού για να οργανώσετε τα παραστατικά σας.
-          </p>
-          <Button onClick={() => setDialogOpen(true)} className="rounded-xl gap-2">
-            <Plus className="h-4 w-4" />
-            Δημιουργία Πακέτου
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {packages.map((pkg, index) => {
-            const stats = getPackageStats(pkg);
-            const matchPercent = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-6">
+          <TabsTrigger value="all" className="rounded-xl">All Packages</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl">Active</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl">Completed</TabsTrigger>
+        </TabsList>
 
-            return (
-              <motion.div
-                key={pkg.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card
-                  className="group cursor-pointer rounded-3xl p-6 transition-all duration-200 hover:shadow-elevated hover:-translate-y-0.5"
-                  onClick={() => navigate(`/packages/${pkg.id}`)}
+        <TabsContent value={activeTab} className="space-y-4">
+          {loading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="h-64 animate-pulse rounded-3xl bg-muted/50 border-none" />
+              ))}
+            </div>
+          ) : filteredPackages.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                <PackageIcon className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">No packages found</h3>
+              <p className="text-muted-foreground mb-6 text-center max-w-sm">
+                Get started by creating your first travel package to track expenses and calculate profits.
+              </p>
+              <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
+                Create First Package
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredPackages.map((pkg, index) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  <div className="mb-4 flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg">{pkg.client_name}</h3>
-                      <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>
-                          {format(new Date(pkg.start_date), "dd/MM")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
-                        </span>
+                  <Card
+                    className="group relative cursor-pointer overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 border border-border/50 bg-gradient-to-br from-card to-secondary/30"
+                    onClick={() => navigate(`/packages/${pkg.id}`)}
+                  >
+                    <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+
+                    <div className="mb-6 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm">
+                          {pkg.status}
+                        </Badge>
+                      </div>
+
+                      <div>
+                        <h3 className="font-bold text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors">
+                          {pkg.client_name}
+                        </h3>
+                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {format(new Date(pkg.start_date), "MMM d")} - {format(new Date(pkg.end_date), "MMM d, yyyy")}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize">
-                      {pkg.status === "active" ? "Ενεργό" : "Ολοκληρώθηκε"}
-                    </Badge>
-                  </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <FileText className="h-4 w-4" />
-                        Παραστατικά
-                      </span>
-                      <span className="font-medium">{stats.total}</span>
-                    </div>
+                    <div className="space-y-4 pt-4 border-t border-border/50">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Expenses</p>
+                          <p className="font-semibold text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Profit (Est.)</p>
+                          <p className={`font-semibold ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
+                          </p>
+                        </div>
+                      </div>
 
-                    {stats.total > 0 && (
-                      <>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      {/* Progress Bar for Matching */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Docs Matched</span>
+                          <span>{pkg.stats.total > 0 ? Math.round((pkg.stats.matched / pkg.stats.total) * 100) : 0}%</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                           <div
                             className="h-full rounded-full bg-primary transition-all duration-500"
-                            style={{ width: `${matchPercent}%` }}
+                            style={{
+                              width: `${pkg.stats.total > 0 ? (pkg.stats.matched / pkg.stats.total) * 100 : 0}%`
+                            }}
                           />
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1.5 text-muted-foreground">
-                            {matchPercent === 100 ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            ) : (
-                              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                            )}
-                            {matchPercent}% ολοκληρώθηκε
-                          </span>
-                          <span className="font-semibold">€{stats.totalAmount.toFixed(2)}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -10,6 +10,9 @@ import BankSync from "./pages/BankSync";
 import ExportHub from "./pages/ExportHub";
 import ProformaInvoice from "./pages/ProformaInvoice";
 import ManageProformas from "./pages/ManageProformas";
+import Suppliers from "./pages/Suppliers";
+import Customers from "./pages/Customers";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,10 +28,13 @@ const App = () => (
             <Route path="/" element={<Navigate to="/packages" replace />} />
             <Route path="/packages" element={<Packages />} />
             <Route path="/packages/:id" element={<PackageDetail />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/customers" element={<Customers />} />
             <Route path="/bank-sync" element={<BankSync />} />
             <Route path="/export-hub" element={<ExportHub />} />
             <Route path="/proforma" element={<ProformaInvoice />} />
             <Route path="/proformas" element={<ManageProformas />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
