@@ -81,7 +81,7 @@ export default function ExportHub() {
         for (const inv of pkg.invoices) {
           const matchedTxn = getMatchInfo(inv.id);
           const extractedData = inv.extracted_data as any;
-          
+
           summaryData.push({
             "Package": pkg.client_name,
             "Merchant": inv.merchant || "—",
@@ -104,7 +104,7 @@ export default function ExportHub() {
       }
 
       const ws = XLSX.utils.json_to_sheet(summaryData);
-      
+
       // Set column widths
       ws['!cols'] = [
         { wch: 20 }, // Package
@@ -121,11 +121,11 @@ export default function ExportHub() {
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
-      
+
       const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement("a");
       a.href = url;
       a.download = `TravelDocs-${selectedMonth}.xlsx`;
@@ -146,41 +146,69 @@ export default function ExportHub() {
     const zip = new JSZip();
 
     const summaryData: any[] = [];
+    let fileIndex = 1;
 
     for (const pkg of filteredPackages) {
       for (const inv of pkg.invoices) {
-        const fileName = `${pkg.client_name}-${inv.category}-€${inv.amount?.toFixed(2) || "0"}.pdf`;
+        // Create descriptive filename: YYYY-MM-DD_Provider_Category_Amount.pdf
+        const invoiceDate = inv.invoice_date || format(new Date(), "yyyy-MM-dd");
+        const provider = (inv.merchant || pkg.client_name || "Unknown").replace(/[/\\?%*:|"<>]/g, "-").substring(0, 30);
+        const category = (inv.category || "other").toUpperCase();
+        const amount = `${(inv.amount || 0).toFixed(2)}EUR`;
+        const fileName = `${invoiceDate}_${provider}_${category}_${amount}.pdf`;
 
-        const { data } = await supabase.storage.from("invoices").download(inv.file_path);
-        if (data) {
-          zip.file(fileName, data);
+        try {
+          const { data } = await supabase.storage.from("invoices").download(inv.file_path);
+          if (data) {
+            zip.file(fileName, data);
+          } else {
+            console.warn(`No file data for invoice ${inv.id}`);
+          }
+        } catch (error) {
+          console.error(`Error downloading invoice ${inv.id}:`, error);
+          // Continue with other files
         }
 
         summaryData.push({
-          Package: pkg.client_name,
-          Category: inv.category,
-          Merchant: inv.merchant,
-          Amount: inv.amount,
-          Date: inv.invoice_date,
+          "Αρ.": fileIndex++,
+          "Πακέτο": pkg.client_name,
+          "Προμηθευτής": inv.merchant || "—",
+          "Κατηγορία": category,
+          "Ημερομηνία": invoiceDate,
+          "Ποσό (€)": (inv.amount || 0).toFixed(2),
+          "Όνομα Αρχείου": fileName,
         });
       }
     }
 
-    const ws = XLSX.utils.json_to_sheet(summaryData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Summary");
-    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    zip.file("Summary.xlsx", excelBuffer);
+    // Add summary Excel file
+    if (summaryData.length > 0) {
+      const ws = XLSX.utils.json_to_sheet(summaryData);
+      ws['!cols'] = [
+        { wch: 5 },  // Αρ.
+        { wch: 20 }, // Πακέτο
+        { wch: 25 }, // Προμηθευτής
+        { wch: 12 }, // Κατηγορία
+        { wch: 12 }, // Ημερομηνία
+        { wch: 12 }, // Ποσό
+        { wch: 60 }, // Όνομα Αρχείου
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Περιληψη");
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      zip.file(`00_ΠΕΡΙΛΗΨΗ_${selectedMonth}.xlsx`, excelBuffer);
+    }
 
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invoices-${selectedMonth}.zip`;
+    a.download = `TravelDocs_${selectedMonth}_${filteredPackages.length}packages_${summaryData.length}invoices.zip`;
     a.click();
+    URL.revokeObjectURL(url);
 
     setExporting(false);
-    toast.success("Export downloaded!");
+    toast.success(`Εξαγωγή ολοκληρώθηκε! ${summaryData.length} αρχεία.`);
   }
 
   async function sendToAccountant() {
@@ -252,26 +280,26 @@ export default function ExportHub() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-8">
-        <Button 
-          onClick={generateXlsx} 
-          disabled={exportingXlsx || totalInvoices === 0} 
+        <Button
+          onClick={generateXlsx}
+          disabled={exportingXlsx || totalInvoices === 0}
           className="rounded-xl gap-2"
         >
           <FileSpreadsheet className="h-4 w-4" />
           {exportingXlsx ? "Generating..." : "Download XLSX Report"}
         </Button>
-        <Button 
-          onClick={generateZip} 
-          disabled={exporting || totalInvoices === 0} 
+        <Button
+          onClick={generateZip}
+          disabled={exporting || totalInvoices === 0}
           variant="outline"
           className="rounded-xl gap-2"
         >
           <Archive className="h-4 w-4" />
           {exporting ? "Generating..." : "Download ZIP + Excel"}
         </Button>
-        <Button 
-          disabled 
-          variant="outline" 
+        <Button
+          disabled
+          variant="outline"
           className="rounded-xl gap-2 opacity-50 cursor-not-allowed"
           title="Σύντομα διαθέσιμο"
         >
