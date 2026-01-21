@@ -237,6 +237,42 @@ export default function ExportHub() {
     toast.success("Marked as sent!");
   }
 
+  async function generateMagicLink() {
+    try {
+      // Generate unique token
+      const token = crypto.randomUUID();
+
+      // Set expiration (7 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const { error } = await supabase.from("accountant_magic_links").insert([
+        {
+          token,
+          month_year: selectedMonth,
+          expires_at: expiresAt.toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error("Magic link error:", error);
+        toast.error("Failed to generate link");
+        return;
+      }
+
+      // Generate the link
+      const link = `${window.location.origin}/accountant/${token}`;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(link);
+
+      toast.success("Magic link copied to clipboard! Valid for 7 days.");
+    } catch (error) {
+      console.error("Error generating magic link:", error);
+      toast.error("Failed to generate magic link");
+    }
+  }
+
   const totalInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
   const totalAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
   const currentMonthLabel = months.find((m) => m.value === selectedMonth)?.label || selectedMonth;
@@ -298,13 +334,13 @@ export default function ExportHub() {
           {exporting ? "Generating..." : "Download ZIP + Excel"}
         </Button>
         <Button
-          disabled
+          onClick={generateMagicLink}
+          disabled={totalInvoices === 0}
           variant="outline"
-          className="rounded-xl gap-2 opacity-50 cursor-not-allowed"
-          title="Σύντομα διαθέσιμο"
+          className="rounded-xl gap-2"
         >
           <Link2 className="h-4 w-4" />
-          Magic Link (σύντομα)
+          Magic Link (Λογιστή)
         </Button>
         <Button
           onClick={() => setConfirmSendDialog(true)}

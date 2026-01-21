@@ -14,15 +14,15 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { title: "Packages", icon: Package, url: "/packages" },
-  { title: "Suppliers", icon: Truck, url: "/suppliers" },
-  { title: "Customers", icon: Users, url: "/customers" },
-  { title: "Analytics", icon: BarChart3, url: "/analytics" },
-  { title: "Bank Sync", icon: Building2, url: "/bank-sync" },
-  { title: "Export Hub", icon: FileSpreadsheet, url: "/export-hub" },
-  { title: "New Proforma", icon: FileText, url: "/proforma" },
-  { title: "Manage Proformas", icon: List, url: "/proformas" },
-  { title: "Settings", icon: Settings, url: "/settings" },
+  { title: "Φάκελοι", icon: Package, url: "/packages" },
+  { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
+  { title: "Πελάτες", icon: Users, url: "/customers" },
+  { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
+  { title: "Συγχρονισμός Τράπεζας", icon: Building2, url: "/bank-sync" },
+  { title: "Εξαγωγές", icon: FileSpreadsheet, url: "/export-hub" },
+  { title: "Νέο Προτιμολόγιο", icon: FileText, url: "/proforma" },
+  { title: "Διαχείριση Προτιμολογίων", icon: List, url: "/proformas" },
+  { title: "Ρυθμίσεις", icon: Settings, url: "/settings" },
 ];
 
 export function AppSidebar() {
