@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 
 // Company details (fixed)
+// Company details
 const COMPANY_INFO = {
   name: "ALFA MONOPROSOPI I.K.E.",
   address: "Thesi Filakio, Leptokarya, Pieria, Greece, 60063",
@@ -40,6 +41,8 @@ const COMPANY_INFO = {
   stampName: "ALFA M.I.K.E.",
   stampDetails: "ΓΡΑΦΕΙΟ ΓΕΝΙΚΟΥ ΤΟΥΡΙΣΜΟΥ\n60063 ΛΕΠΤΟΚΑΡΥΑ ΠΙΕΡΙΑΣ\nΑΦΜ 801915410 ΔΟΥ ΚΑΤΕΡΙΝΗΣ",
   ceo: "Alexandros Papadopoulos",
+  logoUrl: "https://atravel.gr/wp-content/uploads/2023/07/Alfa-Logo-Horizontal-Retina.png",
+  iconUrl: "https://atravel.gr/wp-content/uploads/2023/07/cropped-Icon-512.png"
 };
 
 const BANK_ACCOUNTS = [
@@ -440,13 +443,11 @@ export default function ProformaInvoice() {
           <div className="flex justify-between items-start mb-12">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="text-4xl font-bold tracking-tight text-primary">
-                <span className="text-primary">A</span>
-                <span className="text-primary ml-2">ALFA</span>
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em] mt-2">
-                TRAVEL
-              </div>
+              <img
+                src={COMPANY_INFO.logoUrl}
+                alt="Alfa Travel Logo"
+                className="h-16 object-contain"
+              />
             </div>
 
             {/* Invoice Info */}
