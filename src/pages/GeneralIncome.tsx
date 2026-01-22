@@ -3,15 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/database";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Calendar, TrendingUp } from "lucide-react";
+import { Upload, FileText, Calendar, TrendingUp, MoreVertical, Eye, Edit, Trash2, FileUp } from "lucide-react";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function GeneralIncome() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -34,6 +54,60 @@ export default function GeneralIncome() {
             setLoading(false);
         }
     }
+
+    const handleView = async (inv: Invoice) => {
+        if (inv.file_path && inv.file_path.startsWith("manual/")) {
+            toast.info("This is a manual entry with no file attached yet");
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase.storage
+                .from("invoices")
+                .createSignedUrl(inv.file_path, 3600);
+
+            if (error || !data?.signedUrl) {
+                toast.error("Failed to get file URL");
+                return;
+            }
+
+            window.open(data.signedUrl, "_blank");
+        } catch (error) {
+            console.error("Preview error:", error);
+            toast.error("Failed to open file");
+        }
+    };
+
+    const handleEdit = (inv: Invoice) => {
+        toast.info("Edit functionality coming soon!");
+    };
+
+    const handleDelete = async () => {
+        if (!selectedInvoice) return;
+
+        try {
+            const { error } = await supabase
+                .from("invoices")
+                .delete()
+                .eq("id", selectedInvoice.id);
+
+            if (error) throw error;
+
+            toast.success("Income deleted successfully");
+            fetchData();
+        } catch (error) {
+            console.error("Delete error:", error);
+            toast.error("Failed to delete income");
+        } finally {
+            setDeleteDialogOpen(false);
+            setSelectedInvoice(null);
+        }
+    };
+
+    const confirmDelete = (inv: Invoice) => {
+        setSelectedInvoice(inv);
+        setDeleteDialogOpen(true);
+    };
 
     const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
@@ -79,28 +153,74 @@ export default function GeneralIncome() {
                     </div>
                 ) : (
                     <div className="divide-y divide-border">
-                        {invoices.map((inv) => (
-                            <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                                        <FileText className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-foreground">{inv.merchant || "Άγνωστος Πελάτης"}</p>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Badge variant="secondary" className="rounded-md font-normal text-xs h-5 px-2">
-                                                {inv.category}
-                                            </Badge>
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "-"}
-                                            </span>
+                        {invoices.map((inv) => {
+                            const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
+
+                            return (
+                                <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors group">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                                            {hasFile ? <FileText className="h-5 w-5" /> : <FileUp className="h-5 w-5 opacity-50" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium text-foreground">{inv.merchant || "Άγνωστος Πελάτης"}</p>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Badge variant="secondary" className="rounded-md font-normal text-xs h-5 px-2">
+                                                    {inv.category}
+                                                </Badge>
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "-"}
+                                                </span>
+                                                {!hasFile && (
+                                                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                                                        No file
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <p className="font-bold text-green-600">+€{(inv.amount || 0).toFixed(2)}</p>
+
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48">
+                                                {hasFile && (
+                                                    <DropdownMenuItem onClick={() => handleView(inv)}>
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        View File
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {!hasFile && (
+                                                    <DropdownMenuItem onClick={() => toast.info("Upload file feature coming soon!")}>
+                                                        <FileUp className="h-4 w-4 mr-2" />
+                                                        Upload File
+                                                    </DropdownMenuItem>
+                                                )}
+                                                <DropdownMenuItem onClick={() => handleEdit(inv)}>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Edit Details
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={() => confirmDelete(inv)}
+                                                    className="text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
-                                <p className="font-bold text-green-600">+€{(inv.amount || 0).toFixed(2)}</p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </Card>
@@ -111,6 +231,23 @@ export default function GeneralIncome() {
                 onUploadComplete={fetchData}
                 defaultType="income"
             />
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete <strong>{selectedInvoice?.merchant}</strong> ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : 'amount unknown'}). This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

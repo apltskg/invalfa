@@ -115,12 +115,13 @@ export default function Packages() {
         client_name: newPackage.client_name,
         start_date: newPackage.start_date,
         end_date: newPackage.end_date,
-        // @ts-ignore - Supabase types might not be updated yet
-        target_margin_percent: parseFloat(newPackage.target_margin_percent) || 0,
         status: 'active'
       }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Package creation error:", error);
+        throw error;
+      }
 
       toast.success("Package created successfully");
       setDialogOpen(false);
