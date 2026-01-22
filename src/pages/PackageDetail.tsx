@@ -55,6 +55,7 @@ export default function PackageDetail() {
       const matchedTransaction = match ? txns.find(t => t.id === match.transaction_id) : undefined;
       return {
         ...inv,
+        type: inv.type || 'expense', // Ensure type is set for legacy data
         matchedTransaction,
         matchId: match?.id,
       } as InvoiceWithMatch;

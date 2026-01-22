@@ -27,7 +27,7 @@ export default function GeneralExpenses() {
                 .order("invoice_date", { ascending: false });
 
             if (error) throw error;
-            setInvoices((data as any) || []);
+            setInvoices(((data as any[]) || []) as Invoice[]);
         } catch (error) {
             console.error("Error fetching general expenses:", error);
         } finally {

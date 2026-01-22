@@ -55,7 +55,7 @@ export default function BankSync() {
     ]);
     setTransactions((txns as BankTransaction[]) || []);
     setPackages((pkgs as Package[]) || []);
-    setInvoices((invs as Invoice[]) || []);
+    setInvoices(((invs as any[]) || []) as Invoice[]);
     setLoading(false);
   }
 
