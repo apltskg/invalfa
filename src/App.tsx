@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import Packages from "./pages/Packages";
 import PackageDetail from "./pages/PackageDetail";
 import BankSync from "./pages/BankSync";
