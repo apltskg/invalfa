@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
 
+interface UploadedFile {
+  file: File;
+  path: string;
+  url: string;
+  extractedData: ExtractedData | null;
+}
+
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,9 +25,88 @@ interface UploadModalProps {
 
 export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, defaultType = "expense" }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
-  // ... (rest of state)
+  const [extracting, setExtracting] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
 
-  // ... (existing handling code)
+  const handleClose = useCallback(() => {
+    setUploadedFile(null);
+    setUploading(false);
+    setExtracting(false);
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    try {
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('invoices')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error(`Failed to upload file: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(filePath);
+
+      setUploading(false);
+      setExtracting(true);
+
+      // Extract data using AI
+      let extractedData: ExtractedData | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke('extract-invoice', {
+          body: { filePath, fileName: file.name }
+        });
+
+        if (!error && data) {
+          extractedData = data as ExtractedData;
+        }
+      } catch (extractError) {
+        console.error('Extraction error:', extractError);
+        // Continue without extracted data
+      }
+
+      setExtracting(false);
+      setUploadedFile({
+        file,
+        path: filePath,
+        url: publicUrl,
+        extractedData
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload file');
+      setUploading(false);
+      setExtracting(false);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg']
+    },
+    maxFiles: 1,
+    disabled: uploading || extracting
+  });
 
   const handleSave = async (data: {
     merchant: string;
@@ -41,7 +127,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         category: data.category,
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
-        type: defaultType // Explicitly set the type
+        type: defaultType
       }]);
 
       if (error) {

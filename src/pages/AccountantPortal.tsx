@@ -23,7 +23,7 @@ export default function AccountantPortal() {
         try {
             // Verify magic link token
             const { data: link } = await supabase
-                .from("magic_links")
+                .from("accountant_magic_links")
                 .select("*")
                 .eq("token", token)
                 .single();
@@ -47,13 +47,13 @@ export default function AccountantPortal() {
             const { data: invs } = await supabase.from("invoices").select("*");
             const { data: txns } = await supabase.from("bank_transactions").select("*");
 
-            const packagesWithInvoices = (pkgs || []).map((pkg: Package) => ({
+            const packagesWithInvoices = (pkgs || []).map((pkg) => ({
                 ...pkg,
-                invoices: (invs || []).filter((inv: Invoice) => inv.package_id === pkg.id),
-            }));
+                invoices: ((invs || []) as any[]).filter((inv) => inv.package_id === pkg.id),
+            })) as (Package & { invoices: Invoice[] })[];
 
             setPackages(packagesWithInvoices);
-            setTransactions(txns || []);
+            setTransactions((txns as BankTransaction[]) || []);
         } catch (error) {
             console.error("Error verifying magic link:", error);
             setAuthorized(false);
@@ -235,12 +235,6 @@ export default function AccountantPortal() {
                                         <p className={`font-bold ${txn.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
                                             €{Math.abs(txn.amount).toFixed(2)}
                                         </p>
-                                        {txn.matched && (
-                                            <Badge variant="outline" className="text-xs">
-                                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                Ταιριασμένο
-                                            </Badge>
-                                        )}
                                     </div>
                                 </div>
                             ))}

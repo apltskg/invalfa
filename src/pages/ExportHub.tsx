@@ -48,7 +48,7 @@ export default function ExportHub() {
 
     const packagesWithInvoices = ((pkgs as Package[]) || []).map((pkg) => ({
       ...pkg,
-      invoices: ((invs as Invoice[]) || []).filter((inv) => inv.package_id === pkg.id),
+      invoices: (((invs as any[]) || []).filter((inv) => inv.package_id === pkg.id)) as Invoice[],
     }));
 
     setPackages(packagesWithInvoices);
