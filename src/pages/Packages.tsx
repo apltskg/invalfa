@@ -175,6 +175,7 @@ export default function Packages() {
                   placeholder="π.χ. Σύλλογος Γονέων, Οικογένεια Παπαδόπουλου"
                   className="rounded-xl"
                 />
+                <p className="text-xs text-muted-foreground">Tip: You can also select from existing customers</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
