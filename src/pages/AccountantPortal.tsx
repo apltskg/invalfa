@@ -108,9 +108,16 @@ export default function AccountantPortal() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                        Μηνιαία Αναφορά - {format(new Date(`${monthYear}-01`), "MMMM yyyy")}
+                        ALFA Μονοπρόσωπη Ι.Κ.Ε.
                     </h1>
-                    <p className="text-muted-foreground">Προβολή Μόνο Για Λογιστή</p>
+                    <p className="text-muted-foreground">
+                        Μηνιαία Αναφορά - {format(new Date(`${monthYear}-01`), "MMMM yyyy")}
+                    </p>
+                    <div className="flex items-center justify-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span>📞 +30 694 207 2312</span>
+                        <span>•</span>
+                        <span>✉️ business@atravel.gr</span>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}

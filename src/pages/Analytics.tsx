@@ -70,7 +70,10 @@ export default function Analytics() {
                 }
             });
 
-            const monthlyTrends = Object.values(monthlyData).slice(-6); // Last 6 months
+            const monthlyTrends = Object.values(monthlyData)
+                .filter((m: any) => m.month !== "Unknown")
+                .sort((a: any, b: any) => a.month.localeCompare(b.month))
+                .slice(-6); // Last 6 months
 
             setData({
                 summary: { income, expenses, profit, margin },

@@ -1,106 +1,101 @@
--- TravelDocs Schema Migration
--- Run this SQL in your Supabase SQL Editor to update the database schema
+-- Complete database schema updates
 
--- 1. Create Suppliers Table
-CREATE TABLE IF NOT EXISTS public.suppliers (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    contact_person TEXT,
-    email TEXT,
-    phone TEXT,
-    address TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- 1. Add expense categories table
+CREATE TABLE IF NOT EXISTS expense_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  name_el TEXT NOT NULL,
+  icon TEXT,
+  color TEXT,
+  is_operational BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Create Customers Table
-CREATE TABLE IF NOT EXISTS public.customers (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    contact_person TEXT,
-    email TEXT,
-    phone TEXT,
-    address TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Insert default categories
+INSERT INTO expense_categories (name, name_el, icon, color, is_operational) VALUES
+('Tolls', 'Διόδια', 'navigation', '#3b82f6', true),
+('Petrol', 'Βενζίνη', 'fuel', '#ef4444', true),
+('Personal Use', 'Προσωπική Χρήση', 'user', '#8b5cf6', true),
+('Services', 'Υπηρεσίες', 'wrench', '#f59e0b', true),
+('Tire Changes', 'Αλλαγή Ελαστικών', 'circle-dot', '#6366f1', true),
+('Workshops', 'Συνεργεία', 'hammer', '#ec4899', true),
+('Passenger Transport', 'Μεταφορές Επιβατών', 'bus', '#10b981', false),
+('Other', 'Άλλα', 'more-horizontal', '#64748b', true)
+ON CONFLICT DO NOTHING;
+
+-- 2. Add category reference to invoices
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expense_category_id UUID REFERENCES expense_categories(id);
+
+-- 3. Create shareable links for magic links (2 month expiration)
+CREATE TABLE IF NOT EXISTS shareable_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token TEXT UNIQUE NOT NULL,
+  proforma_id UUID REFERENCES proforma_invoices(id) ON DELETE CASCADE,
+  package_id UUID REFERENCES packages(id) ON DELETE CASCADE,
+  month_year TEXT,
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '2 months'),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT one_linked_entity CHECK (
+    (proforma_id IS NOT NULL AND package_id IS NULL AND month_year IS NULL) OR
+    (proforma_id IS NULL AND package_id IS NOT NULL AND month_year IS NULL) OR
+    (proforma_id IS NULL AND package_id IS NULL AND month_year IS NOT NULL)
+  )
 );
 
--- 3. Update Packages Table
-ALTER TABLE public.packages 
-    ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS target_margin_percent NUMERIC(5,2) DEFAULT 10.00,
-    ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active' CHECK (status IN ('quote', 'active', 'completed', 'cancelled')),
-    ADD COLUMN IF NOT EXISTS description TEXT;
+CREATE INDEX IF NOT EXISTS idx_shareable_token ON shareable_links(token);
+CREATE INDEX IF NOT EXISTS idx_shareable_expires ON shareable_links(expires_at);
 
--- 4. Update Invoices Table
--- Add new invoice type enum
-DO $$ BEGIN
-    CREATE TYPE invoice_type AS ENUM ('expense', 'income');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+-- 4. Comments/feedback system for magic links
+CREATE TABLE IF NOT EXISTS invoice_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  shareable_link_id UUID REFERENCES shareable_links(id) ON DELETE CASCADE,
+  invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE,
+  comment_text TEXT NOT NULL,
+  is_doubt BOOLEAN DEFAULT false,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Add new payment status enum
-DO $$ BEGIN
-    CREATE TYPE payment_status AS ENUM ('paid', 'pending', 'overdue', 'cancelled');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_comments_link ON invoice_comments(shareable_link_id);
+CREATE INDEX IF NOT EXISTS idx_comments_unread ON invoice_comments(is_read) WHERE is_read = false;
 
-ALTER TABLE public.invoices
-    ADD COLUMN IF NOT EXISTS type invoice_type DEFAULT 'expense',
-    ADD COLUMN IF NOT EXISTS payment_status payment_status DEFAULT 'pending',
-    ADD COLUMN IF NOT EXISTS due_date DATE,
-    ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES public.suppliers(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL;
+-- 5. Notification system
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL, -- 'comment', 'doubt', 'view'
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  link_url TEXT,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- 5. Update Bank Transactions Table
-ALTER TABLE public.bank_transactions
-    ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'matched', 'ignored'));
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(is_read, created_at) WHERE is_read = false;
 
--- 6. Enable Row Level Security (RLS)
-ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+-- 6. Add customer_id to packages
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id);
 
--- 7. Create RLS Policies (adjust based on your auth setup)
--- For now, allowing authenticated users full access
-CREATE POLICY "Enable all access for authenticated users" ON public.suppliers
-    FOR ALL USING (auth.role() = 'authenticated');
+-- 7. Ensure customers table exists
+CREATE TABLE IF NOT EXISTS customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  vat_number TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-CREATE POLICY "Enable all access for authenticated users" ON public.customers
-    FOR ALL USING (auth.role() = 'authenticated');
-
--- 8. Create Indexes for Performance
-CREATE INDEX IF NOT EXISTS idx_packages_customer_id ON public.packages(customer_id);
-CREATE INDEX IF NOT EXISTS idx_packages_status ON public.packages(status);
-CREATE INDEX IF NOT EXISTS idx_invoices_type ON public.invoices(type);
-CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON public.invoices(payment_status);
-CREATE INDEX IF NOT EXISTS idx_invoices_supplier_id ON public.invoices(supplier_id);
-CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON public.invoices(customer_id);
-CREATE INDEX IF NOT EXISTS idx_bank_transactions_status ON public.bank_transactions(status);
-
--- 9. Update modified timestamp trigger
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
+-- 8. Add updated_at trigger for customers
+CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = timezone('utc'::text, now());
+    NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ language 'plpgsql';
 
--- Apply trigger to new tables
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.suppliers
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.customers
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
--- 10. Grant permissions (adjust based on your roles)
-GRANT ALL ON public.suppliers TO authenticated;
-GRANT ALL ON public.customers TO authenticated;
-
--- Migration Complete!
--- Note: After running this migration, you may need to regenerate your Supabase types
--- Run: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/supabase.ts
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
