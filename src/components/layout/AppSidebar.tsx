@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users, LayoutDashboard } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -16,9 +16,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { toast } from "sonner";
 
 const menuItems = [
+  { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
   { title: "Φάκελοι", icon: Package, url: "/packages" },
-  { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
-  { title: "Πελάτες", icon: Users, url: "/customers" },
   { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
   { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
@@ -26,6 +25,8 @@ const menuItems = [
   { title: "Κέντρο Εξαγωγών", icon: FileSpreadsheet, url: "/export-hub" },
   { title: "Νέο Proforma", icon: FileText, url: "/proforma" },
   { title: "Διαχείριση Proforma", icon: List, url: "/proformas" },
+  { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
+  { title: "Πελάτες", icon: Users, url: "/customers" },
 ];
 
 export function AppSidebar() {
