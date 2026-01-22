@@ -9,8 +9,8 @@ import { ExtractedData, InvoiceCategory, Package } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvoicePreviewProps {
-  fileUrl: string;
-  fileName: string;
+  fileUrl?: string; // Optional
+  fileName?: string; // Optional
   extractedData: ExtractedData | null;
   onSave: (data: {
     merchant: string;
@@ -24,6 +24,9 @@ interface InvoicePreviewProps {
 }
 
 export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId }: InvoicePreviewProps) {
+  // ... state ... (keep as is) until render
+
+  // ... (keep useEffect and handleSave) ...
   const [merchant, setMerchant] = useState(extractedData?.merchant || "");
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
@@ -43,14 +46,12 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       if (data) {
         setPackages(data as Package[]);
 
-        // If we have a default package, use it
         if (defaultPackageId) {
           const defaultPkg = data.find((p: Package) => p.id === defaultPackageId);
           if (defaultPkg) {
             setSuggestedPackage(defaultPkg as Package);
           }
         } else if (extractedData?.merchant) {
-          // Auto-suggest package based on merchant name
           const merchantLower = extractedData.merchant.toLowerCase();
           const match = data.find((pkg: Package) =>
             merchantLower.includes(pkg.client_name.toLowerCase()) ||
@@ -76,8 +77,6 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
     });
   };
 
-  const isPdf = fileName.toLowerCase().endsWith(".pdf");
-
   return (
     <motion.div
       key="preview"
@@ -86,33 +85,35 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       exit={{ opacity: 0 }}
       className="flex h-[80vh] max-h-[700px]"
     >
-      {/* Left: File Preview */}
-      <div className="flex-1 border-r border-border bg-muted/30 p-4">
-        <div className="flex h-full flex-col">
-          <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span className="truncate">{fileName}</span>
-          </div>
-          <div className="flex-1 overflow-hidden rounded-xl bg-background">
-            {isPdf ? (
-              <iframe
-                src={`${fileUrl}#toolbar=0`}
-                className="h-full w-full rounded-xl"
-                title="Invoice Preview"
-              />
-            ) : (
-              <img
-                src={fileUrl}
-                alt="Invoice"
-                className="h-full w-full object-contain rounded-xl"
-              />
-            )}
+      {/* Left: File Preview (Only if file exists) */}
+      {fileUrl && fileName && (
+        <div className="flex-1 border-r border-border bg-muted/30 p-4">
+          <div className="flex h-full flex-col">
+            <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              <span className="truncate">{fileName}</span>
+            </div>
+            <div className="flex-1 overflow-hidden rounded-xl bg-background">
+              {fileName.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={`${fileUrl}#toolbar=0`}
+                  className="h-full w-full rounded-xl"
+                  title="Invoice Preview"
+                />
+              ) : (
+                <img
+                  src={fileUrl}
+                  alt="Invoice"
+                  className="h-full w-full object-contain rounded-xl"
+                />
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Right: Edit Form */}
-      <div className="w-96 flex flex-col">
+      {/* Right: Edit Form (Full width if no file) */}
+      <div className={`${fileUrl ? "w-96" : "w-full max-w-2xl mx-auto"} flex flex-col`}>
         <div className="border-b border-border p-6">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />

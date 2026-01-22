@@ -39,6 +39,7 @@ export interface Customer {
 export interface Invoice {
   id: string;
   package_id: string | null;
+  type: 'income' | 'expense';
   category: InvoiceCategory;
   merchant: string | null;
   amount: number | null;
