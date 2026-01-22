@@ -1,18 +1,20 @@
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Edit3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
+import { Button } from "@/components/ui/button";
 
 interface UploadedFile {
-  file: File;
+  file?: File;
   path: string;
   url: string;
   extractedData: ExtractedData | null;
+  isManual?: boolean;
 }
 
 interface UploadModalProps {
@@ -27,13 +29,25 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [mode, setMode] = useState<"upload" | "manual">("upload");
 
   const handleClose = useCallback(() => {
     setUploadedFile(null);
     setUploading(false);
     setExtracting(false);
+    setMode("upload");
     onOpenChange(false);
   }, [onOpenChange]);
+
+  const handleManualEntry = () => {
+    setMode("manual");
+    setUploadedFile({
+      path: `manual/${Date.now()}`,
+      url: "",
+      extractedData: null,
+      isManual: true
+    });
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -42,7 +56,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     setUploading(true);
 
     try {
-      // Upload file to Supabase storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
@@ -58,7 +71,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         return;
       }
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('invoices')
         .getPublicUrl(filePath);
@@ -66,7 +78,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       setUploading(false);
       setExtracting(true);
 
-      // Extract data using AI
       let extractedData: ExtractedData | null = null;
       try {
         const { data, error } = await supabase.functions.invoke('extract-invoice', {
@@ -78,7 +89,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         }
       } catch (extractError) {
         console.error('Extraction error:', extractError);
-        // Continue without extracted data
       }
 
       setExtracting(false);
@@ -86,7 +96,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         file,
         path: filePath,
         url: publicUrl,
-        extractedData
+        extractedData,
+        isManual: false
       });
 
     } catch (error) {
@@ -105,7 +116,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       'image/jpeg': ['.jpg', '.jpeg']
     },
     maxFiles: 1,
-    disabled: uploading || extracting
+    disabled: uploading || extracting || mode === "manual"
   });
 
   const handleSave = async (data: {
@@ -117,10 +128,12 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
   }) => {
     if (!uploadedFile) return;
 
+    const isManual = uploadedFile.isManual || !uploadedFile.file;
+
     try {
       const { error } = await supabase.from("invoices").insert([{
         file_path: uploadedFile.path,
-        file_name: uploadedFile.file.name,
+        file_name: uploadedFile.file?.name || "Manual Entry",
         merchant: data.merchant || null,
         amount: data.amount,
         invoice_date: data.date,
@@ -136,7 +149,18 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         return;
       }
 
-      toast.success("Document saved successfully");
+      if (isManual) {
+        toast.success("Entry saved! Remember to upload the PDF file later.", {
+          duration: 5000,
+          action: {
+            label: "Got it",
+            onClick: () => { }
+          }
+        });
+      } else {
+        toast.success("Document saved successfully");
+      }
+
       onUploadComplete?.();
       handleClose();
     } catch (error) {
@@ -148,65 +172,95 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`${uploadedFile ? "max-w-6xl" : "max-w-lg"} p-0 gap-0 overflow-hidden`}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {defaultType === "income" ? "Νέο Έσοδο" : "Νέο Έξοδο"}
+          </DialogTitle>
+        </DialogHeader>
+
         <AnimatePresence mode="wait">
           {!uploadedFile ? (
             <motion.div
-              key="upload"
+              key="upload-zone"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-6"
+              className="space-y-4"
             >
-              <DialogHeader className="mb-6">
-                <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-primary" />
-                  Upload Invoice
-                </DialogTitle>
-              </DialogHeader>
-
-              <div
-                {...getRootProps()}
-                className={`
-                  relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-12
-                  transition-all duration-200 cursor-pointer
-                  ${isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50"}
-                  ${(uploading || extracting) ? "pointer-events-none opacity-60" : ""}
-                `}
-              >
-                <input {...getInputProps()} />
-
-                {uploading || extracting ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {uploading ? "Uploading..." : "Extracting data with AI..."}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                      <Upload className="h-8 w-8 text-primary" />
-                    </div>
-                    <p className="mb-2 text-lg font-medium">
-                      {isDragActive ? "Drop your file here" : "Drag & drop your file"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to browse • PDF, PNG, JPG
-                    </p>
-                  </>
-                )}
+              <div className="flex gap-3 mb-4">
+                <Button
+                  variant={mode === "upload" ? "default" : "outline"}
+                  onClick={() => setMode("upload")}
+                  className="flex-1"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload File
+                </Button>
+                <Button
+                  variant={mode === "manual" ? "default" : "outline"}
+                  onClick={handleManualEntry}
+                  className="flex-1"
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Manual Entry
+                </Button>
               </div>
+
+              {mode === "upload" && (
+                <div
+                  {...getRootProps()}
+                  className={`
+                    border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
+                    transition-all duration-200
+                    ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+                    ${(uploading || extracting) ? 'pointer-events-none opacity-50' : ''}
+                  `}
+                >
+                  <input {...getInputProps()} />
+
+                  {uploading ? (
+                    <div className="space-y-3">
+                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                      <p className="text-sm text-muted-foreground">Uploading file...</p>
+                    </div>
+                  ) : extracting ? (
+                    <div className="space-y-3">
+                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                      <p className="text-sm text-muted-foreground">Extracting data with AI...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        {isDragActive ? "Drop file here" : "Drag & drop or click to upload"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Supports PDF, PNG, JPG
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </motion.div>
           ) : (
-            <InvoicePreview
-              fileUrl={uploadedFile.url}
-              fileName={uploadedFile.file.name}
-              extractedData={uploadedFile.extractedData}
-              onSave={handleSave}
-              onCancel={handleClose}
-              defaultPackageId={packageId}
-            />
+            <motion.div
+              key="preview"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <InvoicePreview
+                fileName={uploadedFile.file?.name || "Manual Entry"}
+                fileUrl={uploadedFile.url}
+                extractedData={uploadedFile.extractedData}
+                onSave={handleSave}
+                onCancel={handleClose}
+                defaultType={defaultType}
+                packageId={packageId}
+                isManual={uploadedFile.isManual}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
       </DialogContent>
