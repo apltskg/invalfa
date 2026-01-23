@@ -22,6 +22,7 @@ import GeneralExpenses from "./pages/GeneralExpenses";
 import GeneralIncome from "./pages/GeneralIncome";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
+import AdminSettings from "./pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
                       <Route path="general-income" element={<GeneralIncome />} />
                       <Route path="suppliers" element={<Suppliers />} />
                       <Route path="customers" element={<Customers />} />
+                      <Route path="admin" element={<AdminSettings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>

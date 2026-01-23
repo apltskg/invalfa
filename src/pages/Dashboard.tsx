@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice, BankTransaction } from "@/types/database";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, CreditCard, DollarSign, Calendar as CalendarIcon, Filter, AlertTriangle, MessageSquare } from "lucide-react";
+import { FileText, CreditCard, DollarSign, Calendar as CalendarIcon, Filter, AlertTriangle, MessageSquare, CalendarDays } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -95,12 +97,23 @@ export default function Dashboard() {
                     <h1 className="text-3xl font-bold">Dashboard</h1>
                     <p className="text-muted-foreground">Overview of all transactions by date</p>
                 </div>
-                <input
-                    type="month"
-                    value={format(selectedMonth, 'yyyy-MM')}
-                    onChange={(e) => setSelectedMonth(new Date(e.target.value))}
-                    className="px-4 py-2 rounded-xl border"
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-10 gap-2 rounded-xl bg-background hover:bg-muted/50 border-input font-medium min-w-[180px] justify-start text-left font-normal">
+                            <CalendarDays className="h-4 w-4 text-primary" />
+                            {format(selectedMonth, "MMMM yyyy")}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-2xl shadow-xl" align="end">
+                        <Calendar
+                            mode="single"
+                            selected={selectedMonth}
+                            onSelect={(date) => date && setSelectedMonth(date)}
+                            initialFocus
+                            className="p-3"
+                        />
+                    </PopoverContent>
+                </Popover>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -175,9 +188,15 @@ export default function Dashboard() {
                 ) : Object.keys(groupedByDate).length === 0 ? (
                     <div className="p-12 text-center text-muted-foreground">No transactions this month</div>
                 ) : (
-                    <div className="divide-y">
-                        {Object.entries(groupedByDate).map(([date, dayItems]) => (
-                            <div key={date} className="p-6">
+                    <div className="divide-y relative">
+                        {Object.entries(groupedByDate).map(([date, dayItems], index) => (
+                            <motion.div
+                                key={date}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1, duration: 0.3 }}
+                                className="p-6"
+                            >
                                 <div className="flex items-center gap-3 mb-4">
                                     <CalendarIcon className="h-5 w-5 text-primary" />
                                     <h3 className="font-semibold">{format(parseISO(date), 'EEEE, dd MMMM yyyy')}</h3>

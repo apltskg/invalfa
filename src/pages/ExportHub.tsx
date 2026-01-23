@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Package, Invoice, ExportLog, BankTransaction, InvoiceTransactionMatch } from "@/types/database";
 import { toast } from "sonner";
 import JSZip from "jszip";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, subMonths } from "date-fns";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -75,55 +75,56 @@ export default function ExportHub() {
     setExportingXlsx(true);
 
     try {
-      const summaryData: any[] = [];
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Monthly Report");
+
+      worksheet.columns = [
+        { header: "Package", key: "package", width: 25 },
+        { header: "Merchant", key: "merchant", width: 30 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "Invoice Date", key: "date", width: 15 },
+        { header: "Amount (€)", key: "amount", width: 15 },
+        { header: "VAT Amount (€)", key: "vat", width: 15 },
+        { header: "Matched", key: "matched", width: 10 },
+        { header: "Transaction Date", key: "txnDate", width: 15 },
+        { header: "Transaction Amount (€)", key: "txnAmount", width: 20 },
+        { header: "Transaction Description", key: "txnDesc", width: 40 },
+      ];
+
+      // Make header bold
+      worksheet.getRow(1).font = { bold: true };
+
+      let hasData = false;
 
       for (const pkg of filteredPackages) {
         for (const inv of pkg.invoices) {
           const matchedTxn = getMatchInfo(inv.id);
           const extractedData = inv.extracted_data as any;
+          hasData = true;
 
-          summaryData.push({
-            "Package": pkg.client_name,
-            "Merchant": inv.merchant || "—",
-            "Category": inv.category,
-            "Invoice Date": inv.invoice_date || "—",
-            "Amount (€)": inv.amount?.toFixed(2) || "—",
-            "VAT Amount (€)": extractedData?.vat_amount?.toFixed(2) || "—",
-            "Matched": matchedTxn ? "Yes" : "No",
-            "Transaction Date": matchedTxn ? matchedTxn.transaction_date : "—",
-            "Transaction Amount (€)": matchedTxn ? Math.abs(matchedTxn.amount).toFixed(2) : "—",
-            "Transaction Description": matchedTxn ? matchedTxn.description : "—",
+          worksheet.addRow({
+            package: pkg.client_name,
+            merchant: inv.merchant || "—",
+            category: inv.category,
+            date: inv.invoice_date || "—",
+            amount: inv.amount?.toFixed(2) || "—",
+            vat: extractedData?.vat_amount?.toFixed(2) || "—",
+            matched: matchedTxn ? "Yes" : "No",
+            txnDate: matchedTxn ? matchedTxn.transaction_date : "—",
+            txnAmount: matchedTxn ? Math.abs(matchedTxn.amount).toFixed(2) : "—",
+            txnDesc: matchedTxn ? matchedTxn.description : "—",
           });
         }
       }
 
-      if (summaryData.length === 0) {
+      if (!hasData) {
         toast.error("No invoices to export");
         setExportingXlsx(false);
         return;
       }
 
-      const ws = XLSX.utils.json_to_sheet(summaryData);
-
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 20 }, // Package
-        { wch: 25 }, // Merchant
-        { wch: 12 }, // Category
-        { wch: 12 }, // Invoice Date
-        { wch: 12 }, // Amount
-        { wch: 12 }, // VAT
-        { wch: 8 },  // Matched
-        { wch: 12 }, // Txn Date
-        { wch: 12 }, // Txn Amount
-        { wch: 30 }, // Txn Description
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
-
-      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -170,33 +171,40 @@ export default function ExportHub() {
         }
 
         summaryData.push({
-          "Αρ.": fileIndex++,
-          "Πακέτο": pkg.client_name,
-          "Προμηθευτής": inv.merchant || "—",
-          "Κατηγορία": category,
-          "Ημερομηνία": invoiceDate,
-          "Ποσό (€)": (inv.amount || 0).toFixed(2),
-          "Όνομα Αρχείου": fileName,
+          index: fileIndex++,
+          package: pkg.client_name,
+          merchant: inv.merchant || "—",
+          category: category,
+          date: invoiceDate,
+          amount: (inv.amount || 0).toFixed(2),
+          filename: fileName,
         });
       }
     }
 
     // Add summary Excel file
     if (summaryData.length > 0) {
-      const ws = XLSX.utils.json_to_sheet(summaryData);
-      ws['!cols'] = [
-        { wch: 5 },  // Αρ.
-        { wch: 20 }, // Πακέτο
-        { wch: 25 }, // Προμηθευτής
-        { wch: 12 }, // Κατηγορία
-        { wch: 12 }, // Ημερομηνία
-        { wch: 12 }, // Ποσό
-        { wch: 60 }, // Όνομα Αρχείου
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Περιληψη");
+
+      worksheet.columns = [
+        { header: "Αρ.", key: "index", width: 6 },
+        { header: "Πακέτο", key: "package", width: 25 },
+        { header: "Προμηθευτής", key: "merchant", width: 30 },
+        { header: "Κατηγορία", key: "category", width: 15 },
+        { header: "Ημερομηνία", key: "date", width: 15 },
+        { header: "Ποσό (€)", key: "amount", width: 15 },
+        { header: "Όνομα Αρχείου", key: "filename", width: 60 },
       ];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Περιληψη");
-      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      zip.file(`00_ΠΕΡΙΛΗΨΗ_${selectedMonth}.xlsx`, excelBuffer);
+
+      worksheet.getRow(1).font = { bold: true };
+
+      summaryData.forEach(row => {
+        worksheet.addRow(row);
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      zip.file(`00_ΠΕΡΙΛΗΨΗ_${selectedMonth}.xlsx`, buffer);
     }
 
     const content = await zip.generateAsync({ type: "blob" });

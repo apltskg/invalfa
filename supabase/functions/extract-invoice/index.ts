@@ -90,26 +90,28 @@ serve(async (req) => {
         model: "google/gemini-2.0-flash-exp",
         messages: [
           {
-            role: "system",
             content: `You are an expert financial auditor specializing in Greek and European tax documents.
             Analyze the document and extract structured data meticulously.
             
             KEY RULES:
-            - Recognize Greek merchant names correctly (e.g., 'ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ' -> 'Aegean Airlines').
-            - Look for Greek VAT Numbers (ΑΦΜ) to identify merchants.
-            - "airline": Boarding passes, flight confirmations, Aegean, SKY express, Ryanair.
-            - "hotel": Booking.com, Airbnb, hotel receipts, accommodation vouchers.
-            - "tolls": Attiki Odos, Egnatia Odos, Via Verde, toll receipts.
-            - "other": Fuel (Shell, BP), restaurants, taxis (FreeNow, Uber), parking.
+            - **Merchant Name**: Prefer the "Trading Name" (e.g., "Aegean Airlines") over the legal name ("AEROPOIRIA AIGAIOU A.E.").
+            - **Greek Characters**: If the merchant name is in Greek, provide the transliterated or common English version if possible, otherwise keep the Greek name.
+            - **VAT/AFM**: Look for "ΑΦΜ" (Tax ID). Valid Greek VATs have 9 digits.
+            - **Amounts**: Always extract the **Total Payable Amount** (Final Amount including VAT). Ignore "Net Amount" or "Subtotal" unless asking for breakdown.
+            - **Dates**: Convert all dates (DD/MM/YYYY, DD.MM.YY) to ISO format: YYYY-MM-DD.
             
-            Ensure dates are YYYY-MM-DD. Convert amounts to numbers without currency symbols.`
+            CATEGORIES:
+            - "airline": Tickets, Boarding passes, Aegean, Sky Express, Ryanair, Volotea, Lufthansa.
+            - "hotel": Accommodation, Airbnb, Booking.com, Hotels.com, Marriott, Hilton.
+            - "tolls": Attiki Odos, Egnatia Odos, Gefyra, Olympia Odos, Moreas, Ionia Odos.
+            - "other": EVERYTHING else. Taxis (Uber, FreeNow), Fuel (Shell, EKO, BP), Restaurants, Parking, Amazon, Software.`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Extremely accurately extract merchant, total amount (incl. VAT), invoice date, and category from this document: ${fileName}`
+                text: `Extremely accurately extract merchant, total amount (incl. VAT), invoice date, category, and tax_id (ΑΦΜ) from this document: ${fileName}`
               },
               {
                 type: "image_url",
@@ -129,11 +131,15 @@ serve(async (req) => {
                 properties: {
                   merchant: {
                     type: "string",
-                    description: "Company or vendor name (e.g., 'Aegean Airlines', 'Marriott Hotel')"
+                    description: "Company or vendor name (e.g., 'Aegean Airlines')"
+                  },
+                  tax_id: {
+                    type: "string",
+                    description: "The 9-digit Greek VAT number (ΑΦΜ) or equivalent Tax ID"
                   },
                   amount: {
                     type: "number",
-                    description: "Total amount paid as a number (e.g., 125.50)"
+                    description: "Total amount paid (final price including VAT)"
                   },
                   currency: {
                     type: "string",
