@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.send-proforma-email]
 verify_jwt = false
+
+[functions.accountant-portal-access]
+verify_jwt = false

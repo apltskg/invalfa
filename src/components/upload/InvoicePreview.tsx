@@ -9,8 +9,8 @@ import { ExtractedData, InvoiceCategory, Package } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvoicePreviewProps {
-  fileUrl?: string; // Optional
-  fileName?: string; // Optional
+  fileUrl?: string;
+  fileName?: string;
   extractedData: ExtractedData | null;
   onSave: (data: {
     merchant: string;
@@ -21,17 +21,16 @@ interface InvoicePreviewProps {
   }) => void;
   onCancel: () => void;
   defaultPackageId?: string;
+  packageId?: string;
+  isManual?: boolean;
 }
 
-export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId }: InvoicePreviewProps) {
-  // ... state ... (keep as is) until render
-
-  // ... (keep useEffect and handleSave) ...
+export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCancel, defaultPackageId, packageId: propPackageId, isManual }: InvoicePreviewProps) {
   const [merchant, setMerchant] = useState(extractedData?.merchant || "");
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
-  const [packageId, setPackageId] = useState<string | null>(defaultPackageId || null);
+  const [packageId, setPackageId] = useState<string | null>(propPackageId || defaultPackageId || null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
 
@@ -46,8 +45,9 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       if (data) {
         setPackages(data as Package[]);
 
-        if (defaultPackageId) {
-          const defaultPkg = data.find((p: Package) => p.id === defaultPackageId);
+        const effectivePackageId = propPackageId || defaultPackageId;
+        if (effectivePackageId) {
+          const defaultPkg = data.find((p: Package) => p.id === effectivePackageId);
           if (defaultPkg) {
             setSuggestedPackage(defaultPkg as Package);
           }
@@ -65,7 +65,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       }
     }
     fetchPackages();
-  }, [extractedData, defaultPackageId]);
+  }, [extractedData, defaultPackageId, propPackageId]);
 
   const handleSave = () => {
     onSave({
@@ -86,7 +86,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       className="flex h-[80vh] max-h-[700px]"
     >
       {/* Left: File Preview (Only if file exists) */}
-      {fileUrl && fileName && (
+      {fileUrl && fileName && !isManual && (
         <div className="flex-1 border-r border-border bg-muted/30 p-4">
           <div className="flex h-full flex-col">
             <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
@@ -113,13 +113,13 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       )}
 
       {/* Right: Edit Form (Full width if no file) */}
-      <div className={`${fileUrl ? "w-96" : "w-full max-w-2xl mx-auto"} flex flex-col`}>
+      <div className={`${fileUrl && !isManual ? "w-96" : "w-full max-w-2xl mx-auto"} flex flex-col`}>
         <div className="border-b border-border p-6">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Αναγνωρισμένα Στοιχεία</h3>
+            <h3 className="text-lg font-semibold">{isManual ? "Χειροκίνητη Καταχώρηση" : "Αναγνωρισμένα Στοιχεία"}</h3>
           </div>
-          {extractedData?.confidence && (
+          {extractedData?.confidence && !isManual && (
             <p className="mt-1 text-sm text-muted-foreground">
               Ακρίβεια AI: {Math.round(extractedData.confidence * 100)}%
             </p>
@@ -182,7 +182,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
             {suggestedPackage && (
               <p className="text-xs text-primary flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                {defaultPackageId ? "Τρέχων φάκελος" : "Προτεινόμενο"}: {suggestedPackage.client_name}
+                {propPackageId || defaultPackageId ? "Τρέχων φάκελος" : "Προτεινόμενο"}: {suggestedPackage.client_name}
               </p>
             )}
             <Select value={packageId || "none"} onValueChange={(v) => setPackageId(v === "none" ? null : v)}>

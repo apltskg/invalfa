@@ -12,6 +12,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function GeneralExpenses() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -24,6 +41,10 @@ export default function GeneralExpenses() {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [saving, setSaving] = useState(false);
+
+    // Delete state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
     useEffect(() => {
         fetchData();
