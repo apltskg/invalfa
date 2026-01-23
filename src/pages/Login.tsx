@@ -15,24 +15,10 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const signupSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
-
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
@@ -49,11 +35,7 @@ export default function Login() {
     setErrors({});
     
     try {
-      if (isSignUp) {
-        signupSchema.parse({ email, password, confirmPassword });
-      } else {
-        loginSchema.parse({ email, password });
-      }
+      loginSchema.parse({ email, password });
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -94,38 +76,6 @@ export default function Login() {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setLoading(true);
-
-    const redirectUrl = `${window.location.origin}/`;
-
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        toast.error('This email is already registered. Please sign in instead.');
-      } else {
-        toast.error('Sign up failed: ' + error.message);
-      }
-      setLoading(false);
-    } else {
-      toast.success('Account created successfully! You can now sign in.');
-      setIsSignUp(false);
-      setPassword('');
-      setConfirmPassword('');
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
@@ -136,11 +86,11 @@ export default function Login() {
           </div>
           <CardTitle className="text-2xl font-bold">TravelDocs</CardTitle>
           <CardDescription className="text-muted-foreground">
-            {isSignUp ? 'Create your account' : 'Sign in to manage your invoices'}
+            Sign in to manage your invoices
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -171,7 +121,7 @@ export default function Login() {
                   required
                   disabled={loading}
                   className={`rounded-xl h-11 pr-10 ${errors.password ? 'border-destructive' : ''}`}
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  autoComplete="current-password"
                 />
                 <Button
                   type="button"
@@ -188,25 +138,6 @@ export default function Login() {
               )}
             </div>
 
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className={`rounded-xl h-11 ${errors.confirmPassword ? 'border-destructive' : ''}`}
-                  autoComplete="new-password"
-                />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-            )}
 
             <Button 
               type="submit" 
@@ -214,28 +145,10 @@ export default function Login() {
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              Sign In
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setErrors({});
-                  setPassword('');
-                  setConfirmPassword('');
-                }}
-                className="text-primary hover:underline font-medium"
-                disabled={loading}
-              >
-                {isSignUp ? 'Sign in' : 'Sign up'}
-              </button>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
