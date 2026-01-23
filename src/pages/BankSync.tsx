@@ -447,9 +447,16 @@ export default function BankSync() {
               <FileText className="h-5 w-5" />
               Εισαγωγή PDF Τράπεζας (Beta)
             </DialogTitle>
-            <DialogDescription className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-4 w-4" />
-              Beta λειτουργία - ελέγξτε τα δεδομένα πριν την εισαγωγή
+            <DialogDescription className="space-y-2">
+              <div className="flex items-center gap-2 text-amber-600 font-bold">
+                <AlertTriangle className="h-4 w-4" />
+                Beta λειτουργία - Αυτόματη Αναγνώριση
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Η AI προσπαθεί να αναγνωρίσει ημερομηνίες και ποσά από το PDF της τράπεζας.
+                <span className="text-amber-700 font-bold"> Παρακαλούμε ελέγξτε προσεκτικά τον παρακάτω πίνακα </span>
+                πριν πατήσετε "Εισαγωγή", καθώς ενδέχεται να υπάρξουν σφάλματα αναγνώρισης.
+              </p>
             </DialogDescription>
           </DialogHeader>
 

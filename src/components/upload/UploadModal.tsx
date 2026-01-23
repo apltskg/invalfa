@@ -80,15 +80,23 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
       let extractedData: ExtractedData | null = null;
       try {
-        const { data, error } = await supabase.functions.invoke('extract-invoice', {
+        const response = await supabase.functions.invoke('extract-invoice', {
           body: { filePath, fileName: file.name }
         });
 
-        if (!error && data) {
-          extractedData = data as ExtractedData;
+        // Robust check for JSON response
+        if (response.error) {
+          console.error('Edge Function error:', response.error);
+          toast.error("AI Assistant: " + (response.error.message || "Extraction failed. Falling back to manual entry."));
+        } else if (response.data && typeof response.data === 'object') {
+          extractedData = response.data as ExtractedData;
+        } else {
+          console.warn('Unexpected non-JSON response from AI extraction');
+          toast.info("AI could not read some fields automatically. Please fill them manually.");
         }
       } catch (extractError) {
-        console.error('Extraction error:', extractError);
+        console.error('Extraction catch error:', extractError);
+        toast.error("AI connection lost. Switching to manual entry.");
       }
 
       setExtracting(false);

@@ -23,14 +23,14 @@ serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    
+
     const authClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } }
     });
 
     const token = authHeader.replace('Bearer ', '');
     const { data: claimsData, error: claimsError } = await authClient.auth.getUser(token);
-    
+
     if (claimsError || !claimsData?.user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized', extracted: null }),
@@ -87,30 +87,33 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.0-flash-exp",
         messages: [
-          { 
-            role: "system", 
-            content: `You are an expert invoice data extraction assistant. Analyze invoice images/PDFs and extract structured data accurately.
-
-For category classification:
-- "airline": Airlines (Aegean, Ryanair, TAP, Lufthansa, BA, easyJet, Vueling), flights, boarding passes
-- "hotel": Hotels (Marriott, Hilton), Booking.com, Airbnb, hostels, accommodation
-- "tolls": Via Verde, toll roads, highway fees, motorway charges
-- "other": Restaurants, taxis, fuel, general expenses
-
-Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transaction date.`
+          {
+            role: "system",
+            content: `You are an expert financial auditor specializing in Greek and European tax documents.
+            Analyze the document and extract structured data meticulously.
+            
+            KEY RULES:
+            - Recognize Greek merchant names correctly (e.g., 'ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ' -> 'Aegean Airlines').
+            - Look for Greek VAT Numbers (ΑΦΜ) to identify merchants.
+            - "airline": Boarding passes, flight confirmations, Aegean, SKY express, Ryanair.
+            - "hotel": Booking.com, Airbnb, hotel receipts, accommodation vouchers.
+            - "tolls": Attiki Odos, Egnatia Odos, Via Verde, toll receipts.
+            - "other": Fuel (Shell, BP), restaurants, taxis (FreeNow, Uber), parking.
+            
+            Ensure dates are YYYY-MM-DD. Convert amounts to numbers without currency symbols.`
           },
-          { 
-            role: "user", 
+          {
+            role: "user",
             content: [
-              { 
-                type: "text", 
-                text: `Extract invoice data from this document. Filename: ${fileName}. Look carefully at all text, numbers, and dates visible in the document.`
+              {
+                type: "text",
+                text: `Extremely accurately extract merchant, total amount (incl. VAT), invoice date, and category from this document: ${fileName}`
               },
-              { 
-                type: "image_url", 
-                image_url: { url: fileUrl } 
+              {
+                type: "image_url",
+                image_url: { url: fileUrl }
               }
             ]
           }
@@ -124,26 +127,26 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
               parameters: {
                 type: "object",
                 properties: {
-                  merchant: { 
-                    type: "string", 
-                    description: "Company or vendor name (e.g., 'Aegean Airlines', 'Marriott Hotel')" 
+                  merchant: {
+                    type: "string",
+                    description: "Company or vendor name (e.g., 'Aegean Airlines', 'Marriott Hotel')"
                   },
-                  amount: { 
-                    type: "number", 
-                    description: "Total amount paid as a number (e.g., 125.50)" 
+                  amount: {
+                    type: "number",
+                    description: "Total amount paid as a number (e.g., 125.50)"
                   },
                   currency: {
                     type: "string",
                     description: "Currency code (EUR, USD, GBP, etc.)"
                   },
-                  date: { 
-                    type: "string", 
-                    description: "Invoice date in YYYY-MM-DD format" 
+                  date: {
+                    type: "string",
+                    description: "Invoice date in YYYY-MM-DD format"
                   },
-                  category: { 
-                    type: "string", 
+                  category: {
+                    type: "string",
                     enum: ["airline", "hotel", "tolls", "other"],
-                    description: "Category based on merchant type" 
+                    description: "Category based on merchant type"
                   },
                   vat_amount: {
                     type: "number",
@@ -167,14 +170,14 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment.", extracted: null }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted. Please add credits to continue.", extracted: null }),
@@ -183,7 +186,7 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
       }
 
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -195,11 +198,11 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
 
     // Extract from tool call response
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    
+
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
       console.log("Parsed extraction:", parsed);
-      
+
       return new Response(
         JSON.stringify({
           extracted: {
@@ -241,7 +244,7 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
 
     console.log("No structured data extracted");
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -250,7 +253,7 @@ Extract the TOTAL amount paid, not subtotals. For dates, use the invoice/transac
   } catch (error) {
     console.error("Extraction error:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
         extracted: null
       }),

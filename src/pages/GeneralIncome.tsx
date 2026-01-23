@@ -111,6 +111,13 @@ export default function GeneralIncome() {
 
     const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
+    const groupedInvoices = invoices.reduce((acc, inv) => {
+        const category = inv.category || "General Income";
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(inv);
+        return acc;
+    }, {} as Record<string, Invoice[]>);
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
@@ -152,75 +159,83 @@ export default function GeneralIncome() {
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-border">
-                        {invoices.map((inv) => {
-                            const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
-
-                            return (
-                                <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors group">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                                            {hasFile ? <FileText className="h-5 w-5" /> : <FileUp className="h-5 w-5 opacity-50" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-foreground">{inv.merchant || "Άγνωστος Πελάτης"}</p>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Badge variant="secondary" className="rounded-md font-normal text-xs h-5 px-2">
-                                                    {inv.category}
-                                                </Badge>
-                                                <span className="flex items-center gap-1">
-                                                    <Calendar className="h-3 w-3" />
-                                                    {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "-"}
-                                                </span>
-                                                {!hasFile && (
-                                                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                                                        No file
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
-                                        <p className="font-bold text-green-600">+€{(inv.amount || 0).toFixed(2)}</p>
-
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                {hasFile && (
-                                                    <DropdownMenuItem onClick={() => handleView(inv)}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View File
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {!hasFile && (
-                                                    <DropdownMenuItem onClick={() => toast.info("Upload file feature coming soon!")}>
-                                                        <FileUp className="h-4 w-4 mr-2" />
-                                                        Upload File
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuItem onClick={() => handleEdit(inv)}>
-                                                    <Edit className="h-4 w-4 mr-2" />
-                                                    Edit Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onClick={() => confirmDelete(inv)}
-                                                    className="text-destructive focus:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
+                    <div className="space-y-8">
+                        {Object.entries(groupedInvoices).map(([category, catInvoices]) => (
+                            <div key={category} className="space-y-4">
+                                <div className="px-6 py-2 bg-muted/40 flex items-center justify-between border-y border-border/50">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{category}</h3>
+                                    <Badge variant="outline" className="font-bold border-muted-foreground/20">
+                                        €{catInvoices.reduce((sum, i) => sum + (i.amount || 0), 0).toFixed(2)}
+                                    </Badge>
                                 </div>
-                            );
-                        })}
+                                <div className="divide-y divide-border/30">
+                                    {catInvoices.map((inv) => {
+                                        const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
+                                        return (
+                                            <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors group">
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                                                        {hasFile ? <FileText className="h-5 w-5" /> : <FileUp className="h-5 w-5 opacity-50" />}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="font-medium text-foreground">{inv.merchant || "Άγνωστος Πελάτης"}</p>
+                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                            <span className="flex items-center gap-1">
+                                                                <Calendar className="h-3 w-3" />
+                                                                {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "-"}
+                                                            </span>
+                                                            {!hasFile && (
+                                                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                                                                    No file
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <p className="font-bold text-green-600">+€{(inv.amount || 0).toFixed(2)}</p>
+
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-48">
+                                                            {hasFile && (
+                                                                <DropdownMenuItem onClick={() => handleView(inv)}>
+                                                                    <Eye className="h-4 w-4 mr-2" />
+                                                                    View File
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {!hasFile && (
+                                                                <DropdownMenuItem onClick={() => toast.info("Upload file feature coming soon!")}>
+                                                                    <FileUp className="h-4 w-4 mr-2" />
+                                                                    Upload File
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuItem onClick={() => handleEdit(inv)}>
+                                                                <Edit className="h-4 w-4 mr-2" />
+                                                                Edit Details
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => confirmDelete(inv)}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </Card>

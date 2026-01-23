@@ -44,19 +44,20 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <Routes>
-                      <Route path="/" element={<Navigate to="/analytics" replace />} />
-                      <Route path="/packages" element={<Packages />} />
-                      <Route path="/packages/:id" element={<PackageDetail />} />
-                      <Route path="/analytics" element={<Analytics />} />
-                      <Route path="/bank-sync" element={<BankSync />} />
-                      <Route path="/export-hub" element={<ExportHub />} />
-                      <Route path="/proforma" element={<ProformaInvoice />} />
-                      <Route path="/proformas" element={<ManageProformas />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/general-expenses" element={<GeneralExpenses />} />
-                      <Route path="/general-income" element={<GeneralIncome />} />
-                      <Route path="/suppliers" element={<Suppliers />} />
-                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/" element={<Navigate to="dashboard" replace />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="packages" element={<Packages />} />
+                      <Route path="packages/:id" element={<PackageDetail />} />
+                      <Route path="analytics" element={<Analytics />} />
+                      <Route path="bank-sync" element={<BankSync />} />
+                      <Route path="export-hub" element={<ExportHub />} />
+                      <Route path="proforma" element={<ProformaInvoice />} />
+                      <Route path="proformas" element={<ManageProformas />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="general-expenses" element={<GeneralExpenses />} />
+                      <Route path="general-income" element={<GeneralIncome />} />
+                      <Route path="suppliers" element={<Suppliers />} />
+                      <Route path="customers" element={<Customers />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>

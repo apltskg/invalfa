@@ -60,197 +60,121 @@ const BANK_ACCOUNTS = [
 
 export async function generateProformaPDF(data: ProformaData, agencySettings: AgencySettings) {
     const doc = new jsPDF();
+    const primaryColor = [37, 99, 235]; // Blue 600
 
-    // 1. Add Logo
+    // Add Logo
     try {
-        const logoUrl = agencySettings.logo_url || PDF_CONSTANTS.logoUrl;
-
-        // We need to fetch the image to add it to PDF, or use an `img` element if running in browser
-        // Since this runs in browser:
         const img = new Image();
-        img.src = logoUrl;
-        // Wait for load? In a sync function it's hard. 
-        // Better approach for browser-side jsPDF with remote images:
-        // Ideally we convert to base64. 
-        // For simplicity in this environment, let's try strict addImage if allow-origin permits, 
-        // otherwise we might need a proxy or base64 string.
-        // Assuming allow-origin is okay or cached.
-
-        // NOTE: addImage with URL is async-ish or requires arraybuffer. 
-        // PRO TIP: Use a pre-loaded base64 if possible. 
-        // For this task, we'll try to add it. If it fails, we fallback to text.
-        doc.addImage(img, 'PNG', 20, 15, 50, 15);
+        img.src = agencySettings.logo_url || PDF_CONSTANTS.logoUrl;
+        doc.addImage(img, 'PNG', 20, 15, 45, 12);
     } catch (e) {
-        console.warn("Could not add logo image to PDF, falling back to text", e);
-        doc.setFontSize(20);
+        doc.setFontSize(22);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.setFont("helvetica", "bold");
         doc.text(agencySettings.company_name || "ALFA TRAVEL", 20, 25);
     }
 
     // Header Right
-    doc.setFontSize(16);
-    doc.setTextColor(40, 40, 40);
-    doc.setFont("helvetica", "bold");
-    doc.text("PROFORMA INVOICE", 200, 25, { align: "right" });
-
-    // Invoice Meta
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-
-    doc.text("Invoice number", 160, 35, { align: "right" });
-    doc.setTextColor(0, 0, 0);
-    doc.text(data.invoiceNumber, 200, 35, { align: "right" });
-
-    doc.setTextColor(100, 100, 100);
-    doc.text("Issue date", 160, 42, { align: "right" });
-    doc.setTextColor(0, 0, 0);
-    doc.text(data.issueDate, 200, 42, { align: "right" });
-
-    // Grid: Invoice To (Left) vs Pay To (Right)
-    const yStart = 60;
-
-    // Invoice To
-    doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.setFont("helvetica", "bold");
-    doc.text("INVOICE TO:", 20, yStart);
+    doc.text("PROFORMA INVOICE", 190, 20, { align: "right" });
 
+    doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(data.clientName || "Client Name", 20, yStart + 8);
+    doc.text(data.invoiceNumber, 190, 28, { align: "right" });
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    if (data.clientAddress) {
-        const addressLines = doc.splitTextToSize(data.clientAddress, 70);
-        doc.text(addressLines, 20, yStart + 14);
-    }
-    if (data.clientEmail) {
-        doc.text(data.clientEmail, 20, yStart + 24);
-    }
-    if (data.clientVatNumber) {
-        doc.text(`VAT: ${data.clientVatNumber}`, 20, yStart + 30);
-    }
+    // Client Info
+    const startY = 50;
+    doc.setDrawColor(240, 240, 240);
+    doc.line(20, startY - 5, 190, startY - 5);
 
-    // Pay To (Right side)
+    doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.setFont("helvetica", "bold");
-    doc.text("PAY TO:", 200, yStart, { align: "right" });
+    doc.text("BILL TO", 20, startY);
+    doc.text("ISSUED ON", 190, startY, { align: "right" });
 
+    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text(agencySettings.company_name, 200, yStart + 8, { align: "right" });
+    doc.text(data.clientName || "Client Name", 20, startY + 7);
+    doc.text(data.issueDate, 190, startY + 7, { align: "right" });
 
     doc.setFont("helvetica", "normal");
-    const agencyAddr = doc.splitTextToSize(agencySettings.address, 70);
-    doc.text(agencyAddr, 200, yStart + 14, { align: "right" });
-
-    doc.text(agencySettings.phone, 200, yStart + 24, { align: "right" });
-    doc.text(agencySettings.email, 200, yStart + 29, { align: "right" });
-    doc.text(`VAT: ${agencySettings.vat_number}`, 200, yStart + 34, { align: "right" });
-
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    const clientDetails = [
+        data.clientAddress,
+        data.clientVatNumber ? `VAT: ${data.clientVatNumber}` : null,
+        data.clientEmail
+    ].filter(Boolean) as string[];
+    doc.text(clientDetails, 20, startY + 14);
 
     // Table
-    const tableData = data.lineItems.map(item => [
-        item.description,
-        `€${item.price.toFixed(2)}`,
-        `${item.taxPercent}%`,
-        `€${item.total.toFixed(2)}`
-    ]);
-
     autoTable(doc, {
-        startY: yStart + 50,
-        head: [["DESCRIPTION", "PRICE", "TAX", "TOTAL"]],
-        body: tableData,
-        theme: "plain",
+        startY: startY + 35,
+        head: [["Description", "Tax", "Price", "Total"]],
+        body: data.lineItems.map(item => [
+            item.description,
+            `${item.taxPercent}%`,
+            `€${item.price.toFixed(2)}`,
+            `€${item.total.toFixed(2)}`
+        ]),
         headStyles: {
-            fillColor: [255, 255, 255],
-            textColor: [150, 150, 150],
-            fontStyle: 'bold',
+            fillColor: [249, 250, 251],
+            textColor: [107, 114, 128],
             fontSize: 8,
+            fontStyle: 'bold',
             halign: 'left'
-        },
-        columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { halign: 'right' },
-            2: { halign: 'right' },
-            3: { halign: 'right' }
         },
         styles: {
             fontSize: 9,
-            cellPadding: 6,
-            lineColor: [240, 240, 240],
-            lineWidth: { bottom: 0.1 }
+            cellPadding: 5
         },
+        columnStyles: {
+            1: { halign: 'right' },
+            2: { halign: 'right' },
+            3: { halign: 'right', fontStyle: 'bold' }
+        }
     });
 
-    // Totals
     const finalY = (doc as any).lastAutoTable.finalY + 10;
-    const rightColX = 200;
 
-    doc.setFontSize(9);
-    doc.text(`Subtotal:`, 150, finalY, { align: "right" });
-    doc.text(`€${data.subtotal.toFixed(2)}`, rightColX, finalY, { align: "right" });
+    // Totals
+    doc.setFontSize(10);
+    doc.text("Subtotal", 140, finalY);
+    doc.text(`€${data.subtotal.toFixed(2)}`, 190, finalY, { align: "right" });
 
-    let currentY = finalY;
-
-    if (data.discountAmount > 0) {
-        currentY += 6;
-        doc.text(`Discount (${data.discountPercent}%):`, 150, currentY, { align: "right" });
-        doc.text(`-€${data.discountAmount.toFixed(2)}`, rightColX, currentY, { align: "right" });
-    }
-
-    currentY += 6;
-    doc.text(`Tax:`, 150, currentY, { align: "right" });
-    doc.text(`€${data.taxAmount.toFixed(2)}`, rightColX, currentY, { align: "right" });
-
-    currentY += 10;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text(`Total:`, 150, currentY, { align: "right" });
-    doc.text(`€${data.total.toFixed(2)}`, rightColX, currentY, { align: "right" });
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text("Total Amount Due", 140, finalY + 15);
+    doc.text(`€${data.total.toFixed(2)}`, 190, finalY + 15, { align: "right" });
 
-    // Bank Accounts Section
-    let notesY = finalY + 40;
-
+    // Bank Details
     if (data.acceptBankTransfer) {
-        doc.setFontSize(9);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("PAYMENT INSTRUCTIONS", 20, finalY + 40);
+
+        doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "bold");
-        doc.text("Payment Methods:", 20, notesY);
-        notesY += 6;
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-
-        BANK_ACCOUNTS.forEach(acc => {
-            doc.setFont("helvetica", "bold");
-            doc.text(acc.bank, 20, notesY);
+        let bankY = finalY + 48;
+        BANK_ACCOUNTS.forEach(bank => {
+            doc.text(bank.bank, 20, bankY);
             doc.setFont("helvetica", "normal");
-
-            const lines = doc.splitTextToSize(acc.details, 100);
-            doc.text(lines, 20, notesY + 5);
-            notesY += 15 + (lines.length * 3);
+            doc.setFontSize(7);
+            doc.text(bank.details, 20, bankY + 4);
+            bankY += 15;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
         });
-    }
-
-    // Notes
-    if (data.notes) {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        const noteLines = doc.splitTextToSize(data.notes, 170);
-        doc.text("Notes:", 20, notesY);
-        doc.text(noteLines, 20, notesY + 5);
     }
 
     // Footer
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    const footerY = 280;
-    doc.text("Thank you for your business!", 105, footerY, { align: "center" });
+    doc.setTextColor(180, 180, 180);
+    doc.text("This is a computer-generated document.", 105, 285, { align: "center" });
 
     return doc;
 }

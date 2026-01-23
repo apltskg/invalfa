@@ -35,18 +35,29 @@ export default function Packages() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
 
-  // New Package State
   const [newPackage, setNewPackage] = useState({
     client_name: "",
     start_date: "",
     end_date: "",
-    target_margin_percent: "10", // Default 10%
+    target_margin_percent: "10",
     description: "",
   });
 
+  const [customers, setCustomers] = useState<any[]>([]);
+
   useEffect(() => {
     fetchData();
+    fetchCustomers();
   }, []);
+
+  async function fetchCustomers() {
+    try {
+      const { data } = await supabase.from('customers').select('*').order('name');
+      if (data) setCustomers(data);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
+  }
 
   async function fetchData() {
     try {
@@ -168,14 +179,31 @@ export default function Packages() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="client_name">Όνομα Πελάτη / Γκρουπ</Label>
-                <Input
-                  id="client_name"
-                  value={newPackage.client_name}
-                  onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
-                  placeholder="π.χ. Σύλλογος Γονέων, Οικογένεια Παπαδόπουλου"
-                  className="rounded-xl"
-                />
-                <p className="text-xs text-muted-foreground">Tip: You can also select from existing customers</p>
+                <div className="flex gap-2">
+                  <Select
+                    onValueChange={(val) => setNewPackage({ ...newPackage, client_name: val })}
+                  >
+                    <SelectTrigger className="rounded-xl flex-1">
+                      <SelectValue placeholder="Επιλέξτε Υπάρχοντα Πελάτη" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="client_name"
+                    value={newPackage.client_name}
+                    onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
+                    placeholder="ή πληκτρολογήστε νέο..."
+                    className="rounded-xl flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Tip: Επιλέξτε από τη λίστα ή γράψτε νέο όνομα.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

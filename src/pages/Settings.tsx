@@ -41,13 +41,14 @@ export default function Settings() {
 
     async function fetchSettings() {
         try {
-            // For now, store in localStorage (later move to Supabase jsonb or table)
-            const stored = localStorage.getItem('agency_settings');
-            if (stored) {
-                setSettings(JSON.parse(stored));
+            const { data, error } = await supabase.from('agency_settings').select('*').single();
+            if (error && error.code !== 'PGRST116') throw error;
+            if (data) {
+                setSettings(data);
             }
         } catch (error) {
             console.error("Error fetching settings:", error);
+            toast.error("Αποτυχία φόρτωσης ρυθμίσεων");
         } finally {
             setLoading(false);
         }
@@ -56,12 +57,25 @@ export default function Settings() {
     async function handleSave() {
         setSaving(true);
         try {
-            // For now, save to localStorage (later migrate to Supabase)
-            localStorage.setItem('agency_settings', JSON.stringify(settings));
-            toast.success("Settings saved successfully");
+            const { data: existing } = await supabase.from('agency_settings').select('id').single();
+
+            if (existing) {
+                const { error } = await supabase
+                    .from('agency_settings')
+                    .update(settings)
+                    .eq('id', existing.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('agency_settings')
+                    .insert([settings]);
+                if (error) throw error;
+            }
+
+            toast.success("Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς");
         } catch (error: any) {
             console.error("Save error:", error);
-            toast.error("Failed to save settings");
+            toast.error("Αποτυχία αποθήκευσης ρυθμίσεων");
         } finally {
             setSaving(false);
         }

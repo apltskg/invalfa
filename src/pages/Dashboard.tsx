@@ -4,7 +4,7 @@ import { Invoice, BankTransaction } from "@/types/database";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, CreditCard, DollarSign, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { FileText, CreditCard, DollarSign, Calendar as CalendarIcon, Filter, AlertTriangle, MessageSquare } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -18,12 +18,26 @@ interface TimelineItem {
 
 export default function Dashboard() {
     const [items, setItems] = useState<TimelineItem[]>([]);
+    const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(new Date());
 
     useEffect(() => {
         fetchData();
+        fetchNotifications();
     }, [selectedMonth]);
+
+    async function fetchNotifications() {
+        try {
+            const { data } = await (supabase.from('notifications' as any) as any)
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(5);
+            if (data) setNotifications(data);
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        }
+    }
 
     async function fetchData() {
         try {
@@ -126,6 +140,34 @@ export default function Dashboard() {
                     </div>
                 </Card>
             </div>
+
+            {notifications.length > 0 && (
+                <div className="space-y-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Filter className="h-5 w-5 text-primary" />
+                        Πρόσφατες Ειδοποιήσεις
+                    </h2>
+                    <div className="grid gap-3">
+                        {notifications.map((n) => (
+                            <Card key={n.id} className={cn(
+                                "p-4 rounded-2xl border-l-4 shadow-sm",
+                                n.type === 'warning' ? "border-l-red-500 bg-red-50/30" : "border-l-blue-500 bg-blue-50/30"
+                            )}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex gap-3">
+                                        {n.type === 'warning' ? <AlertTriangle className="h-5 w-5 text-red-500" /> : <MessageSquare className="h-5 w-5 text-blue-500" />}
+                                        <div>
+                                            <p className="font-bold text-sm">{n.title}</p>
+                                            <p className="text-sm text-muted-foreground">{n.message}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px]">{format(new Date(n.created_at), 'dd/MM HH:mm')}</Badge>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <Card className="rounded-3xl overflow-hidden">
                 {loading ? (

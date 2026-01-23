@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Package, Invoice, BankTransaction } from "@/types/database";
-import { CheckCircle2, AlertCircle, FileText, CreditCard } from "lucide-react";
+import { CheckCircle2, AlertCircle, FileText, CreditCard, MessageSquare, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function AccountantPortal() {
     const { token } = useParams();
@@ -66,6 +68,30 @@ export default function AccountantPortal() {
         const [year, month] = monthYear.split("-");
         const next = new Date(parseInt(year), parseInt(month), 1);
         return format(next, "yyyy-MM");
+    }
+
+    async function postFeedback(invoiceId: string, type: 'comment' | 'doubt', content: string) {
+        try {
+            await supabase.from('invoice_comments').insert([{
+                invoice_id: invoiceId,
+                comment_text: content,
+                is_from_accountant: true,
+                is_doubt: type === 'doubt'
+            }]);
+
+            // Also create a notification
+            await supabase.from('notifications').insert([{
+                type: type === 'doubt' ? 'warning' : 'info',
+                title: type === 'doubt' ? 'Αμφισβήτηση από Λογιστή' : 'Νέο Σχόλιο Λογιστή',
+                message: content,
+                invoice_id: invoiceId
+            }]);
+
+            toast.success("Τα σχόλιά σας υποβλήθηκαν επιτυχώς");
+        } catch (error) {
+            console.error("Error posting feedback:", error);
+            toast.error("Αποτυχία υποβολής σχολίων");
+        }
     }
 
     if (loading) {
@@ -183,34 +209,86 @@ export default function AccountantPortal() {
                                         </div>
 
                                         {/* Invoices */}
-                                        <div className="grid gap-3 md:grid-cols-2">
+                                        <div className="grid gap-4 md:grid-cols-2">
                                             <div>
-                                                <h4 className="text-sm font-medium text-muted-foreground mb-2">Έξοδα</h4>
-                                                {pkg.invoices
-                                                    .filter((i) => i.type === "expense")
-                                                    .map((inv) => (
-                                                        <div key={inv.id} className="flex justify-between text-sm py-1">
-                                                            <span className="text-gray-600">{inv.merchant || inv.category}</span>
-                                                            <span className="font-medium">€{(inv.amount || 0).toFixed(2)}</span>
-                                                        </div>
-                                                    ))}
+                                                <h4 className="text-sm font-bold text-red-600 mb-2 uppercase tracking-tight">Έξοδα</h4>
+                                                <div className="space-y-2">
+                                                    {pkg.invoices
+                                                        .filter((i) => i.type === "expense")
+                                                        .map((inv) => (
+                                                            <div key={inv.id} className="group bg-muted/30 p-3 rounded-2xl transition-all hover:bg-muted/50">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <p className="font-semibold text-sm">{inv.merchant || inv.category}</p>
+                                                                        <p className="text-xs text-muted-foreground">{inv.invoice_date || "No date"}</p>
+                                                                    </div>
+                                                                    <span className="font-bold text-red-600">€{(inv.amount || 0).toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="h-7 text-[10px] rounded-lg px-2"
+                                                                        onClick={() => {
+                                                                            const comment = prompt("Προσθέστε ένα σχόλιο ή ερώτηση για αυτό το έξοδο:");
+                                                                            if (comment) postFeedback(inv.id, 'comment', comment);
+                                                                        }}
+                                                                    >
+                                                                        Σχόλιο
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="destructive"
+                                                                        className="h-7 text-[10px] rounded-lg px-2 bg-red-500/10 text-red-600 border-red-200 hover:bg-red-500 hover:text-white"
+                                                                        onClick={() => {
+                                                                            if (confirm("Θέλετε να επισημάνετε αυτό το έξοδο ως αμφίβολο;")) {
+                                                                                postFeedback(inv.id, 'doubt', 'Ο λογιστής επισήμανε αυτό το έξοδο ως αμφίβολο.');
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Αμφισβήτηση
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
                                                 {pkg.invoices.filter((i) => i.type === "expense").length === 0 && (
-                                                    <p className="text-sm text-muted-foreground italic">Δεν υπάρχουν</p>
+                                                    <p className="text-sm text-muted-foreground italic p-2">Δεν υπάρχουν έξοδα</p>
                                                 )}
                                             </div>
 
                                             <div>
-                                                <h4 className="text-sm font-medium text-muted-foreground mb-2">Έσοδα</h4>
-                                                {pkg.invoices
-                                                    .filter((i) => i.type === "income")
-                                                    .map((inv) => (
-                                                        <div key={inv.id} className="flex justify-between text-sm py-1">
-                                                            <span className="text-gray-600">{inv.merchant || inv.category}</span>
-                                                            <span className="font-medium text-green-600">€{(inv.amount || 0).toFixed(2)}</span>
-                                                        </div>
-                                                    ))}
+                                                <h4 className="text-sm font-bold text-green-600 mb-2 uppercase tracking-tight">Έσοδα</h4>
+                                                <div className="space-y-2">
+                                                    {pkg.invoices
+                                                        .filter((i) => i.type === "income")
+                                                        .map((inv) => (
+                                                            <div key={inv.id} className="group bg-muted/30 p-3 rounded-2xl transition-all hover:bg-muted/50">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <p className="font-semibold text-sm">{inv.merchant || inv.category}</p>
+                                                                        <p className="text-xs text-muted-foreground">{inv.invoice_date || "No date"}</p>
+                                                                    </div>
+                                                                    <span className="font-bold text-green-600">€{(inv.amount || 0).toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="h-7 text-[10px] rounded-lg px-2"
+                                                                        onClick={() => {
+                                                                            const comment = prompt("Προσθέστε ένα σχόλιο ή ερώτηση για αυτό το έσοδο:");
+                                                                            if (comment) postFeedback(inv.id, 'comment', comment);
+                                                                        }}
+                                                                    >
+                                                                        Σχόλιο
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
                                                 {pkg.invoices.filter((i) => i.type === "income").length === 0 && (
-                                                    <p className="text-sm text-muted-foreground italic">Δεν υπάρχουν</p>
+                                                    <p className="text-sm text-muted-foreground italic p-2">Δεν υπάρχουν έσοδα</p>
                                                 )}
                                             </div>
                                         </div>
