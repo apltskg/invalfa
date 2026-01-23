@@ -264,7 +264,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
                 extractedData={uploadedFile.extractedData}
                 onSave={handleSave}
                 onCancel={handleClose}
-                defaultType={defaultType}
                 packageId={packageId}
                 isManual={uploadedFile.isManual}
               />

@@ -9,12 +9,24 @@ import { CheckCircle2, AlertCircle, FileText, CreditCard, MessageSquare, AlertTr
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+interface PackageWithInvoices extends Package {
+    invoices: Invoice[];
+}
+
+interface PortalResponse {
+    authorized: boolean;
+    monthYear?: string;
+    packages?: PackageWithInvoices[];
+    transactions?: BankTransaction[];
+    error?: string;
+}
+
 export default function AccountantPortal() {
     const { token } = useParams();
     const [loading, setLoading] = useState(true);
     const [authorized, setAuthorized] = useState(false);
     const [monthYear, setMonthYear] = useState("");
-    const [packages, setPackages] = useState<(Package & { invoices: Invoice[] })[]>([]);
+    const [packages, setPackages] = useState<PackageWithInvoices[]>([]);
     const [transactions, setTransactions] = useState<BankTransaction[]>([]);
 
     useEffect(() => {
@@ -22,40 +34,36 @@ export default function AccountantPortal() {
     }, [token]);
 
     async function verifyAndFetch() {
-        try {
-            // Verify magic link token
-            const { data: link } = await supabase
-                .from("accountant_magic_links")
-                .select("*")
-                .eq("token", token)
-                .single();
+        if (!token) {
+            setAuthorized(false);
+            setLoading(false);
+            return;
+        }
 
-            if (!link || new Date(link.expires_at) < new Date()) {
+        try {
+            // Use edge function for server-side token validation
+            const { data, error } = await supabase.functions.invoke<PortalResponse>('accountant-portal-access', {
+                body: { token, action: 'get_data' }
+            });
+
+            if (error) {
+                console.error("Portal access error:", error);
+                setAuthorized(false);
+                setLoading(false);
+                return;
+            }
+
+            if (!data?.authorized) {
+                console.log("Not authorized:", data?.error);
                 setAuthorized(false);
                 setLoading(false);
                 return;
             }
 
             setAuthorized(true);
-            setMonthYear(link.month_year);
-
-            // Fetch packages for this month
-            const { data: pkgs } = await supabase
-                .from("packages")
-                .select("*")
-                .gte("start_date", `${link.month_year}-01`)
-                .lt("start_date", `${getNextMonth(link.month_year)}-01`);
-
-            const { data: invs } = await supabase.from("invoices").select("*");
-            const { data: txns } = await supabase.from("bank_transactions").select("*");
-
-            const packagesWithInvoices = (pkgs || []).map((pkg) => ({
-                ...pkg,
-                invoices: ((invs || []) as any[]).filter((inv) => inv.package_id === pkg.id),
-            })) as (Package & { invoices: Invoice[] })[];
-
-            setPackages(packagesWithInvoices);
-            setTransactions((txns as BankTransaction[]) || []);
+            setMonthYear(data.monthYear || "");
+            setPackages(data.packages || []);
+            setTransactions(data.transactions || []);
         } catch (error) {
             console.error("Error verifying magic link:", error);
             setAuthorized(false);
@@ -64,28 +72,23 @@ export default function AccountantPortal() {
         }
     }
 
-    function getNextMonth(monthYear: string) {
-        const [year, month] = monthYear.split("-");
-        const next = new Date(parseInt(year), parseInt(month), 1);
-        return format(next, "yyyy-MM");
-    }
-
     async function postFeedback(invoiceId: string, type: 'comment' | 'doubt', content: string) {
-        try {
-            await supabase.from('invoice_comments').insert([{
-                invoice_id: invoiceId,
-                comment_text: content,
-                is_from_accountant: true,
-                is_doubt: type === 'doubt'
-            }]);
+        if (!token) return;
 
-            // Also create a notification
-            await supabase.from('notifications').insert([{
-                type: type === 'doubt' ? 'warning' : 'info',
-                title: type === 'doubt' ? 'Αμφισβήτηση από Λογιστή' : 'Νέο Σχόλιο Λογιστή',
-                message: content,
-                invoice_id: invoiceId
-            }]);
+        try {
+            const { data, error } = await supabase.functions.invoke('accountant-portal-access', {
+                body: { 
+                    token, 
+                    action: 'post_comment',
+                    invoiceId,
+                    commentText: content,
+                    isDoubt: type === 'doubt'
+                }
+            });
+
+            if (error || !data?.success) {
+                throw new Error(error?.message || 'Failed to post feedback');
+            }
 
             toast.success("Τα σχόλιά σας υποβλήθηκαν επιτυχώς");
         } catch (error) {
@@ -117,12 +120,12 @@ export default function AccountantPortal() {
     }
 
     const totalIncome = packages.reduce(
-        (sum, pkg) => sum + pkg.invoices.filter((i) => i.type === "income").reduce((s, i) => s + (i.amount || 0), 0),
+        (sum, pkg) => sum + pkg.invoices.filter((i) => (i.type || 'expense') === "income").reduce((s, i) => s + (i.amount || 0), 0),
         0
     );
 
     const totalExpenses = packages.reduce(
-        (sum, pkg) => sum + pkg.invoices.filter((i) => i.type === "expense").reduce((s, i) => s + (i.amount || 0), 0),
+        (sum, pkg) => sum + pkg.invoices.filter((i) => (i.type || 'expense') === "expense").reduce((s, i) => s + (i.amount || 0), 0),
         0
     );
 
@@ -137,7 +140,7 @@ export default function AccountantPortal() {
                         ALFA Μονοπρόσωπη Ι.Κ.Ε.
                     </h1>
                     <p className="text-muted-foreground">
-                        Μηνιαία Αναφορά - {format(new Date(`${monthYear}-01`), "MMMM yyyy")}
+                        Μηνιαία Αναφορά - {monthYear ? format(new Date(`${monthYear}-01`), "MMMM yyyy") : ""}
                     </p>
                     <div className="flex items-center justify-center gap-4 mt-2 text-sm text-muted-foreground">
                         <span>📞 +30 694 207 2312</span>
@@ -183,10 +186,10 @@ export default function AccountantPortal() {
                         ) : (
                             packages.map((pkg) => {
                                 const pkgIncome = pkg.invoices
-                                    .filter((i) => i.type === "income")
+                                    .filter((i) => (i.type || 'expense') === "income")
                                     .reduce((s, i) => s + (i.amount || 0), 0);
                                 const pkgExpenses = pkg.invoices
-                                    .filter((i) => i.type === "expense")
+                                    .filter((i) => (i.type || 'expense') === "expense")
                                     .reduce((s, i) => s + (i.amount || 0), 0);
                                 const pkgProfit = pkgIncome - pkgExpenses;
 
@@ -203,7 +206,7 @@ export default function AccountantPortal() {
                                             <div className="text-right">
                                                 <p className="text-2xl font-bold">€{pkgProfit.toFixed(2)}</p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {((pkgProfit / pkgIncome) * 100).toFixed(1)}% περιθώριο
+                                                    {pkgIncome > 0 ? ((pkgProfit / pkgIncome) * 100).toFixed(1) : 0}% περιθώριο
                                                 </p>
                                             </div>
                                         </div>
@@ -214,7 +217,7 @@ export default function AccountantPortal() {
                                                 <h4 className="text-sm font-bold text-red-600 mb-2 uppercase tracking-tight">Έξοδα</h4>
                                                 <div className="space-y-2">
                                                     {pkg.invoices
-                                                        .filter((i) => i.type === "expense")
+                                                        .filter((i) => (i.type || 'expense') === "expense")
                                                         .map((inv) => (
                                                             <div key={inv.id} className="group bg-muted/30 p-3 rounded-2xl transition-all hover:bg-muted/50">
                                                                 <div className="flex justify-between items-start">
@@ -252,7 +255,7 @@ export default function AccountantPortal() {
                                                             </div>
                                                         ))}
                                                 </div>
-                                                {pkg.invoices.filter((i) => i.type === "expense").length === 0 && (
+                                                {pkg.invoices.filter((i) => (i.type || 'expense') === "expense").length === 0 && (
                                                     <p className="text-sm text-muted-foreground italic p-2">Δεν υπάρχουν έξοδα</p>
                                                 )}
                                             </div>
@@ -261,7 +264,7 @@ export default function AccountantPortal() {
                                                 <h4 className="text-sm font-bold text-green-600 mb-2 uppercase tracking-tight">Έσοδα</h4>
                                                 <div className="space-y-2">
                                                     {pkg.invoices
-                                                        .filter((i) => i.type === "income")
+                                                        .filter((i) => (i.type || 'expense') === "income")
                                                         .map((inv) => (
                                                             <div key={inv.id} className="group bg-muted/30 p-3 rounded-2xl transition-all hover:bg-muted/50">
                                                                 <div className="flex justify-between items-start">
@@ -287,7 +290,7 @@ export default function AccountantPortal() {
                                                             </div>
                                                         ))}
                                                 </div>
-                                                {pkg.invoices.filter((i) => i.type === "income").length === 0 && (
+                                                {pkg.invoices.filter((i) => (i.type || 'expense') === "income").length === 0 && (
                                                     <p className="text-sm text-muted-foreground italic p-2">Δεν υπάρχουν έσοδα</p>
                                                 )}
                                             </div>
@@ -301,35 +304,45 @@ export default function AccountantPortal() {
 
                 {/* Bank Transactions Summary */}
                 <Card className="rounded-3xl overflow-hidden bg-white shadow-lg">
-                    <div className="p-6 bg-gradient-to-r from-purple-500 to-pink-600">
+                    <div className="p-6 bg-gradient-to-r from-emerald-500 to-teal-600">
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <CreditCard className="h-6 w-6" />
-                            Τραπεζικές Συναλλαγές ({transactions.length})
+                            Τραπεζικές Κινήσεις ({transactions.length})
                         </h2>
                     </div>
 
                     <div className="p-6">
-                        <div className="grid gap-2">
-                            {transactions.slice(0, 10).map((txn) => (
-                                <div key={txn.id} className="flex justify-between items-center text-sm py-2 border-b">
-                                    <div>
-                                        <p className="font-medium">{txn.description}</p>
-                                        <p className="text-xs text-muted-foreground">{txn.transaction_date}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className={`font-bold ${txn.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {transactions.length === 0 ? (
+                            <p className="text-center text-muted-foreground">Δεν υπάρχουν καταγεγραμμένες κινήσεις</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {transactions.slice(0, 10).map((txn) => (
+                                    <div key={txn.id} className="flex justify-between items-center p-3 bg-muted/30 rounded-xl">
+                                        <div>
+                                            <p className="font-medium text-sm">{txn.description}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {format(new Date(txn.transaction_date), "dd MMM yyyy")}
+                                            </p>
+                                        </div>
+                                        <span className={`font-bold ${txn.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
                                             €{Math.abs(txn.amount).toFixed(2)}
-                                        </p>
+                                        </span>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                                {transactions.length > 10 && (
+                                    <p className="text-center text-sm text-muted-foreground">
+                                        ... και {transactions.length - 10} ακόμη κινήσεις
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </Card>
 
                 {/* Footer */}
-                <div className="text-center text-sm text-muted-foreground pt-8 pb-4">
-                    <p>© TravelDocs - Αυτός ο σύνδεσμος θα λήξει σύντομα</p>
+                <div className="text-center text-sm text-muted-foreground py-8">
+                    <p>Αυτή η αναφορά δημιουργήθηκε αυτόματα από το TravelDocs.</p>
+                    <p className="mt-1">Για απορίες επικοινωνήστε με το γραφείο.</p>
                 </div>
             </div>
         </div>

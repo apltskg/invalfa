@@ -169,6 +169,36 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_operational: boolean | null
+          name: string
+          name_el: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_operational?: boolean | null
+          name: string
+          name_el: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_operational?: boolean | null
+          name?: string
+          name_el?: string
+        }
+        Relationships: []
+      }
       export_logs: {
         Row: {
           id: string
@@ -192,6 +222,51 @@ export type Database = {
           sent_at?: string
         }
         Relationships: []
+      }
+      invoice_comments: {
+        Row: {
+          comment_text: string
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          is_doubt: boolean | null
+          is_read: boolean | null
+          shareable_link_id: string | null
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_doubt?: boolean | null
+          is_read?: boolean | null
+          shareable_link_id?: string | null
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_doubt?: boolean | null
+          is_read?: boolean | null
+          shareable_link_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_comments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_comments_shareable_link_id_fkey"
+            columns: ["shareable_link_id"]
+            isOneToOne: false
+            referencedRelation: "shareable_links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_transaction_matches: {
         Row: {
@@ -241,6 +316,7 @@ export type Database = {
           category: Database["public"]["Enums"]["invoice_category"]
           created_at: string
           customer_id: string | null
+          expense_category_id: string | null
           extracted_data: Json | null
           file_name: string
           file_path: string
@@ -257,6 +333,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["invoice_category"]
           created_at?: string
           customer_id?: string | null
+          expense_category_id?: string | null
           extracted_data?: Json | null
           file_name: string
           file_path: string
@@ -273,6 +350,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["invoice_category"]
           created_at?: string
           customer_id?: string | null
+          expense_category_id?: string | null
           extracted_data?: Json | null
           file_name?: string
           file_path?: string
@@ -293,6 +371,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
@@ -307,6 +392,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          link_url: string | null
+          message: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link_url?: string | null
+          message: string
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link_url?: string | null
+          message?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
       }
       packages: {
         Row: {
@@ -415,6 +530,51 @@ export type Database = {
         }
         Relationships: []
       }
+      shareable_links: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          month_year: string | null
+          package_id: string | null
+          proforma_id: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          month_year?: string | null
+          package_id?: string | null
+          proforma_id?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          month_year?: string | null
+          package_id?: string | null
+          proforma_id?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shareable_links_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shareable_links_proforma_id_fkey"
+            columns: ["proforma_id"]
+            isOneToOne: false
+            referencedRelation: "proforma_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -488,6 +648,19 @@ export type Database = {
         Returns: boolean
       }
       is_authorized_user: { Args: { _user_id: string }; Returns: boolean }
+      update_magic_link_access: {
+        Args: { _link_id: string }
+        Returns: undefined
+      }
+      validate_magic_link_token: {
+        Args: { _token: string }
+        Returns: {
+          expires_at: string
+          id: string
+          is_valid: boolean
+          month_year: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "staff"
