@@ -100,14 +100,26 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.0-flash-exp",
         messages: [
-          { 
-            role: "system", 
-            content: `You extract bank transactions from PDF statements. Return a JSON array of transactions with: date (YYYY-MM-DD), description (string), amount (number, positive for credits, negative for debits). Only return valid transactions.`
+          {
+            role: "system",
+            content: `You are an expert financial auditor specializing in Greek and European bank statements. 
+            Extract structured data from the PDF.
+            
+            RETURN JSON ARRAY OF OBJECTS: 
+            [{ "date": "YYYY-MM-DD", "description": "string", "amount": number }]
+
+            CRITICAL RULES:
+            1. **Dates**: Convert DD/MM/YYYY to YYYY-MM-DD.
+            2. **Amounts**: Greek format uses DOT for thousands and COMMA for decimals (e.g. "1.234,56" -> 1234.56).
+               - POSITIVE for Credits (Deposits).
+               - NEGATIVE for Debits (Withdrawals/Expenses).
+            3. **Ignore**: Opening/Closing balances, running balance columns, page headers/footers.
+            4. **Descriptions**: Clean up extra whitespace/newlines.`
           },
-          { 
-            role: "user", 
+          {
+            role: "user",
             content: [
               { type: "text", text: `Extract all transactions from this bank statement PDF. Return JSON array only.` },
               { type: "image_url", image_url: { url: signedUrlData.signedUrl } }
@@ -124,7 +136,7 @@ serve(async (req) => {
 
     const aiResponse = await response.json();
     const content = aiResponse.choices?.[0]?.message?.content || "";
-    
+
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const transactions = JSON.parse(jsonMatch[0]);
@@ -134,7 +146,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ transactions: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", transactions: [] }), 
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", transactions: [] }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
