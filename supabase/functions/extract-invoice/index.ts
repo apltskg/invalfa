@@ -104,14 +104,19 @@ serve(async (req) => {
             - "airline": Tickets, Boarding passes, Aegean, Sky Express, Ryanair, Volotea, Lufthansa.
             - "hotel": Accommodation, Airbnb, Booking.com, Hotels.com, Marriott, Hilton.
             - "tolls": Attiki Odos, Egnatia Odos, Gefyra, Olympia Odos, Moreas, Ionia Odos.
-            - "other": EVERYTHING else. Taxis (Uber, FreeNow), Fuel (Shell, EKO, BP), Restaurants, Parking, Amazon, Software.`
+            - "other": EVERYTHING else. Taxis (Uber, FreeNow), Fuel (Shell, EKO, BP), Restaurants, Parking, Amazon, Software.
+            
+            CRITICAL FORMATTING RULES:
+            - **Amounts**: Greek format uses DOT for thousands and COMMA for decimals (e.g., 1.234,56). Convert this carefully to a standard number (1234.56).
+            - **Dates**: Greek dates are usually DD/MM/YYYY.
+            - **Merchant**: If a logo is present, use the brand name (e.g., "Vodafone") rather than the legal entity (e.g., "Vodafone Panafon S.A.") unless they are drastically different.
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Extremely accurately extract merchant, total amount (incl. VAT), invoice date, category, and tax_id (ΑΦΜ) from this document: ${fileName}`
+                text: `Extremely accurately extract merchant, total amount(incl.VAT), invoice date, category, and tax_id(ΑΦΜ) from this document: ${ fileName }`
               },
               {
                 type: "image_url",
@@ -213,6 +218,7 @@ serve(async (req) => {
         JSON.stringify({
           extracted: {
             merchant: parsed.merchant || null,
+            tax_id: parsed.tax_id || null, // Added tax_id
             amount: parsed.amount ?? null,
             date: parsed.date || null,
             category: parsed.category || "other",

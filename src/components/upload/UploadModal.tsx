@@ -133,6 +133,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     date: string | null;
     category: InvoiceCategory;
     packageId: string | null;
+    customerId?: string | null;
+    supplierId?: string | null;
   }) => {
     if (!uploadedFile) return;
 
@@ -148,7 +150,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         category: data.category,
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
-        type: defaultType
+        type: defaultType,
+        customer_id: data.customerId || null,
+        supplier_id: data.supplierId || null
       }]);
 
       if (error) {
@@ -266,7 +270,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
                 onCancel={handleClose}
                 packageId={packageId}
                 isManual={uploadedFile.isManual}
+                type={defaultType} // Pass the type
               />
+            )}
             </motion.div>
           )}
         </AnimatePresence>
