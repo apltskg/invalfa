@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.accountant-portal-access]
 verify_jwt = false
+
+[functions.manage-users]
+verify_jwt = false
