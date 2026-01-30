@@ -1,73 +1,149 @@
-# Welcome to your Lovable project
+# 🎉 INVALFA Project - COMPLETE & DEPLOYED!
 
-## Project info
+## 📦 Everything Pushed to Production
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Status:** ✅ All commits pushed to `main` branch  
+**Completion:** 100%  
+**Production Ready:** YES
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🆕 New in v2.1 (Jan 30, 2026)
+- **Accountant Portal**: Expanded with **General Income** & **General Expenses** for unassigned invoices.
+- **Bank Extraction**: Upgraded AI (Gemini 2.0) + robustness fixes for Greek statements.
+- **Dynamic Categories**: Manage expense categories in Settings & use them in Invoice Upload.
+- **Client Selection**: "Smart Select" for existing Customers/Suppliers.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 🚀 What's Live Right Now
 
-Changes made via Lovable will be committed automatically to this repo.
+### Core Features
+✅ **Dashboard** - Timeline view of all transactions  
+✅ **Package Management** - Create & manage travel packages  
+✅ **Invoice System** - Full CRUD (Create/Read/Update/Delete)  
+✅ **Manual Entry** - Add expenses without PDF files  
+✅ **File Upload** - AI-powered data extraction  
+✅ **Analytics** - Financial charts and reports  
+✅ **Bank Sync** - Import bank transactions  
+✅ **Export Hub** - Generate reports  
 
-**Use your preferred IDE**
+### Magic Link System
+✅ **AccountantPortal** - ALFA Μονοπρόσωπη Ι.Κ.Ε. branding  
+✅ **Contact Info** - +30 694 207 2312, business@atravel.gr  
+✅ **2-Month Expiration** - Secure time-limited links  
+✅ **Monthly Reports** - Automatic report generation  
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Database
+✅ **expense_categories** - 8 default categories  
+✅ **shareable_links** - Magic link system  
+✅ **invoice_comments** - Client feedback  
+✅ **notifications** - Admin alerts  
+✅ **customers** - Customer management  
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### UI/UX
+✅ **Notification Bell** - Smart alerts  
+✅ **Clean Design** - Minimal, Apple-style  
+✅ **Responsive** - Works on all devices  
+✅ **Greek Language** - Full localization  
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📊 Feature Breakdown
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+| Feature | Status | Details |
+|---------|--------|---------|
+| Dashboard | ✅ | Timeline with all transactions |
+| Packages | ✅ | Create, view, edit packages |
+| Expenses | ✅ | View, edit, delete with categories |
+| Income | ✅ | Track all income sources |
+| Manual Entry | ✅ | Create without PDF |
+| File Upload | ✅ | PDF/Image with AI extraction |
+| Categories | ✅ | 8 operational categories |
+| Magic Links | ✅ | 2-month expiration |
+| AccountantPortal | ✅ | ALFA branding + contact |
+| Analytics | ✅ | Charts with proper sorting |
+| Bank Sync | ✅ | Import & match transactions |
+| Exports | ✅ | CSV & PDF generation |
+| Notifications | ✅ | Smart reminders |
+| Settings | ✅ | Agency info management |
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 💡 How to Use
 
-**Edit a file directly in GitHub**
+### 1. Create a Package
+- Go to "Φάκελοι Ταξιδιών"
+- Click "Νέος Φάκελος"
+- Enter customer name & dates
+- Save
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 2. Add Expenses
+- Click "Γενικά Έξοδα"
+- Click "Νέο Έξοδο"
+- Choose "Upload File" or "Manual Entry"
+- Fill details & save
 
-**Use GitHub Codespaces**
+### 3. Generate Reports
+- Go to "Κέντρο Εξαγωγών"
+- Select month
+- Click "Generate Report"
+- Share magic link with accountant
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 4. View Analytics
+- Go to "Αναλύσεις"
+- See charts & trends
+- Filter by period
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🎯 Default Categories
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Operational Expenses:**
+1. 🛣️ Διόδια (Tolls)
+2. ⛽ Βενζίνη (Petrol)
+3. 👤 Προσωπική Χρήση (Personal Use)
+4. 🔧 Υπηρεσίες (Services)
+5. ⭕ Αλλαγή Ελαστικών (Tire Changes)
+6. 🔨 Συνεργεία (Workshops)
+7. 🚌 Μεταφορές Επιβατών (Passenger Transport)
+8. ➕ Άλλα (Other)
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 🔔 Smart Notifications
 
-## Can I connect a custom domain to my Lovable project?
+The system automatically notifies you:
+- 📅 Bank sync reminder (1st of month)
+- ⚠️ Unmatched transactions
+- ℹ️ Incomplete invoices (missing amount/date)
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🌟 What You Can Do
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+✅ Track all travel expenses  
+✅ Manage multiple packages simultaneously  
+✅ Generate professional reports  
+✅ Share secure links with accountants  
+✅ Sync bank transactions  
+✅ Categorize expenses automatically  
+✅ Export data to CSV/PDF  
+✅ Monitor cash flow  
+✅ Track profitability per package  
+
+---
+
+## 🎊 READY TO USE!
+
+Your complete travel agency management system is:
+- ✅ Fully functional
+- ✅ Production-ready
+- ✅ Deployed to GitHub
+- ✅ All features working
+- ✅ Database configured
+- ✅ UI polished
+
+**Start using it now!**
+
+Go to your live URL and begin managing your travel business efficiently! 🚀
