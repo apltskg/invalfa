@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Building2 } from "lucide-react";
+import { Save, Building2, Plus, Trash2, Tag, X, Check } from "lucide-react"; // Added icons
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -238,6 +238,110 @@ export default function Settings() {
                     </div>
                 </div>
             </Card>
+
+            {/* EXPENSE CATEGORIES SECTION */}
+            <Card className="p-8 rounded-3xl">
+                <div className="flex items-center justify-between mb-6 pb-6 border-b">
+                    <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                            <Tag className="h-6 w-6 text-indigo-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-semibold">Κατηγορίες Εξόδων</h2>
+                            <p className="text-sm text-muted-foreground">Διαμορφώστε τις κατηγορίες που εμφανίζονται στις καταχωρήσεις</p>
+                        </div>
+                    </div>
+                </div>
+
+                <CategoryManager />
+            </Card>
+        </div>
+    );
+}
+
+// Sub-component for managing categories
+function CategoryManager() {
+    interface Category { id: string; name: string; name_el: string; is_operational: boolean; }
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [newCat, setNewCat] = useState({ name: "", name_el: "" });
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    async function fetchCategories() {
+        const { data } = await supabase.from('expense_categories').select('*').order('name');
+        if (data) setCategories(data);
+    }
+
+    async function addCategory() {
+        if (!newCat.name || !newCat.name_el) return;
+        setLoading(true);
+        const { error } = await supabase.from('expense_categories').insert([{
+            name: newCat.name,
+            name_el: newCat.name_el,
+            is_operational: true
+        }]);
+        if (error) toast.error("Σφάλμα προσθήκης");
+        else {
+            toast.success("Κατηγορία προστέθηκε");
+            setNewCat({ name: "", name_el: "" });
+            fetchCategories();
+        }
+        setLoading(false);
+    }
+
+    async function deleteCategory(id: string) {
+        if (!confirm("Are you sure?")) return;
+        const { error } = await supabase.from('expense_categories').delete().eq('id', id);
+        if (error) toast.error("Σφάλμα διαγραφής");
+        else {
+            toast.success("Κατηγορία διαγράφηκε");
+            fetchCategories();
+        }
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                        <div>
+                            <p className="font-medium">{cat.name_el}</p>
+                            <p className="text-xs text-muted-foreground">{cat.name}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteCategory(cat.id)} className="text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+            </div>
+
+            <div className="flex gap-4 items-end pt-4 border-t">
+                <div className="space-y-2 flex-1">
+                    <Label>English Name</Label>
+                    <Input
+                        value={newCat.name}
+                        onChange={e => setNewCat({ ...newCat, name: e.target.value })}
+                        placeholder="e.g. Marketing"
+                        className="rounded-xl"
+                    />
+                </div>
+                <div className="space-y-2 flex-1">
+                    <Label>Ελληνικό Όνομα</Label>
+                    <Input
+                        value={newCat.name_el}
+                        onChange={e => setNewCat({ ...newCat, name_el: e.target.value })}
+                        placeholder="π.χ. Μάρκετινγκ"
+                        className="rounded-xl"
+                    />
+                </div>
+                <Button onClick={addCategory} disabled={loading} className="rounded-xl mb-0.5">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Προσθήκη
+                </Button>
+            </div>
         </div>
     );
 }

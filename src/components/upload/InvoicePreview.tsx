@@ -20,6 +20,7 @@ interface InvoicePreviewProps {
     amount: number | null;
     date: string | null;
     category: InvoiceCategory;
+    expenseCategoryId?: string | null; // Added
     packageId: string | null;
     customerId?: string | null;
     supplierId?: string | null;
@@ -37,10 +38,14 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
   const [amount, setAmount] = useState(extractedData?.amount?.toString() || "");
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
+  const [expenseCategoryId, setExpenseCategoryId] = useState<string | null>(null);
   const [packageId, setPackageId] = useState<string | null>(propPackageId || defaultPackageId || null);
 
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
+
+  const [expenseCategories, setExpenseCategories] = useState<{ id: string, name: string, name_el: string, check_keywords?: string[] }[]>([]); // Dynamic Categories
+
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -111,6 +116,18 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           }
         }
       }
+      // 3. Fetch Expense Categories (only if type is expense)
+      if (type === "expense") {
+        const { data: catData } = await supabase.from('expense_categories').select('*').order('name');
+        if (catData) {
+          setExpenseCategories(catData);
+          // Optional: Try to auto-match category based on extracted data text or merchant
+          if (extractedData?.category && !expenseCategoryId) {
+            // Try to find a dynamic category that matches the extracted enum (e.g. 'airline' -> 'Aeroporika')
+            // For now, simpler: if they have a 'name' that matches
+          }
+        }
+      }
     }
     fetchData();
   }, [extractedData, defaultPackageId, propPackageId, type]);
@@ -120,7 +137,8 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       merchant,
       amount: amount ? parseFloat(amount) : null,
       date: date || null,
-      category,
+      category, // Keep passing the enum for backward compat
+      expenseCategoryId, // New field
       packageId,
       customerId: type === "income" ? selectedEntityId : null,
       supplierId: type === "expense" ? selectedEntityId : null,
@@ -266,18 +284,40 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Κατηγορία</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as InvoiceCategory)}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="airline">✈️ Αεροπορικά</SelectItem>
-                <SelectItem value="hotel">🏨 Διαμονή</SelectItem>
-                <SelectItem value="tolls">🛣️ Διόδια/Μεταφορικά</SelectItem>
-                <SelectItem value="other">📄 Άλλα</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Κατηγορία</Label>
+            {type === 'expense' && expenseCategories.length > 0 ? (
+              <Select
+                value={expenseCategoryId || ""}
+                onValueChange={(val) => {
+                  setExpenseCategoryId(val);
+                  // Also set the enum category to 'other' (or mapped) to satisfy DB constraint
+                  setCategory('other');
+                }}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Επιλογή κατηγορίας..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name_el || c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={category} onValueChange={(val) => setCategory(val as InvoiceCategory)}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="airline">✈️ Αεροπορικά</SelectItem>
+                  <SelectItem value="hotel">🏨 Διαμονή</SelectItem>
+                  <SelectItem value="tolls">🛣️ Διόδια/Μεταφορικά</SelectItem>
+                  <SelectItem value="other">📄 Άλλα</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">

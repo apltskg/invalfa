@@ -64,6 +64,7 @@ export interface ExtractedData {
   currency?: string;
   vat_amount?: number;
   invoice_number?: string;
+  tax_id?: string;
   items?: Array<{ description: string; quantity: number; unit_price: number; total: number }>;
 }
 

@@ -104,19 +104,20 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert financial auditor specializing in Greek and European bank statements. 
-            Extract structured data from the PDF.
+            content: `You are an expert financial auditor. Your JOB is to extract EVERY SINGLE transaction line item from the provided bank statement PDF.
             
-            RETURN JSON ARRAY OF OBJECTS: 
-            [{ "date": "YYYY-MM-DD", "description": "string", "amount": number }]
+            OUTPUT FORMAT:
+            A JSON Array of objects: [{ "date": "YYYY-MM-DD", "description": "full description text", "amount": number }]
 
-            CRITICAL RULES:
-            1. **Dates**: Convert DD/MM/YYYY to YYYY-MM-DD.
-            2. **Amounts**: Greek format uses DOT for thousands and COMMA for decimals (e.g. "1.234,56" -> 1234.56).
-               - POSITIVE for Credits (Deposits).
-               - NEGATIVE for Debits (Withdrawals/Expenses).
-            3. **Ignore**: Opening/Closing balances, running balance columns, page headers/footers.
-            4. **Descriptions**: Clean up extra whitespace/newlines.`
+            STRICT RULES:
+            1. **Exhaustive Extraction**: Do NOT summarize. Do NOT skip any rows. If there are 50 transactions, return 50 objects.
+            2. **Dates**: Convert all dates to YYYY-MM-DD.
+            3. **Amounts**: 
+               - Parse Greek/European formats correctly (e.g. "1.234,56" is 1234.56).
+               - CREDITS (Deposits) are POSITIVE.
+               - DEBITS (Withdrawals) are NEGATIVE.
+            4. **Clean Descriptions**: Remove line breaks within a description.
+            5. **Ignore**: Page numbers, headers, "Balance Brought Forward", "Total", etc. Only extract actual movements.`
           },
           {
             role: "user",
@@ -135,12 +136,24 @@ serve(async (req) => {
     }
 
     const aiResponse = await response.json();
+    console.log("AI Response full:", JSON.stringify(aiResponse));
     const content = aiResponse.choices?.[0]?.message?.content || "";
+    console.log("AI Raw Content:", content);
 
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    // Clean up markdown code blocks if present
+    const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+
+    // Try finding array bracket
+    const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+
     if (jsonMatch) {
-      const transactions = JSON.parse(jsonMatch[0]);
-      return new Response(JSON.stringify({ transactions }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      try {
+        const transactions = JSON.parse(jsonMatch[0]);
+        console.log("Parsed transactions:", transactions.length);
+        return new Response(JSON.stringify({ transactions }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+      }
     }
 
     return new Response(JSON.stringify({ transactions: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

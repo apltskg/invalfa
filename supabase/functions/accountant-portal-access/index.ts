@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     // Use service role client for server-side operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
     // Handle different actions
     if (action === 'validate') {
       return new Response(
-        JSON.stringify({ 
-          authorized: true, 
+        JSON.stringify({
+          authorized: true,
           monthYear,
           expiresAt: validatedLink.expires_at
         }),
@@ -78,8 +78,8 @@ Deno.serve(async (req) => {
       // Calculate date range for the month
       const [year, month] = monthYear.split('-');
       const startDate = `${monthYear}-01`;
-      const nextMonth = parseInt(month) === 12 
-        ? `${parseInt(year) + 1}-01` 
+      const nextMonth = parseInt(month) === 12
+        ? `${parseInt(year) + 1}-01`
         : `${year}-${String(parseInt(month) + 1).padStart(2, '0')}`;
       const endDate = `${nextMonth}-01`;
 
@@ -111,15 +111,25 @@ Deno.serve(async (req) => {
         invoices = invData || [];
       }
 
-      // Fetch bank transactions for these packages
-      let transactions: any[] = [];
-      if (packageIds.length > 0) {
-        const { data: txnData } = await supabase
-          .from('bank_transactions')
-          .select('*')
-          .in('package_id', packageIds);
-        transactions = txnData || [];
-      }
+      // Fetch general invoices (not linked to any package) for this month
+      const { data: generalInvoicesData } = await supabase
+        .from('invoices')
+        .select('*')
+        .is('package_id', null)
+        .gte('invoice_date', startDate)
+        .lt('invoice_date', endDate);
+
+      const generalInvoices = generalInvoicesData || [];
+
+      // Fetch ALL bank transactions for this month (regardless of package)
+      const { data: txnData } = await supabase
+        .from('bank_transactions')
+        .select('*')
+        .gte('transaction_date', startDate)
+        .lt('transaction_date', endDate)
+        .order('transaction_date', { ascending: false });
+
+      const transactions = txnData || [];
 
       // Combine packages with their invoices
       const packagesWithInvoices = (packages || []).map(pkg => ({
@@ -132,7 +142,8 @@ Deno.serve(async (req) => {
           authorized: true,
           monthYear,
           packages: packagesWithInvoices,
-          transactions
+          transactions,
+          generalInvoices // Add to response
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
