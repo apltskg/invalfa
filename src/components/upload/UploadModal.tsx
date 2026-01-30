@@ -272,9 +272,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
                 onCancel={handleClose}
                 packageId={packageId}
                 isManual={uploadedFile.isManual}
-                type={defaultType} // Pass the type
+                type={defaultType}
               />
-            )}
             </motion.div>
           )}
         </AnimatePresence>

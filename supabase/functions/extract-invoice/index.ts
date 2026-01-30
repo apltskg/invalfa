@@ -90,6 +90,7 @@ serve(async (req) => {
         model: "google/gemini-2.0-flash-exp",
         messages: [
           {
+            role: "system",
             content: `You are an expert financial auditor specializing in Greek and European tax documents.
             Analyze the document and extract structured data meticulously.
             
@@ -109,7 +110,7 @@ serve(async (req) => {
             CRITICAL FORMATTING RULES:
             - **Amounts**: Greek format uses DOT for thousands and COMMA for decimals (e.g., 1.234,56). Convert this carefully to a standard number (1234.56).
             - **Dates**: Greek dates are usually DD/MM/YYYY.
-            - **Merchant**: If a logo is present, use the brand name (e.g., "Vodafone") rather than the legal entity (e.g., "Vodafone Panafon S.A.") unless they are drastically different.
+            - **Merchant**: If a logo is present, use the brand name (e.g., "Vodafone") rather than the legal entity (e.g., "Vodafone Panafon S.A.") unless they are drastically different.`
           },
           {
             role: "user",
