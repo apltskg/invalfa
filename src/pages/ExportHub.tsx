@@ -18,8 +18,26 @@ import { EmptyState } from "@/components/shared/EmptyState";
 export default function ExportHub() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [generalInvoices, setGeneralInvoices] = useState<Invoice[]>([]);
+  const [packages, setPackages] = useState<(Package & { invoices: Invoice[] })[]>([]);
+  const [transactions, setTransactions] = useState<BankTransaction[]>([]);
+  const [matches, setMatches] = useState<InvoiceTransactionMatch[]>([]);
+  const [exportLogs, setExportLogs] = useState<ExportLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [confirmSendDialog, setConfirmSendDialog] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  // ...
+  // Generate last 12 months for dropdown
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const date = subMonths(new Date(), i);
+    return { value: format(date, "yyyy-MM"), label: format(date, "MMMM yyyy") };
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function fetchData() {
     const [{ data: pkgs }, { data: invs }, { data: logs }, { data: txns }, { data: matchData }] = await Promise.all([
