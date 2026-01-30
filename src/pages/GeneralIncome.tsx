@@ -78,8 +78,40 @@ export default function GeneralIncome() {
         }
     };
 
+    // Edit state
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+    const [saving, setSaving] = useState(false);
+
+    async function handleUpdate() {
+        if (!editingInvoice) return;
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from('invoices')
+                .update({
+                    merchant: editingInvoice.merchant,
+                    amount: editingInvoice.amount,
+                    invoice_date: editingInvoice.invoice_date,
+                    category: editingInvoice.category
+                })
+                .eq('id', editingInvoice.id);
+
+            if (error) throw error;
+            toast.success("Ενημερώθηκε επιτυχώς");
+            setEditDialogOpen(false);
+            fetchData();
+        } catch (error: any) {
+            console.error("Update error:", error);
+            toast.error("Αποτυχία ενημέρωσης");
+        } finally {
+            setSaving(false);
+        }
+    }
+
     const handleEdit = (inv: Invoice) => {
-        toast.info("Edit functionality coming soon!");
+        setEditingInvoice(inv);
+        setEditDialogOpen(true);
     };
 
     const handleDelete = async () => {
@@ -246,6 +278,52 @@ export default function GeneralIncome() {
                 onUploadComplete={fetchData}
                 defaultType="income"
             />
+
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent className="rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Επεξεργασία Εσόδου</DialogTitle>
+                    </DialogHeader>
+                    {editingInvoice && (
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Πελάτης/Πηγή</label>
+                                <input
+                                    value={editingInvoice.merchant || ""}
+                                    onChange={(e) => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
+                                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Ποσό (€)</label>
+                                    <input
+                                        type="number"
+                                        value={editingInvoice.amount || 0}
+                                        onChange={(e) => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
+                                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Ημερομηνία</label>
+                                    <input
+                                        type="date"
+                                        value={editingInvoice.invoice_date || ""}
+                                        onChange={(e) => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
+                                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl">Ακύρωση</Button>
+                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl">
+                            {saving ? "Αποθήκευση..." : "Αποθήκευση"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>

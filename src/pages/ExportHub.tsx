@@ -17,25 +17,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 
 export default function ExportHub() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [packages, setPackages] = useState<(Package & { invoices: Invoice[] })[]>([]);
-  const [transactions, setTransactions] = useState<BankTransaction[]>([]);
-  const [matches, setMatches] = useState<InvoiceTransactionMatch[]>([]);
-  const [exportLogs, setExportLogs] = useState<ExportLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
-  const [exportingXlsx, setExportingXlsx] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [confirmSendDialog, setConfirmSendDialog] = useState(false);
+  const [generalInvoices, setGeneralInvoices] = useState<Invoice[]>([]);
 
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const d = subMonths(new Date(), i);
-    return { value: format(d, "yyyy-MM"), label: format(d, "MMMM yyyy") };
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // ...
 
   async function fetchData() {
     const [{ data: pkgs }, { data: invs }, { data: logs }, { data: txns }, { data: matchData }] = await Promise.all([
@@ -46,12 +30,18 @@ export default function ExportHub() {
       supabase.from("invoice_transaction_matches").select("*"),
     ]);
 
+    const allInvoices = (invs as Invoice[]) || [];
+
     const packagesWithInvoices = ((pkgs as Package[]) || []).map((pkg) => ({
       ...pkg,
-      invoices: (((invs as any[]) || []).filter((inv) => inv.package_id === pkg.id)) as Invoice[],
+      invoices: allInvoices.filter((inv) => inv.package_id === pkg.id),
     }));
 
     setPackages(packagesWithInvoices);
+
+    // Store general invoices (no package)
+    setGeneralInvoices(allInvoices.filter(inv => !inv.package_id));
+
     setTransactions((txns as BankTransaction[]) || []);
     setMatches((matchData as InvoiceTransactionMatch[]) || []);
     setExportLogs((logs as ExportLog[]) || []);
@@ -61,6 +51,11 @@ export default function ExportHub() {
   const filteredPackages = packages.filter((pkg) => {
     const pkgMonth = format(new Date(pkg.start_date), "yyyy-MM");
     return pkgMonth === selectedMonth;
+  });
+
+  const filteredGeneralInvoices = generalInvoices.filter(inv => {
+    const invDate = inv.invoice_date || inv.created_at;
+    return format(new Date(invDate), "yyyy-MM") === selectedMonth;
   });
 
   // Get match info for an invoice
@@ -115,6 +110,26 @@ export default function ExportHub() {
             txnDesc: matchedTxn ? matchedTxn.description : "—",
           });
         }
+      }
+
+      // Add General Invoices
+      for (const inv of filteredGeneralInvoices) {
+        const matchedTxn = getMatchInfo(inv.id);
+        const extractedData = inv.extracted_data as any;
+        hasData = true;
+
+        worksheet.addRow({
+          package: "General / Independent",
+          merchant: inv.merchant || "—",
+          category: inv.category,
+          date: inv.invoice_date || "—",
+          amount: inv.amount?.toFixed(2) || "—",
+          vat: extractedData?.vat_amount?.toFixed(2) || "—",
+          matched: matchedTxn ? "Yes" : "No",
+          txnDate: matchedTxn ? matchedTxn.transaction_date : "—",
+          txnAmount: matchedTxn ? Math.abs(matchedTxn.amount).toFixed(2) : "—",
+          txnDesc: matchedTxn ? matchedTxn.description : "—",
+        });
       }
 
       if (!hasData) {
@@ -180,6 +195,37 @@ export default function ExportHub() {
           filename: fileName,
         });
       }
+    }
+
+    // Add General Invoices to Zip
+    for (const inv of filteredGeneralInvoices) {
+      // Create descriptive filename: YYYY-MM-DD_Provider_Category_Amount.pdf
+      const invoiceDate = inv.invoice_date || format(new Date(), "yyyy-MM-dd");
+      const provider = (inv.merchant || "General").replace(/[/\\?%*:|"<>]/g, "-").substring(0, 30);
+      const category = (inv.category || "other").toUpperCase();
+      const amount = `${(inv.amount || 0).toFixed(2)}EUR`;
+      const fileName = `General/${invoiceDate}_${provider}_${category}_${amount}.pdf`;
+
+      try {
+        const { data } = await supabase.storage.from("invoices").download(inv.file_path);
+        if (data) {
+          zip.file(fileName, data);
+        } else {
+          console.warn(`No file data for invoice ${inv.id}`);
+        }
+      } catch (error) {
+        console.error(`Error downloading invoice ${inv.id}:`, error);
+      }
+
+      summaryData.push({
+        index: fileIndex++,
+        package: "General / Independent",
+        merchant: inv.merchant || "—",
+        category: category,
+        date: invoiceDate,
+        amount: (inv.amount || 0).toFixed(2),
+        filename: fileName,
+      });
     }
 
     // Add summary Excel file
@@ -281,8 +327,14 @@ export default function ExportHub() {
     }
   }
 
-  const totalInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
-  const totalAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
+  const totalPackageInvoices = filteredPackages.reduce((acc, p) => acc + p.invoices.length, 0);
+  const totalGeneralInvoices = filteredGeneralInvoices.length;
+  const totalInvoices = totalPackageInvoices + totalGeneralInvoices;
+
+  const totalPackageAmount = filteredPackages.reduce((acc, p) => acc + p.invoices.reduce((a, i) => a + (i.amount || 0), 0), 0);
+  const totalGeneralAmount = filteredGeneralInvoices.reduce((acc, i) => acc + (i.amount || 0), 0);
+  const totalAmount = totalPackageAmount + totalGeneralAmount;
+
   const currentMonthLabel = months.find((m) => m.value === selectedMonth)?.label || selectedMonth;
 
   return (
@@ -382,6 +434,32 @@ export default function ExportHub() {
         </Button>
       </div>
 
+      {/* General Invoices List */}
+      {filteredGeneralInvoices.length > 0 && (
+        <Card className="rounded-3xl overflow-hidden mb-8 border-l-4 border-l-amber-500">
+          <div className="p-4 border-b border-border bg-amber-50/30">
+            <h3 className="font-semibold flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Γενικά / Ανεξάρτητα ({filteredGeneralInvoices.length})
+            </h3>
+          </div>
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium">Γενικά Έξοδα & Έσοδα</p>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge variant="outline" className="rounded-lg border-amber-200 bg-amber-50 text-amber-700">
+                  {filteredGeneralInvoices.length} invoices
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Εκτός ταξιδιωτικών φακέλων
+                </span>
+              </div>
+            </div>
+            <p className="text-lg font-semibold">€{filteredGeneralInvoices.reduce((a, i) => a + (i.amount || 0), 0).toFixed(2)}</p>
+          </div>
+        </Card>
+      )}
+
       {/* Packages List */}
       {filteredPackages.length > 0 ? (
         <Card className="rounded-3xl overflow-hidden mb-8">
@@ -407,15 +485,15 @@ export default function ExportHub() {
             ))}
           </div>
         </Card>
-      ) : (
+      ) : filteredGeneralInvoices.length === 0 ? (
         <div className="mb-8">
           <EmptyState
             icon={Archive}
-            title="Δεν υπάρχουν πακέτα"
-            description={`Δεν υπάρχουν πακέτα για ${currentMonthLabel}. Επιλέξτε διαφορετικό μήνα ή δημιουργήστε νέα πακέτα.`}
+            title="Δεν υπάρχουν δεδομένα"
+            description={`Δεν υπάρχουν πακέτα ή γενικά έξοδα για ${currentMonthLabel}.`}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Export History */}
       <Card className="rounded-3xl">
