@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, Loader2, Edit3 } from "lucide-react";
+import { Upload, Edit3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import { ExtractionProgress } from "./ExtractionProgress";
 
 interface UploadedFile {
   file?: File;
@@ -232,24 +233,18 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
                 >
                   <input {...getInputProps()} />
 
-                  {uploading ? (
-                    <div className="space-y-3">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-                      <p className="text-sm text-muted-foreground">Uploading file...</p>
-                    </div>
-                  ) : extracting ? (
-                    <div className="space-y-3">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-                      <p className="text-sm text-muted-foreground">Extracting data with AI...</p>
-                    </div>
+              {uploading || extracting ? (
+                    <ExtractionProgress
+                      stage={uploading ? "uploading" : "extracting"}
+                    />
                   ) : (
                     <>
                       <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-lg font-medium mb-2">
-                        {isDragActive ? "Drop file here" : "Drag & drop or click to upload"}
+                        {isDragActive ? "Αφήστε το αρχείο εδώ" : "Σύρετε ή κάντε κλικ για μεταφόρτωση"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Supports PDF, PNG, JPG
+                        Υποστηρίζονται PDF, PNG, JPG
                       </p>
                     </>
                   )}
