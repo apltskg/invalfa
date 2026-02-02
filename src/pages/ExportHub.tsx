@@ -296,7 +296,7 @@ export default function ExportHub() {
 
     if (error) {
       console.error("Export log error:", error);
-      toast.error(`Failed to log export: ${error.message}`);
+      toast.error("Αποτυχία καταγραφής εξαγωγής. Παρακαλώ δοκιμάστε ξανά.");
       setSending(false);
       return;
     }

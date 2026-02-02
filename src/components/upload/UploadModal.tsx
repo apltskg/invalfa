@@ -66,7 +66,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        toast.error(`Failed to upload file: ${uploadError.message}`);
+        toast.error('Αποτυχία μεταφόρτωσης αρχείου. Παρακαλώ δοκιμάστε ξανά.');
         setUploading(false);
         return;
       }
@@ -87,7 +87,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         // Robust check for JSON response
         if (response.error) {
           console.error('Edge Function error:', response.error);
-          toast.error("AI Assistant: " + (response.error.message || "Extraction failed. Falling back to manual entry."));
+          toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
         } else if (response.data && typeof response.data === 'object') {
           extractedData = response.data as ExtractedData;
         } else {
@@ -96,7 +96,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         }
       } catch (extractError) {
         console.error('Extraction catch error:', extractError);
-        toast.error("AI connection lost. Switching to manual entry.");
+        toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
       }
 
       setExtracting(false);
@@ -159,7 +159,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
       if (error) {
         console.error("Save error:", error);
-        toast.error(`Failed to save document: ${error.message}`);
+        toast.error("Αποτυχία αποθήκευσης. Παρακαλώ δοκιμάστε ξανά.");
         return;
       }
 
@@ -179,8 +179,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       handleClose();
     } catch (error) {
       console.error("Save error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to save: ${errorMessage}`);
+      toast.error("Αποτυχία αποθήκευσης. Παρακαλώ δοκιμάστε ξανά.");
     }
   };
 

@@ -16,7 +16,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized', extracted: null }),
+        JSON.stringify({ error: 'Authentication required', code: 'AUTH_REQUIRED', extracted: null }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -33,7 +33,7 @@ serve(async (req) => {
 
     if (claimsError || !claimsData?.user) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized', extracted: null }),
+        JSON.stringify({ error: 'Invalid session', code: 'INVALID_SESSION', extracted: null }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -43,25 +43,31 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: 'AI service not configured', code: 'CONFIG_ERROR', extracted: null }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!filePath || typeof filePath !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'Invalid filePath parameter', extracted: null }),
+        JSON.stringify({ error: 'Invalid file reference', code: 'INVALID_FILE', extracted: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate filePath format
-    if (!filePath.match(/^[a-zA-Z0-9_-]+\/[0-9]+-[a-z0-9]+\.(pdf|png|jpg|jpeg|webp)$/i)) {
+    // Stricter file path validation - only allow uploads directory with expected format
+    // Format: uploads/[timestamp]-[random].[ext]
+    if (!filePath.match(/^uploads\/[0-9]+-[a-z0-9]+\.(pdf|png|jpg|jpeg|webp)$/i)) {
+      console.error('Invalid file path format detected');
       return new Response(
-        JSON.stringify({ error: 'Invalid file path format', extracted: null }),
+        JSON.stringify({ error: 'Invalid file path format', code: 'INVALID_PATH', extracted: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${claimsData.user.email}] Processing invoice:`, fileName, "Path:", filePath);
+    console.log(`Processing invoice extraction request`);
 
     // Create service role client to access storage
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -72,12 +78,18 @@ serve(async (req) => {
       .createSignedUrl(filePath, 300); // 5 minutes for AI processing
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error("Failed to create signed URL:", signedUrlError);
-      throw new Error("Failed to access file in storage");
+      console.error("Failed to create signed URL");
+      return new Response(
+        JSON.stringify({ error: 'Unable to access file', code: 'FILE_ACCESS_ERROR', extracted: null }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const fileUrl = signedUrlData.signedUrl;
-    console.log("Generated server-side signed URL for AI");
+    console.log("Generated signed URL for AI processing");
+
+    // Sanitize fileName for display in prompt
+    const safeFileName = String(fileName || 'document').substring(0, 100);
 
     // Use tool calling for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -117,7 +129,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: `Extremely accurately extract merchant, total amount(incl.VAT), invoice date, category, and tax_id(ΑΦΜ) from this document: ${ fileName }`
+                text: `Extremely accurately extract merchant, total amount(incl.VAT), invoice date, category, and tax_id(ΑΦΜ) from this document: ${safeFileName}`
               },
               {
                 type: "image_url",
@@ -180,19 +192,19 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+      const errorStatus = response.status;
+      console.error("AI Gateway error:", errorStatus);
 
-      if (response.status === 429) {
+      if (errorStatus === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment.", extracted: null }),
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment.", code: 'RATE_LIMIT', extracted: null }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (response.status === 402) {
+      if (errorStatus === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue.", extracted: null }),
+          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue.", code: 'CREDITS_EXHAUSTED', extracted: null }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -213,13 +225,13 @@ serve(async (req) => {
 
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
-      console.log("Parsed extraction:", parsed);
+      console.log("Extraction completed successfully");
 
       return new Response(
         JSON.stringify({
           extracted: {
             merchant: parsed.merchant || null,
-            tax_id: parsed.tax_id || null, // Added tax_id
+            tax_id: parsed.tax_id || null,
             amount: parsed.amount ?? null,
             date: parsed.date || null,
             category: parsed.category || "other",
@@ -264,10 +276,11 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Extraction error:", error);
+    console.error("Extraction error occurred");
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "Unable to process document. Please try again.",
+        code: 'EXTRACTION_ERROR',
         extracted: null
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
