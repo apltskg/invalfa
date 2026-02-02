@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,7 @@ serve(async (req) => {
     // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
+      console.error("[AUTH] Missing or invalid Authorization header");
       return new Response(
         JSON.stringify({ error: 'Authentication required', code: 'AUTH_REQUIRED', extracted: null }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,6 +34,7 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getUser(token);
 
     if (claimsError || !claimsData?.user) {
+      console.error("[AUTH] Invalid session");
       return new Response(
         JSON.stringify({ error: 'Invalid session', code: 'INVALID_SESSION', extracted: null }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -43,7 +46,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+      console.error("[CONFIG] LOVABLE_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: 'AI service not configured', code: 'CONFIG_ERROR', extracted: null }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -51,6 +54,7 @@ serve(async (req) => {
     }
 
     if (!filePath || typeof filePath !== 'string') {
+      console.error("[VALIDATION] Invalid file reference");
       return new Response(
         JSON.stringify({ error: 'Invalid file reference', code: 'INVALID_FILE', extracted: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,40 +62,129 @@ serve(async (req) => {
     }
 
     // Stricter file path validation - only allow uploads directory with expected format
-    // Format: uploads/[timestamp]-[random].[ext]
     if (!filePath.match(/^uploads\/[0-9]+-[a-z0-9]+\.(pdf|png|jpg|jpeg|webp)$/i)) {
-      console.error('Invalid file path format detected');
+      console.error('[VALIDATION] Invalid file path format');
       return new Response(
         JSON.stringify({ error: 'Invalid file path format', code: 'INVALID_PATH', extracted: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Processing invoice extraction request`);
+    const safeFileName = String(fileName || 'document').substring(0, 100);
+    const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+    const isPDF = fileExtension === 'pdf';
+
+    console.log(`[START] Processing invoice: ${safeFileName} (type: ${fileExtension})`);
 
     // Create service role client to access storage
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Generate a signed URL server-side for the AI to access
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from("invoices")
-      .createSignedUrl(filePath, 300); // 5 minutes for AI processing
+    // For PDFs: download bytes and send as base64
+    // For images: use signed URL directly
+    let contentPayload: any;
 
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error("Failed to create signed URL");
-      return new Response(
-        JSON.stringify({ error: 'Unable to access file', code: 'FILE_ACCESS_ERROR', extracted: null }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (isPDF) {
+      console.log("[PDF] Downloading PDF bytes for base64 encoding...");
+      
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("invoices")
+        .download(filePath);
+
+      if (downloadError || !fileData) {
+        console.error("[PDF] Failed to download PDF:", downloadError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Unable to access PDF file', code: 'FILE_ACCESS_ERROR', extracted: null }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const arrayBuffer = await fileData.arrayBuffer();
+      const base64Data = base64Encode(arrayBuffer);
+      const fileSize = arrayBuffer.byteLength;
+
+      console.log(`[PDF] Encoded PDF to base64 (${fileSize} bytes)`);
+
+      contentPayload = [
+        {
+          type: "text",
+          text: `Extract invoice data from this PDF document: ${safeFileName}`
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:application/pdf;base64,${base64Data}`
+          }
+        }
+      ];
+    } else {
+      // For images, use signed URL
+      console.log("[IMAGE] Generating signed URL for image...");
+      
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from("invoices")
+        .createSignedUrl(filePath, 300);
+
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        console.error("[IMAGE] Failed to create signed URL");
+        return new Response(
+          JSON.stringify({ error: 'Unable to access file', code: 'FILE_ACCESS_ERROR', extracted: null }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      contentPayload = [
+        {
+          type: "text",
+          text: `Extract invoice data from this image: ${safeFileName}`
+        },
+        {
+          type: "image_url",
+          image_url: { url: signedUrlData.signedUrl }
+        }
+      ];
     }
 
-    const fileUrl = signedUrlData.signedUrl;
-    console.log("Generated signed URL for AI processing");
+    console.log("[AI] Sending to Gemini 2.5 Flash for extraction...");
 
-    // Sanitize fileName for display in prompt
-    const safeFileName = String(fileName || 'document').substring(0, 100);
+    // Enhanced system prompt for Greek documents
+    const systemPrompt = `You are an expert financial auditor specializing in Greek and European tax documents.
+Analyze the document meticulously and extract structured data.
 
-    // Use tool calling for structured extraction
+CRITICAL RULES FOR GREEK INVOICES:
+
+1. **NUMBER FORMATS (VERY IMPORTANT)**:
+   - Greek format: dot (.) = thousands separator, comma (,) = decimal
+   - Example: "1.234,56" means one thousand two hundred thirty-four point fifty-six = 1234.56
+   - Example: "12.500,00" = 12500.00
+   - Always convert to standard decimal (no thousands separator, dot for decimal)
+
+2. **DATE FORMATS**:
+   - Greek dates: DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY
+   - Convert ALL dates to ISO format: YYYY-MM-DD
+
+3. **MERCHANT NAME**:
+   - Prefer trading/brand name over legal entity (e.g., "Aegean Airlines" not "ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ Α.Ε.")
+   - Keep Greek characters if no common English equivalent exists
+   - Look for: ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης
+
+4. **VAT/TAX ID (ΑΦΜ)**:
+   - Greek VAT numbers are exactly 9 digits
+   - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number
+
+5. **AMOUNTS**:
+   - Extract the FINAL TOTAL (Σύνολο Πληρωμής, Grand Total) INCLUDING VAT
+   - NOT the net amount (Καθαρή Αξία)
+   - Look for: ΣΥΝΟΛΟ, Πληρωτέο, Total
+
+6. **CATEGORIES** (choose one):
+   - "airline": Αεροπορικά, Aegean, Sky Express, Ryanair, Olympic, Volotea, boarding pass
+   - "hotel": Ξενοδοχείο, διαμονή, Airbnb, Booking.com, Hotels.com, accommodation
+   - "tolls": Διόδια, Attiki Odos, Egnatia, Gefyra, Olympia Odos, Moreas, Ionia Odos, e-pass
+   - "other": Everything else (taxi, fuel, restaurant, parking, supplies, software, services)
+
+7. **INVOICE NUMBER**:
+   - Look for: Αριθμός Τιμολογίου, Αρ. Παραστατικού, Invoice No, Receipt No`;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -99,44 +192,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp",
+        model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: `You are an expert financial auditor specializing in Greek and European tax documents.
-            Analyze the document and extract structured data meticulously.
-            
-            KEY RULES:
-            - **Merchant Name**: Prefer the "Trading Name" (e.g., "Aegean Airlines") over the legal name ("AEROPOIRIA AIGAIOU A.E.").
-            - **Greek Characters**: If the merchant name is in Greek, provide the transliterated or common English version if possible, otherwise keep the Greek name.
-            - **VAT/AFM**: Look for "ΑΦΜ" (Tax ID). Valid Greek VATs have 9 digits.
-            - **Amounts**: Always extract the **Total Payable Amount** (Final Amount including VAT). Ignore "Net Amount" or "Subtotal" unless asking for breakdown.
-            - **Dates**: Convert all dates (DD/MM/YYYY, DD.MM.YY) to ISO format: YYYY-MM-DD.
-            
-            CATEGORIES:
-            - "airline": Tickets, Boarding passes, Aegean, Sky Express, Ryanair, Volotea, Lufthansa.
-            - "hotel": Accommodation, Airbnb, Booking.com, Hotels.com, Marriott, Hilton.
-            - "tolls": Attiki Odos, Egnatia Odos, Gefyra, Olympia Odos, Moreas, Ionia Odos.
-            - "other": EVERYTHING else. Taxis (Uber, FreeNow), Fuel (Shell, EKO, BP), Restaurants, Parking, Amazon, Software.
-            
-            CRITICAL FORMATTING RULES:
-            - **Amounts**: Greek format uses DOT for thousands and COMMA for decimals (e.g., 1.234,56). Convert this carefully to a standard number (1234.56).
-            - **Dates**: Greek dates are usually DD/MM/YYYY.
-            - **Merchant**: If a logo is present, use the brand name (e.g., "Vodafone") rather than the legal entity (e.g., "Vodafone Panafon S.A.") unless they are drastically different.`
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Extremely accurately extract merchant, total amount(incl.VAT), invoice date, category, and tax_id(ΑΦΜ) from this document: ${safeFileName}`
-              },
-              {
-                type: "image_url",
-                image_url: { url: fileUrl }
-              }
-            ]
-          }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: contentPayload }
         ],
         tools: [
           {
@@ -149,7 +208,7 @@ serve(async (req) => {
                 properties: {
                   merchant: {
                     type: "string",
-                    description: "Company or vendor name (e.g., 'Aegean Airlines')"
+                    description: "Company or vendor name (prefer trading name over legal entity)"
                   },
                   tax_id: {
                     type: "string",
@@ -157,7 +216,7 @@ serve(async (req) => {
                   },
                   amount: {
                     type: "number",
-                    description: "Total amount paid (final price including VAT)"
+                    description: "Total amount paid (final price INCLUDING VAT) as a decimal number"
                   },
                   currency: {
                     type: "string",
@@ -174,11 +233,11 @@ serve(async (req) => {
                   },
                   vat_amount: {
                     type: "number",
-                    description: "VAT/tax amount if visible"
+                    description: "VAT/tax amount if visible as a decimal number"
                   },
                   invoice_number: {
                     type: "string",
-                    description: "Invoice or receipt number if visible"
+                    description: "Invoice or receipt number"
                   }
                 },
                 required: ["merchant", "amount", "date", "category"],
@@ -193,7 +252,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorStatus = response.status;
-      console.error("AI Gateway error:", errorStatus);
+      console.error(`[AI] Gateway error: ${errorStatus}`);
 
       if (errorStatus === 429) {
         return new Response(
@@ -209,6 +268,7 @@ serve(async (req) => {
         );
       }
 
+      console.error("[AI] Returning low-confidence fallback");
       return new Response(
         JSON.stringify({
           extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
@@ -218,56 +278,71 @@ serve(async (req) => {
     }
 
     const aiResponse = await response.json();
-    console.log("AI response received");
+    console.log("[AI] Response received successfully");
 
     // Extract from tool call response
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
 
     if (toolCall?.function?.arguments) {
-      const parsed = JSON.parse(toolCall.function.arguments);
-      console.log("Extraction completed successfully");
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        
+        console.log("[EXTRACTED] merchant:", parsed.merchant);
+        console.log("[EXTRACTED] amount:", parsed.amount);
+        console.log("[EXTRACTED] date:", parsed.date);
+        console.log("[EXTRACTED] category:", parsed.category);
+        console.log("[EXTRACTED] tax_id:", parsed.tax_id);
+        console.log("[EXTRACTED] invoice_number:", parsed.invoice_number);
 
-      return new Response(
-        JSON.stringify({
-          extracted: {
-            merchant: parsed.merchant || null,
-            tax_id: parsed.tax_id || null,
-            amount: parsed.amount ?? null,
-            date: parsed.date || null,
-            category: parsed.category || "other",
-            currency: parsed.currency || "EUR",
-            vat_amount: parsed.vat_amount ?? null,
-            invoice_number: parsed.invoice_number || null,
-            confidence: 0.9
-          }
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        return new Response(
+          JSON.stringify({
+            extracted: {
+              merchant: parsed.merchant || null,
+              tax_id: parsed.tax_id || null,
+              amount: typeof parsed.amount === 'number' ? parsed.amount : null,
+              date: parsed.date || null,
+              category: parsed.category || "other",
+              currency: parsed.currency || "EUR",
+              vat_amount: typeof parsed.vat_amount === 'number' ? parsed.vat_amount : null,
+              invoice_number: parsed.invoice_number || null,
+              confidence: 0.9
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (parseError) {
+        console.error("[AI] Failed to parse tool call arguments:", parseError);
+      }
     }
 
     // Fallback: try to parse from regular content
     const content = aiResponse.choices?.[0]?.message?.content;
     if (content) {
-      console.log("Fallback content parsing");
+      console.log("[AI] Attempting fallback content parsing...");
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return new Response(
-          JSON.stringify({
-            extracted: {
-              merchant: parsed.merchant || null,
-              amount: parsed.amount ? parseFloat(parsed.amount) : null,
-              date: parsed.date || null,
-              category: parsed.category || "other",
-              confidence: 0.7
-            }
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          console.log("[FALLBACK] Extracted data from content");
+          return new Response(
+            JSON.stringify({
+              extracted: {
+                merchant: parsed.merchant || null,
+                amount: parsed.amount ? parseFloat(parsed.amount) : null,
+                date: parsed.date || null,
+                category: parsed.category || "other",
+                confidence: 0.7
+              }
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (e) {
+          console.error("[FALLBACK] JSON parse failed");
+        }
       }
     }
 
-    console.log("No structured data extracted");
+    console.log("[AI] No structured data extracted, returning low confidence");
     return new Response(
       JSON.stringify({
         extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
@@ -276,7 +351,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Extraction error occurred");
+    console.error("[ERROR] Extraction error:", error);
     return new Response(
       JSON.stringify({
         error: "Unable to process document. Please try again.",
