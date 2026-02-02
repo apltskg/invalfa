@@ -13,6 +13,21 @@ interface PortalRequest {
   isDoubt?: boolean;
 }
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Validate UUID format
+function isValidUUID(id: string | undefined): boolean {
+  return id ? UUID_REGEX.test(id) : false;
+}
+
+// Sanitize and validate comment text
+function sanitizeComment(text: string | undefined, maxLength: number = 5000): string {
+  if (!text) return '';
+  // Trim and limit length
+  return String(text).trim().substring(0, maxLength);
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -29,9 +44,9 @@ Deno.serve(async (req) => {
     const body: PortalRequest = await req.json();
     const { token, action = 'validate' } = body;
 
-    if (!token) {
+    if (!token || typeof token !== 'string' || token.length < 10 || token.length > 100) {
       return new Response(
-        JSON.stringify({ error: 'Token is required' }),
+        JSON.stringify({ error: 'Invalid request', code: 'INVALID_TOKEN' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -41,17 +56,17 @@ Deno.serve(async (req) => {
       .rpc('validate_magic_link_token', { _token: token });
 
     if (linkError) {
-      console.error('Token validation error:', linkError);
+      console.error('Token validation error');
       return new Response(
-        JSON.stringify({ error: 'Token validation failed' }),
+        JSON.stringify({ error: 'Unable to validate access', code: 'VALIDATION_ERROR' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!linkData || linkData.length === 0 || !linkData[0].is_valid) {
-      console.log('Invalid or expired token:', token.substring(0, 8) + '...');
+      console.log('Access denied: invalid or expired link');
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired link', authorized: false }),
+        JSON.stringify({ error: 'Link expired or invalid', authorized: false, code: 'LINK_INVALID' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -91,9 +106,9 @@ Deno.serve(async (req) => {
         .lt('start_date', endDate);
 
       if (pkgError) {
-        console.error('Error fetching packages:', pkgError);
+        console.error('Error fetching packages');
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch data' }),
+          JSON.stringify({ error: 'Unable to retrieve data', code: 'DATA_FETCH_ERROR' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -143,7 +158,7 @@ Deno.serve(async (req) => {
           monthYear,
           packages: packagesWithInvoices,
           transactions,
-          generalInvoices // Add to response
+          generalInvoices
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -152,9 +167,26 @@ Deno.serve(async (req) => {
     if (action === 'post_comment') {
       const { invoiceId, commentText, isDoubt } = body;
 
-      if (!invoiceId || !commentText) {
+      // Validate invoice ID format
+      if (!invoiceId || !isValidUUID(invoiceId)) {
         return new Response(
-          JSON.stringify({ error: 'Invoice ID and comment text are required' }),
+          JSON.stringify({ error: 'Invalid invoice reference', code: 'INVALID_INVOICE_ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate and sanitize comment text
+      const sanitizedComment = sanitizeComment(commentText);
+      if (!sanitizedComment || sanitizedComment.length < 1) {
+        return new Response(
+          JSON.stringify({ error: 'Comment text is required', code: 'MISSING_COMMENT' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (sanitizedComment.length > 5000) {
+        return new Response(
+          JSON.stringify({ error: 'Comment exceeds maximum length', code: 'COMMENT_TOO_LONG' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -164,30 +196,30 @@ Deno.serve(async (req) => {
         .from('invoice_comments')
         .insert({
           invoice_id: invoiceId,
-          comment_text: commentText,
-          is_doubt: isDoubt || false
+          comment_text: sanitizedComment,
+          is_doubt: Boolean(isDoubt)
         });
 
       if (commentError) {
-        console.error('Error posting comment:', commentError);
+        console.error('Error posting comment');
         return new Response(
-          JSON.stringify({ error: 'Failed to post comment' }),
+          JSON.stringify({ error: 'Unable to save comment', code: 'COMMENT_SAVE_ERROR' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Create notification for staff
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert({
-          type: isDoubt ? 'doubt' : 'comment',
-          title: isDoubt ? 'Αμφισβήτηση από Λογιστή' : 'Νέο Σχόλιο Λογιστή',
-          message: commentText,
-          link_url: `/packages?invoice=${invoiceId}`
-        });
-
-      if (notifError) {
-        console.error('Error creating notification:', notifError);
+      // Create notification for staff (don't fail if this errors)
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            type: isDoubt ? 'doubt' : 'comment',
+            title: isDoubt ? 'Αμφισβήτηση από Λογιστή' : 'Νέο Σχόλιο Λογιστή',
+            message: sanitizedComment.substring(0, 200), // Limit notification message
+            link_url: `/packages?invoice=${invoiceId}`
+          });
+      } catch (notifError) {
+        console.error('Notification creation failed');
         // Don't fail the request for notification error
       }
 
@@ -198,14 +230,14 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
+      JSON.stringify({ error: 'Invalid action', code: 'INVALID_ACTION' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Accountant portal error:', error);
+    console.error('Portal access error');
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'An unexpected error occurred', code: 'INTERNAL_ERROR' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

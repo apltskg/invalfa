@@ -116,7 +116,7 @@ export default function PackageDetail() {
       await fetchData();
     } catch (error: any) {
       console.error("Match error:", error);
-      toast.error(`Failed to create match: ${error.message}`);
+      toast.error("Αποτυχία σύνδεσης. Παρακαλώ δοκιμάστε ξανά.");
     }
 
     setLinking(null);

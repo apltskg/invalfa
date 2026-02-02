@@ -87,7 +87,7 @@ export default function AdminSettings() {
             refetch();
         } catch (error: any) {
             console.error("Error creating user:", error);
-            toast.error("Αποτυχία δημιουργίας: " + error.message);
+            toast.error("Αποτυχία δημιουργίας χρήστη. Παρακαλώ δοκιμάστε ξανά.");
         } finally {
             setIsSubmitting(false);
         }
@@ -107,7 +107,7 @@ export default function AdminSettings() {
             refetch();
         } catch (error: any) {
             console.error("Error deleting user:", error);
-            toast.error("Αποτυχία διαγραφής: " + error.message);
+            toast.error("Αποτυχία διαγραφής χρήστη. Παρακαλώ δοκιμάστε ξανά.");
         }
     };
 
@@ -140,7 +140,7 @@ export default function AdminSettings() {
             refetch();
         } catch (error: any) {
             console.error("Error updating role:", error);
-            toast.error("Αποτυχία ενημέρωσης ρόλου: " + error.message);
+            toast.error("Αποτυχία ενημέρωσης ρόλου. Παρακαλώ δοκιμάστε ξανά.");
         }
     };
 

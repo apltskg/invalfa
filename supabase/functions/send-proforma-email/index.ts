@@ -56,6 +56,29 @@ const BANK_ACCOUNTS = [
   },
 ];
 
+// HTML sanitization function - escapes special characters to prevent injection
+function escapeHtml(text: string | null | undefined): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Email format validation
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Input length validation
+function validateStringLength(str: string | null | undefined, maxLength: number): string {
+  if (!str) return '';
+  return str.substring(0, maxLength);
+}
+
 function generateEmailHTML(data: ProformaEmailData): string {
   const t = data.language === 'el' ? {
     title: 'Προτιμολόγιο',
@@ -95,20 +118,29 @@ function generateEmailHTML(data: ProformaEmailData): string {
     thanks: 'Thank you for traveling with us!',
   };
 
-  const lineItemsHTML = data.lineItems.map(item => `
+  // Sanitize all user-provided content
+  const safeClientName = escapeHtml(validateStringLength(data.clientName, 200));
+  const safeClientAddress = escapeHtml(validateStringLength(data.clientAddress, 500));
+  const safeClientEmail = escapeHtml(validateStringLength(data.clientEmail, 255));
+  const safeClientVatNumber = escapeHtml(validateStringLength(data.clientVatNumber, 50));
+  const safeNotes = escapeHtml(validateStringLength(data.notes, 2000));
+  const safeInvoiceNumber = escapeHtml(validateStringLength(data.invoiceNumber, 50));
+  const safeIssueDate = escapeHtml(validateStringLength(data.issueDate, 20));
+
+  const lineItemsHTML = (data.lineItems || []).slice(0, 50).map(item => `
     <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.description || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">€${item.price.toFixed(2)}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.taxPercent}%</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">€${item.total.toFixed(2)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(validateStringLength(item.description, 500)) || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">€${(Number(item.price) || 0).toFixed(2)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${(Number(item.taxPercent) || 0)}%</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">€${(Number(item.total) || 0).toFixed(2)}</td>
     </tr>
   `).join('');
 
   const bankAccountsHTML = data.acceptBankTransfer ? BANK_ACCOUNTS.map(acc => `
     <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-      <strong>${acc.bank}</strong><br/>
-      <span style="color: #6b7280;">IBAN: ${acc.iban}</span><br/>
-      <span style="color: #6b7280;">BIC: ${acc.bic}</span>
+      <strong>${escapeHtml(acc.bank)}</strong><br/>
+      <span style="color: #6b7280;">IBAN: ${escapeHtml(acc.iban)}</span><br/>
+      <span style="color: #6b7280;">BIC: ${escapeHtml(acc.bic)}</span>
     </div>
   `).join('') : '';
 
@@ -118,7 +150,7 @@ function generateEmailHTML(data: ProformaEmailData): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${t.title} - ${data.invoiceNumber}</title>
+  <title>${t.title} - ${safeInvoiceNumber}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f3f4f6;">
   <div style="max-width: 600px; margin: 0 auto; padding: 24px;">
@@ -133,8 +165,8 @@ function generateEmailHTML(data: ProformaEmailData): string {
         <div style="text-align: right;">
           <h2 style="margin: 0; color: #3b82f6; font-size: 20px;">${t.title.toUpperCase()}</h2>
           <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 14px;">
-            ${t.invoiceNumber}: <strong>${data.invoiceNumber}</strong><br/>
-            ${t.issueDate}: <strong>${data.issueDate}</strong>
+            ${t.invoiceNumber}: <strong>${safeInvoiceNumber}</strong><br/>
+            ${t.issueDate}: <strong>${safeIssueDate}</strong>
           </p>
         </div>
       </div>
@@ -145,10 +177,10 @@ function generateEmailHTML(data: ProformaEmailData): string {
       <div style="margin-bottom: 24px;">
         <h3 style="margin: 0 0 8px 0; color: #374151; font-size: 14px;">${t.invoiceTo}:</h3>
         <p style="margin: 0; color: #1f2937;">
-          <strong>${data.clientName || '-'}</strong><br/>
-          ${data.clientAddress ? data.clientAddress.replace(/\n/g, '<br/>') : ''}<br/>
-          ${data.clientEmail}<br/>
-          ${data.clientVatNumber ? `VAT: ${data.clientVatNumber}` : ''}
+          <strong>${safeClientName || '-'}</strong><br/>
+          ${safeClientAddress ? safeClientAddress.replace(/\n/g, '<br/>') : ''}<br/>
+          ${safeClientEmail}<br/>
+          ${safeClientVatNumber ? `VAT: ${safeClientVatNumber}` : ''}
         </p>
       </div>
       
@@ -172,21 +204,21 @@ function generateEmailHTML(data: ProformaEmailData): string {
         <div style="width: 250px;">
           <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
             <span style="color: #6b7280;">${t.subtotal}:</span>
-            <span style="font-weight: 500;">€${data.subtotal.toFixed(2)}</span>
+            <span style="font-weight: 500;">€${(Number(data.subtotal) || 0).toFixed(2)}</span>
           </div>
-          ${data.discountPercent > 0 ? `
+          ${(Number(data.discountPercent) || 0) > 0 ? `
           <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-            <span style="color: #6b7280;">${t.discount} (${data.discountPercent}%):</span>
-            <span style="font-weight: 500; color: #10b981;">-€${data.discountAmount.toFixed(2)}</span>
+            <span style="color: #6b7280;">${t.discount} (${(Number(data.discountPercent) || 0)}%):</span>
+            <span style="font-weight: 500; color: #10b981;">-€${(Number(data.discountAmount) || 0).toFixed(2)}</span>
           </div>
           ` : ''}
           <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
             <span style="color: #6b7280;">${t.taxAmount}:</span>
-            <span style="font-weight: 500;">€${data.taxAmount.toFixed(2)}</span>
+            <span style="font-weight: 500;">€${(Number(data.taxAmount) || 0).toFixed(2)}</span>
           </div>
           <div style="display: flex; justify-content: space-between; padding: 12px 0; background: #f9fafb; margin-top: 8px; border-radius: 8px; padding-left: 12px; padding-right: 12px;">
             <span style="font-weight: 600; color: #1f2937;">${t.grandTotal}:</span>
-            <span style="font-weight: 700; font-size: 18px; color: #3b82f6;">€${data.total.toFixed(2)}</span>
+            <span style="font-weight: 700; font-size: 18px; color: #3b82f6;">€${(Number(data.total) || 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -202,10 +234,10 @@ function generateEmailHTML(data: ProformaEmailData): string {
       </div>
       
       <!-- Notes -->
-      ${data.notes ? `
+      ${safeNotes ? `
       <div style="margin-bottom: 24px; background: #fef3c7; padding: 16px; border-radius: 8px;">
         <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px;">${t.notes}:</h3>
-        <p style="margin: 0; color: #78350f;">${data.notes}</p>
+        <p style="margin: 0; color: #78350f;">${safeNotes}</p>
       </div>
       ` : ''}
       
@@ -239,7 +271,7 @@ serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       console.error('Missing or invalid Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - missing authentication' }),
+        JSON.stringify({ error: 'Authentication required', code: 'AUTH_REQUIRED' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -251,7 +283,7 @@ serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       console.error('Supabase environment variables not configured');
       return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
+        JSON.stringify({ error: 'Service temporarily unavailable', code: 'CONFIG_ERROR' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -262,14 +294,14 @@ serve(async (req) => {
 
     const { data: userData, error: authError } = await authClient.auth.getUser(token);
     if (authError || !userData?.user) {
-      console.error('Authentication failed:', authError?.message);
+      console.error('Authentication failed');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid session' }),
+        JSON.stringify({ error: 'Invalid session', code: 'INVALID_SESSION' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', userData.user.email);
+    console.log('Request authenticated successfully');
     // ============ END AUTHENTICATION CHECK ============
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
@@ -289,19 +321,30 @@ serve(async (req) => {
     }
 
     const data: ProformaEmailData = await req.json();
-    console.log('Sending proforma email to:', data.clientEmail);
-
+    
+    // Validate required fields
     if (!data.clientEmail) {
       return new Response(
-        JSON.stringify({ error: 'Client email is required' }),
+        JSON.stringify({ error: 'Client email is required', code: 'MISSING_EMAIL' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Validate email format
+    if (!isValidEmail(data.clientEmail)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format', code: 'INVALID_EMAIL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Sending proforma email');
+
     const emailHTML = generateEmailHTML(data);
+    const safeInvoiceNumber = escapeHtml(validateStringLength(data.invoiceNumber, 50));
     const subject = data.language === 'el' 
-      ? `Προτιμολόγιο ${data.invoiceNumber} - ALFA Travel`
-      : `Proforma Invoice ${data.invoiceNumber} - ALFA Travel`;
+      ? `Προτιμολόγιο ${safeInvoiceNumber} - ALFA Travel`
+      : `Proforma Invoice ${safeInvoiceNumber} - ALFA Travel`;
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -318,13 +361,13 @@ serve(async (req) => {
     });
 
     const result = await response.json();
-    console.log('Resend API response:', result);
+    console.log('Email send completed');
 
     if (!response.ok) {
-      console.error('Resend API error:', result);
+      console.error('Email service error:', response.status);
       return new Response(
-        JSON.stringify({ error: result.message || 'Failed to send email', details: result }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Failed to send email. Please try again later.', code: 'EMAIL_SEND_FAILED' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -334,10 +377,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error sending email:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Email function error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An unexpected error occurred. Please try again.', code: 'INTERNAL_ERROR' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
