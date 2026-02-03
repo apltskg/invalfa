@@ -8,6 +8,7 @@ import { UploadModal } from "@/components/upload/UploadModal";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useMonth } from "@/contexts/MonthContext";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function GeneralIncome() {
+    const { startDate, endDate, monthKey } = useMonth();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -42,15 +44,18 @@ export default function GeneralIncome() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [monthKey]); // Re-fetch when month changes
 
     async function fetchData() {
         try {
+            setLoading(true);
             const { data, error } = await supabase
                 .from("invoices")
                 .select("*")
                 .is("package_id", null)
                 .eq("type", "income")
+                .gte("invoice_date", startDate)
+                .lte("invoice_date", endDate)
                 .order("invoice_date", { ascending: false });
 
             if (error) throw error;

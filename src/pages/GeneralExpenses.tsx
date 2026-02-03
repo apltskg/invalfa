@@ -10,6 +10,7 @@ import { Invoice, InvoiceCategory } from "@/types/database";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadModal } from "@/components/upload/UploadModal";
+import { useMonth } from "@/contexts/MonthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function GeneralExpenses() {
+    const { startDate, endDate, monthKey } = useMonth();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -48,15 +50,18 @@ export default function GeneralExpenses() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [monthKey]); // Re-fetch when month changes
 
     async function fetchData() {
         try {
+            setLoading(true);
             const { data, error } = await supabase
                 .from("invoices")
                 .select("*")
                 .is("package_id", null)
                 .eq("type", "expense")
+                .gte("invoice_date", startDate)
+                .lte("invoice_date", endDate)
                 .order("invoice_date", { ascending: false });
 
             if (error) throw error;

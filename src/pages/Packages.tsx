@@ -14,6 +14,7 @@ import { Package, Invoice } from "@/types/database";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { useMonth } from "@/contexts/MonthContext";
 
 type PackageWithStats = Package & {
   invoices: Invoice[];
@@ -30,6 +31,7 @@ type PackageWithStats = Package & {
 
 export default function Packages() {
   const navigate = useNavigate();
+  const { startDate, endDate, monthKey } = useMonth();
   const [packages, setPackages] = useState<PackageWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -48,7 +50,7 @@ export default function Packages() {
   useEffect(() => {
     fetchData();
     fetchCustomers();
-  }, []);
+  }, [monthKey]); // Re-fetch when month changes
 
   async function fetchCustomers() {
     try {
@@ -61,8 +63,14 @@ export default function Packages() {
 
   async function fetchData() {
     try {
+      setLoading(true);
       const [{ data: pkgs }, { data: invs }] = await Promise.all([
-        supabase.from("packages").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("packages")
+          .select("*")
+          .gte("start_date", startDate)
+          .lte("start_date", endDate)
+          .order("created_at", { ascending: false }),
         supabase.from("invoices").select("*"),
       ]);
 
