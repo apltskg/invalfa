@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, Plus, Trash2, Tag, X, Check } from "lucide-react"; // Added icons
+import { Save, Building2, Plus, Trash2, Tag, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -265,6 +265,8 @@ function CategoryManager() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [newCat, setNewCat] = useState({ name: "", name_el: "" });
     const [loading, setLoading] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState({ name: "", name_el: "" });
 
     useEffect(() => {
         fetchCategories();
@@ -292,8 +294,33 @@ function CategoryManager() {
         setLoading(false);
     }
 
+    function startEdit(cat: Category) {
+        setEditingId(cat.id);
+        setEditValues({ name: cat.name, name_el: cat.name_el });
+    }
+
+    async function saveEdit() {
+        if (!editingId || !editValues.name || !editValues.name_el) return;
+        setLoading(true);
+        const { error } = await supabase.from('expense_categories')
+            .update({ name: editValues.name, name_el: editValues.name_el })
+            .eq('id', editingId);
+        if (error) toast.error("Σφάλμα ενημέρωσης");
+        else {
+            toast.success("Κατηγορία ενημερώθηκε");
+            setEditingId(null);
+            fetchCategories();
+        }
+        setLoading(false);
+    }
+
+    function cancelEdit() {
+        setEditingId(null);
+        setEditValues({ name: "", name_el: "" });
+    }
+
     async function deleteCategory(id: string) {
-        if (!confirm("Are you sure?")) return;
+        if (!confirm("Είστε σίγουροι;")) return;
         const { error } = await supabase.from('expense_categories').delete().eq('id', id);
         if (error) toast.error("Σφάλμα διαγραφής");
         else {
@@ -307,13 +334,43 @@ function CategoryManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categories.map((cat) => (
                     <div key={cat.id} className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
-                        <div>
-                            <p className="font-medium">{cat.name_el}</p>
-                            <p className="text-xs text-muted-foreground">{cat.name}</p>
+                        {editingId === cat.id ? (
+                            <div className="flex-1 space-y-2 mr-2">
+                                <Input
+                                    value={editValues.name_el}
+                                    onChange={e => setEditValues({ ...editValues, name_el: e.target.value })}
+                                    placeholder="Ελληνικό όνομα"
+                                    className="rounded-lg h-9 text-sm"
+                                />
+                                <Input
+                                    value={editValues.name}
+                                    onChange={e => setEditValues({ ...editValues, name: e.target.value })}
+                                    placeholder="English name"
+                                    className="rounded-lg h-9 text-sm"
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex-1" onClick={() => startEdit(cat)} role="button" tabIndex={0}>
+                                <p className="font-medium cursor-pointer hover:text-primary transition-colors">{cat.name_el}</p>
+                                <p className="text-xs text-muted-foreground">{cat.name}</p>
+                            </div>
+                        )}
+                        <div className="flex gap-1">
+                            {editingId === cat.id ? (
+                                <>
+                                    <Button variant="ghost" size="icon" onClick={saveEdit} disabled={loading} className="h-8 w-8 text-green-600 hover:bg-green-50">
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={cancelEdit} className="h-8 w-8 text-muted-foreground hover:bg-muted">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button variant="ghost" size="icon" onClick={() => deleteCategory(cat.id)} className="text-destructive hover:bg-destructive/10 h-8 w-8">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => deleteCategory(cat.id)} className="text-destructive hover:bg-destructive/10">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
                     </div>
                 ))}
             </div>
