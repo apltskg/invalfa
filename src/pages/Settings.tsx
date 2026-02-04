@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, Plus, Trash2, Tag, X, Check } from "lucide-react";
+import { Save, Building2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CategoryManager } from "@/components/categories/CategoryManager";
 
 interface AgencySettings {
     company_name: string;
@@ -241,164 +242,18 @@ export default function Settings() {
 
             {/* EXPENSE CATEGORIES SECTION */}
             <Card className="p-8 rounded-3xl">
-                <div className="flex items-center justify-between mb-6 pb-6 border-b">
-                    <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                            <Tag className="h-6 w-6 text-indigo-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold">Κατηγορίες Εξόδων</h2>
-                            <p className="text-sm text-muted-foreground">Διαμορφώστε τις κατηγορίες που εμφανίζονται στις καταχωρήσεις</p>
-                        </div>
+                <div className="flex items-center gap-3 mb-6 pb-6 border-b">
+                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                        <Tag className="h-6 w-6 text-indigo-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-semibold">Κατηγορίες Εξόδων</h2>
+                        <p className="text-sm text-muted-foreground">Διαμορφώστε τις κατηγορίες που εμφανίζονται στις καταχωρήσεις</p>
                     </div>
                 </div>
 
                 <CategoryManager />
             </Card>
-        </div>
-    );
-}
-
-// Sub-component for managing categories
-function CategoryManager() {
-    interface Category { id: string; name: string; name_el: string; is_operational: boolean; }
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [newCat, setNewCat] = useState({ name: "", name_el: "" });
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editValues, setEditValues] = useState({ name: "", name_el: "" });
-
-    useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    async function fetchCategories() {
-        const { data } = await supabase.from('expense_categories').select('*').order('name');
-        if (data) setCategories(data);
-    }
-
-    async function addCategory() {
-        if (!newCat.name || !newCat.name_el) return;
-        setLoading(true);
-        const { error } = await supabase.from('expense_categories').insert([{
-            name: newCat.name,
-            name_el: newCat.name_el,
-            is_operational: true
-        }]);
-        if (error) toast.error("Σφάλμα προσθήκης");
-        else {
-            toast.success("Κατηγορία προστέθηκε");
-            setNewCat({ name: "", name_el: "" });
-            fetchCategories();
-        }
-        setLoading(false);
-    }
-
-    function startEdit(cat: Category) {
-        setEditingId(cat.id);
-        setEditValues({ name: cat.name, name_el: cat.name_el });
-    }
-
-    async function saveEdit() {
-        if (!editingId || !editValues.name || !editValues.name_el) return;
-        setLoading(true);
-        const { error } = await supabase.from('expense_categories')
-            .update({ name: editValues.name, name_el: editValues.name_el })
-            .eq('id', editingId);
-        if (error) toast.error("Σφάλμα ενημέρωσης");
-        else {
-            toast.success("Κατηγορία ενημερώθηκε");
-            setEditingId(null);
-            fetchCategories();
-        }
-        setLoading(false);
-    }
-
-    function cancelEdit() {
-        setEditingId(null);
-        setEditValues({ name: "", name_el: "" });
-    }
-
-    async function deleteCategory(id: string) {
-        if (!confirm("Είστε σίγουροι;")) return;
-        const { error } = await supabase.from('expense_categories').delete().eq('id', id);
-        if (error) toast.error("Σφάλμα διαγραφής");
-        else {
-            toast.success("Κατηγορία διαγράφηκε");
-            fetchCategories();
-        }
-    }
-
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
-                        {editingId === cat.id ? (
-                            <div className="flex-1 space-y-2 mr-2">
-                                <Input
-                                    value={editValues.name_el}
-                                    onChange={e => setEditValues({ ...editValues, name_el: e.target.value })}
-                                    placeholder="Ελληνικό όνομα"
-                                    className="rounded-lg h-9 text-sm"
-                                />
-                                <Input
-                                    value={editValues.name}
-                                    onChange={e => setEditValues({ ...editValues, name: e.target.value })}
-                                    placeholder="English name"
-                                    className="rounded-lg h-9 text-sm"
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex-1" onClick={() => startEdit(cat)} role="button" tabIndex={0}>
-                                <p className="font-medium cursor-pointer hover:text-primary transition-colors">{cat.name_el}</p>
-                                <p className="text-xs text-muted-foreground">{cat.name}</p>
-                            </div>
-                        )}
-                        <div className="flex gap-1">
-                            {editingId === cat.id ? (
-                                <>
-                                    <Button variant="ghost" size="icon" onClick={saveEdit} disabled={loading} className="h-8 w-8 text-green-600 hover:bg-green-50">
-                                        <Check className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={cancelEdit} className="h-8 w-8 text-muted-foreground hover:bg-muted">
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button variant="ghost" size="icon" onClick={() => deleteCategory(cat.id)} className="text-destructive hover:bg-destructive/10 h-8 w-8">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex gap-4 items-end pt-4 border-t">
-                <div className="space-y-2 flex-1">
-                    <Label>English Name</Label>
-                    <Input
-                        value={newCat.name}
-                        onChange={e => setNewCat({ ...newCat, name: e.target.value })}
-                        placeholder="e.g. Marketing"
-                        className="rounded-xl"
-                    />
-                </div>
-                <div className="space-y-2 flex-1">
-                    <Label>Ελληνικό Όνομα</Label>
-                    <Input
-                        value={newCat.name_el}
-                        onChange={e => setNewCat({ ...newCat, name_el: e.target.value })}
-                        placeholder="π.χ. Μάρκετινγκ"
-                        className="rounded-xl"
-                    />
-                </div>
-                <Button onClick={addCategory} disabled={loading} className="rounded-xl mb-0.5">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Προσθήκη
-                </Button>
-            </div>
         </div>
     );
 }

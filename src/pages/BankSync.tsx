@@ -1,522 +1,441 @@
-import { useState, useEffect, useRef } from "react";
-import { Upload, Check, Download, FileSpreadsheet, HelpCircle, AlertTriangle, FileText, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { FileText, Filter, ArrowUpDown, Check, X, AlertTriangle, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { BankTransaction, Package, Invoice } from "@/types/database";
+import { Package } from "@/types/database";
 import { toast } from "sonner";
-import Papa from "papaparse";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { format, parseISO } from "date-fns";
+import { el } from "date-fns/locale";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { useMonth } from "@/contexts/MonthContext";
+import { BankLogo, SUPPORTED_BANKS, getBankBorderColor } from "@/components/bank/BankLogo";
+import { BankPDFUploadModal } from "@/components/bank/BankPDFUploadModal";
+import { TransactionRow } from "@/components/bank/TransactionRow";
 
-interface ParsedTransaction {
-  date: string;
+interface BankTransaction {
+  id: string;
+  transaction_date: string;
   description: string;
   amount: number;
-  error?: string;
+  bank_id: string | null;
+  bank_name: string | null;
+  statement_id: string | null;
+  match_status: string;
+  matched_record_id: string | null;
+  matched_record_type: string | null;
+  folder_id: string | null;
+  category_type: string;
+  notes: string | null;
+  confidence_score: number | null;
+  package_id: string | null;
+  needs_invoice: boolean;
 }
 
-interface PDFExtractedRow {
-  date: string;
-  description: string;
-  amount: number;
-}
+type SortField = "date" | "amount" | "bank" | "status";
+type SortDirection = "asc" | "desc";
 
 export default function BankSync() {
+  const { startDate, endDate, monthKey } = useMonth();
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
-  // PDF import state
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-  const [pdfExtracting, setPdfExtracting] = useState(false);
-  const [pdfExtractedRows, setPdfExtractedRows] = useState<PDFExtractedRow[]>([]);
-  const [pdfImporting, setPdfImporting] = useState(false);
-
-  const pdfInputRef = useRef<HTMLInputElement>(null);
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [monthKey]);
 
   async function fetchData() {
-    const [{ data: txns }, { data: pkgs }, { data: invs }] = await Promise.all([
-      supabase.from("bank_transactions").select("*").order("transaction_date", { ascending: false }),
+    setLoading(true);
+    const [{ data: txns }, { data: pkgs }] = await Promise.all([
+      supabase
+        .from("bank_transactions")
+        .select("*")
+        .gte("transaction_date", startDate)
+        .lte("transaction_date", endDate)
+        .order("transaction_date", { ascending: false }),
       supabase.from("packages").select("*"),
-      supabase.from("invoices").select("*"),
     ]);
     setTransactions((txns as BankTransaction[]) || []);
     setPackages((pkgs as Package[]) || []);
-    setInvoices(((invs as any[]) || []) as Invoice[]);
     setLoading(false);
   }
 
-  function downloadSampleCSV() {
-    const sample = `date,description,amount
-2024-01-15,AEGEAN AIRLINES SA,245.50
-2024-01-16,BOOKING.COM HOTEL,189.00
-2024-01-17,ATTIKI ODOS TOLLS,12.80`;
-
-    const blob = new Blob([sample], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "sample-transactions.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Sample CSV downloaded");
-  }
-
-  function parseAmount(amountStr: string): number | null {
-    if (!amountStr || typeof amountStr !== "string") return null;
-
-    // Remove currency symbols and whitespace
-    let cleaned = amountStr.replace(/[€$£\s]/g, "").trim();
-
-    // Handle European format (1.234,56) vs US format (1,234.56)
-    const lastComma = cleaned.lastIndexOf(",");
-    const lastPeriod = cleaned.lastIndexOf(".");
-
-    if (lastComma > lastPeriod) {
-      // European format: remove periods (thousands), replace comma with period
-      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-    } else {
-      // US format or simple: just remove commas
-      cleaned = cleaned.replace(/,/g, "");
-    }
-
-    const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? null : parsed;
-  }
-
-  function handleCSVUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const rows = results.data as Record<string, string>[];
-
-        // Check for required headers
-        if (rows.length === 0) {
-          toast.error("CSV file is empty");
-          return;
-        }
-
-        const firstRow = rows[0];
-        const headers = Object.keys(firstRow).map(h => h.toLowerCase().trim());
-
-        const hasDate = headers.includes("date");
-        const hasDescription = headers.includes("description");
-        const hasAmount = headers.includes("amount");
-
-        if (!hasDate || !hasDescription || !hasAmount) {
-          const missing = [];
-          if (!hasDate) missing.push("date");
-          if (!hasDescription) missing.push("description");
-          if (!hasAmount) missing.push("amount");
-
-          toast.error(`Missing required columns: ${missing.join(", ")}. CSV must have: date, description, amount`);
-          return;
-        }
-
-        const parsed: ParsedTransaction[] = [];
-        const errors: string[] = [];
-
-        rows.forEach((r, idx) => {
-          // Find columns case-insensitively
-          const dateKey = Object.keys(r).find(k => k.toLowerCase().trim() === "date");
-          const descKey = Object.keys(r).find(k => k.toLowerCase().trim() === "description");
-          const amountKey = Object.keys(r).find(k => k.toLowerCase().trim() === "amount");
-
-          const date = dateKey ? r[dateKey]?.trim() : "";
-          const description = descKey ? r[descKey]?.trim() : "";
-          const amountStr = amountKey ? r[amountKey] : "";
-          const amount = parseAmount(amountStr);
-
-          if (!date || !description) {
-            errors.push(`Row ${idx + 2}: Missing date or description`);
-            return;
-          }
-
-          if (amount === null) {
-            errors.push(`Row ${idx + 2}: Invalid amount "${amountStr}"`);
-            return;
-          }
-
-          parsed.push({ date, description, amount });
-        });
-
-        if (parsed.length === 0) {
-          toast.error(`No valid rows found. ${errors.length} errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? "..." : ""}`);
-          return;
-        }
-
-        const toInsert = parsed.map((r) => ({
-          transaction_date: r.date,
-          description: r.description,
-          amount: r.amount,
-        }));
-
-        const { error } = await supabase.from("bank_transactions").insert(toInsert);
-        if (error) {
-          console.error("Insert error:", error);
-          toast.error(`Failed to import: ${error.message}`);
-        } else {
-          const successMsg = `Imported ${toInsert.length} transactions`;
-          const errorSuffix = errors.length > 0 ? ` (${errors.length} rows skipped due to errors)` : "";
-          toast.success(successMsg + errorSuffix);
-          fetchData();
-        }
-      },
-      error: (err) => {
-        console.error("Parse error:", err);
-        toast.error(`Failed to parse CSV: ${err.message}`);
-      }
-    });
-
-    // Reset input
-    e.target.value = "";
-  }
-
-  async function handlePDFUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setPdfDialogOpen(true);
-    setPdfExtracting(true);
-    setPdfExtractedRows([]);
-
-    try {
-      // Upload PDF to bank-statements bucket
-      const fileExt = file.name.split(".").pop()?.toLowerCase() || "pdf";
-      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const filePath = `statements/${uniqueId}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("bank-statements")
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error("PDF upload error:", uploadError);
-        toast.error(`Failed to upload PDF: ${uploadError.message}`);
-        setPdfExtracting(false);
-        return;
-      }
-
-      // Call extraction edge function
-      const { data, error } = await supabase.functions.invoke("extract-bank-pdf", {
-        body: { filePath, fileName: file.name }
-      });
-
-      if (error) {
-        console.error("PDF extraction error:", error);
-        toast.error("Failed to extract transactions from PDF");
-        setPdfExtracting(false);
-        return;
-      }
-
-      if (data?.transactions && Array.isArray(data.transactions)) {
-        setPdfExtractedRows(data.transactions);
-        if (data.transactions.length === 0) {
-          toast.warning("No transactions found in PDF");
-        }
-      } else {
-        toast.warning("No transactions could be extracted");
-      }
-    } catch (err) {
-      console.error("PDF processing error:", err);
-      toast.error("Failed to process PDF");
-    }
-
-    setPdfExtracting(false);
-    e.target.value = "";
-  }
-
-  async function importPDFTransactions() {
-    if (pdfExtractedRows.length === 0) return;
-
-    setPdfImporting(true);
-
-    const toInsert = pdfExtractedRows.map(r => ({
-      transaction_date: r.date,
-      description: r.description,
-      amount: r.amount,
-    }));
-
-    const { error } = await supabase.from("bank_transactions").insert(toInsert);
+  async function handleLinkToPackage(txnId: string, packageId: string | null) {
+    const { error } = await supabase
+      .from("bank_transactions")
+      .update({ 
+        folder_id: packageId,
+        category_type: packageId ? "folder" : "unmatched"
+      })
+      .eq("id", txnId);
 
     if (error) {
-      console.error("Import error:", error);
-      toast.error(`Failed to import: ${error.message}`);
-    } else {
-      toast.success(`Imported ${toInsert.length} transactions`);
-      setPdfDialogOpen(false);
-      setPdfExtractedRows([]);
-      fetchData();
-    }
-
-    setPdfImporting(false);
-  }
-
-  async function linkToPackage(txnId: string, packageId: string | null) {
-    const { error } = await supabase.from("bank_transactions").update({ package_id: packageId }).eq("id", txnId);
-    if (error) {
-      toast.error(`Failed to link: ${error.message}`);
+      toast.error("Αποτυχία σύνδεσης");
       return;
     }
-    toast.success("Transaction linked");
+    toast.success("Η κίνηση συνδέθηκε");
     fetchData();
   }
 
-  async function toggleNeedsInvoice(txn: BankTransaction) {
-    await supabase.from("bank_transactions").update({ needs_invoice: !txn.needs_invoice }).eq("id", txn.id);
+  async function handleSetCategoryType(txnId: string, type: string) {
+    const { error } = await supabase
+      .from("bank_transactions")
+      .update({ category_type: type })
+      .eq("id", txnId);
+
+    if (error) {
+      toast.error("Αποτυχία ενημέρωσης");
+      return;
+    }
+    toast.success("Κατηγορία ενημερώθηκε");
     fetchData();
   }
 
-  const findMatchingInvoice = (txn: BankTransaction) => {
-    return invoices.find((inv) => inv.amount && Math.abs(inv.amount - txn.amount) <= 1);
+  async function handleUpdateNotes(txnId: string, notes: string) {
+    const { error } = await supabase
+      .from("bank_transactions")
+      .update({ notes: notes || null })
+      .eq("id", txnId);
+
+    if (error) {
+      toast.error("Αποτυχία αποθήκευσης σημείωσης");
+      return;
+    }
+    toast.success("Σημείωση αποθηκεύτηκε");
+    fetchData();
+  }
+
+  // Filter and sort transactions
+  const filteredTransactions = useMemo(() => {
+    let result = [...transactions];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.description.toLowerCase().includes(query) ||
+          t.notes?.toLowerCase().includes(query)
+      );
+    }
+
+    // Bank filter
+    if (selectedBanks.length > 0) {
+      result = result.filter((t) => t.bank_name && selectedBanks.includes(t.bank_name));
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((t) => t.match_status === statusFilter);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+          break;
+        case "amount":
+          comparison = Math.abs(a.amount) - Math.abs(b.amount);
+          break;
+        case "bank":
+          comparison = (a.bank_name || "").localeCompare(b.bank_name || "");
+          break;
+        case "status":
+          comparison = (a.match_status || "").localeCompare(b.match_status || "");
+          break;
+      }
+      return sortDirection === "desc" ? -comparison : comparison;
+    });
+
+    return result;
+  }, [transactions, searchQuery, selectedBanks, statusFilter, sortField, sortDirection]);
+
+  // Group by date
+  const groupedTransactions = useMemo(() => {
+    const groups: Record<string, BankTransaction[]> = {};
+    filteredTransactions.forEach((t) => {
+      const dateKey = t.transaction_date;
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(t);
+    });
+    return groups;
+  }, [filteredTransactions]);
+
+  const toggleBankFilter = (bankName: string) => {
+    setSelectedBanks((prev) =>
+      prev.includes(bankName) ? prev.filter((b) => b !== bankName) : [...prev, bankName]
+    );
   };
 
-  const getMatchConfidence = (txn: BankTransaction, inv: Invoice): "high" | "medium" | "low" => {
-    const amountDiff = Math.abs((inv.amount || 0) - txn.amount);
-    if (amountDiff < 0.01) return "high";
-    if (amountDiff <= 1) return "medium";
-    return "low";
-  };
+  const stats = useMemo(() => {
+    const matched = transactions.filter((t) => t.match_status === "matched").length;
+    const suggested = transactions.filter((t) => t.match_status === "suggested").length;
+    const unmatched = transactions.filter((t) => t.match_status === "unmatched").length;
+    const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    return { matched, suggested, unmatched, totalIncome, totalExpense, total: transactions.length };
+  }, [transactions]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground animate-pulse">Φόρτωση κινήσεων...</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Συγχρονισμός Τράπεζας</h1>
-          <p className="mt-1 text-muted-foreground">Εισαγωγή και αντιστοίχιση τραπεζικών κινήσεων</p>
+          <p className="mt-1 text-muted-foreground">
+            Διαχείριση τραπεζικών κινήσεων και αντιστοίχιση με παραστατικά
+          </p>
         </div>
-        <div className="flex gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" onClick={downloadSampleCSV} className="rounded-xl gap-2">
-                <Download className="h-4 w-4" />
-                Δείγμα CSV
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Κατεβάστε δείγμα αρχείου CSV με τη σωστή μορφή</TooltipContent>
-          </Tooltip>
-
-          <div>
-            <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" id="csv-upload" />
-            <label htmlFor="csv-upload">
-              <Button asChild className="rounded-xl cursor-pointer gap-2">
-                <span>
-                  <Upload className="h-4 w-4" />
-                  Εισαγωγή CSV
-                </span>
-              </Button>
-            </label>
-          </div>
-
-          <div>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handlePDFUpload}
-              className="hidden"
-              id="pdf-upload"
-              ref={pdfInputRef}
-            />
-            <label htmlFor="pdf-upload">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild variant="outline" className="rounded-xl cursor-pointer gap-2">
-                    <span>
-                      <FileText className="h-4 w-4" />
-                      PDF (beta)
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Μεταφόρτωση PDF τράπεζας - Beta λειτουργία</TooltipContent>
-              </Tooltip>
-            </label>
-          </div>
-        </div>
+        <Button
+          onClick={() => setUploadModalOpen(true)}
+          className="rounded-xl gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Εισαγωγή PDF
+        </Button>
       </div>
 
-      {/* Instructions Card */}
-      <Card className="mb-6 rounded-2xl border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-        <div className="flex items-start gap-3">
-          <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div>
-            <p className="font-medium text-blue-900 dark:text-blue-100">Οδηγίες Εισαγωγής</p>
-            <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-              Το CSV πρέπει να περιέχει τις στήλες: <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">date</code>,{" "}
-              <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">description</code>,{" "}
-              <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">amount</code>. Κατεβάστε το sample για παράδειγμα.
-            </p>
-          </div>
+      {/* Stats */}
+      {transactions.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="p-4 rounded-2xl">
+            <p className="text-xs text-muted-foreground">Σύνολο</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </Card>
+          <Card className="p-4 rounded-2xl border-l-4 border-l-green-500">
+            <p className="text-xs text-muted-foreground">Ταιριασμένα</p>
+            <p className="text-2xl font-bold text-green-600">{stats.matched}</p>
+          </Card>
+          <Card className="p-4 rounded-2xl border-l-4 border-l-yellow-500">
+            <p className="text-xs text-muted-foreground">Προτεινόμενα</p>
+            <p className="text-2xl font-bold text-yellow-600">{stats.suggested}</p>
+          </Card>
+          <Card className="p-4 rounded-2xl">
+            <p className="text-xs text-muted-foreground">Εισπράξεις</p>
+            <p className="text-2xl font-bold text-emerald-600">€{stats.totalIncome.toFixed(2)}</p>
+          </Card>
+          <Card className="p-4 rounded-2xl">
+            <p className="text-xs text-muted-foreground">Πληρωμές</p>
+            <p className="text-2xl font-bold text-rose-600">€{stats.totalExpense.toFixed(2)}</p>
+          </Card>
         </div>
-      </Card>
+      )}
 
-      {transactions.length === 0 ? (
-        <EmptyState
-          icon={FileSpreadsheet}
-          title="Δεν υπάρχουν κινήσεις"
-          description="Εισάγετε ένα αρχείο CSV ή PDF με τις τραπεζικές σας κινήσεις για να ξεκινήσετε την αντιστοίχιση με παραστατικά."
-          actionLabel="Λήψη Δείγματος CSV"
-          onAction={downloadSampleCSV}
-        />
-      ) : (
-        <Card className="rounded-3xl overflow-hidden">
-          <div className="divide-y divide-border">
-            {transactions.map((txn, i) => {
-              const match = findMatchingInvoice(txn);
-              const linkedPkg = packages.find((p) => p.id === txn.package_id);
-              const confidence = match ? getMatchConfidence(txn, match) : null;
+      {/* Filters */}
+      {transactions.length > 0 && (
+        <Card className="p-4 rounded-2xl">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Αναζήτηση περιγραφής..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 rounded-xl"
+              />
+            </div>
 
-              return (
-                <motion.div
-                  key={txn.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                  className={cn(
-                    "flex items-center gap-4 p-4 transition-colors",
-                    match && "bg-green-50/70 dark:bg-green-950/20"
+            {/* Bank Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-xl gap-2">
+                  <Filter className="h-4 w-4" />
+                  Τράπεζα
+                  {selectedBanks.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedBanks.length}
+                    </Badge>
                   )}
-                >
-                  <div className="flex-1 min-w-0">
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuLabel>Επιλέξτε Τράπεζες</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {SUPPORTED_BANKS.map((bank) => (
+                  <DropdownMenuCheckboxItem
+                    key={bank.value}
+                    checked={selectedBanks.includes(bank.value)}
+                    onCheckedChange={() => toggleBankFilter(bank.value)}
+                  >
                     <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{txn.description}</p>
-                      {txn.needs_invoice && (
-                        <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200">
-                          Λείπει Τιμολόγιο
-                        </Badge>
-                      )}
+                      <BankLogo bankName={bank.value} size="sm" />
+                      {bank.label}
                     </div>
-                    <p className="text-sm text-muted-foreground">{format(new Date(txn.transaction_date), "dd/MM/yyyy")}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={cn("font-semibold text-lg", txn.amount < 0 ? "text-destructive" : "")}>
-                      €{Math.abs(txn.amount).toFixed(2)}
-                    </p>
-                    {match && (
-                      <p className="text-xs text-green-600 flex items-center justify-end gap-1">
-                        <Check className="h-3 w-3" />
-                        Ταίριασμα
-                      </p>
-                    )}
-                  </div>
-                  <Select value={txn.package_id || "none"} onValueChange={(v) => linkToPackage(txn.id, v === "none" ? null : v)}>
-                    <SelectTrigger className="w-40 rounded-xl">
-                      <SelectValue placeholder="Σύνδεση με..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Καμία σύνδεση</SelectItem>
-                      {packages.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.client_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px] rounded-xl">
+                <SelectValue placeholder="Κατάσταση" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Όλες</SelectItem>
+                <SelectItem value="matched">
                   <div className="flex items-center gap-2">
-                    <Switch checked={txn.needs_invoice} onCheckedChange={() => toggleNeedsInvoice(txn)} />
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">Τιμολόγιο;</span>
+                    <Check className="h-3 w-3 text-green-600" />
+                    Ταιριασμένες
                   </div>
-                </motion.div>
-              );
-            })}
+                </SelectItem>
+                <SelectItem value="suggested">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                    Προτεινόμενες
+                  </div>
+                </SelectItem>
+                <SelectItem value="unmatched">
+                  <div className="flex items-center gap-2">
+                    <X className="h-3 w-3 text-muted-foreground" />
+                    Χωρίς αντιστοίχιση
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-xl gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  Ταξινόμηση
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Ταξινόμηση κατά</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={sortField === "date"}
+                  onCheckedChange={() => setSortField("date")}
+                >
+                  Ημερομηνία
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={sortField === "amount"}
+                  onCheckedChange={() => setSortField("amount")}
+                >
+                  Ποσό
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={sortField === "bank"}
+                  onCheckedChange={() => setSortField("bank")}
+                >
+                  Τράπεζα
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={sortDirection === "desc"}
+                  onCheckedChange={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+                >
+                  {sortDirection === "desc" ? "Φθίνουσα" : "Αύξουσα"}
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Clear Filters */}
+            {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedBanks([]);
+                  setStatusFilter("all");
+                }}
+                className="text-muted-foreground"
+              >
+                Καθαρισμός
+              </Button>
+            )}
           </div>
         </Card>
       )}
 
-      {/* PDF Extraction Dialog */}
-      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
-        <DialogContent className="max-w-2xl rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Εισαγωγή PDF Τράπεζας (Beta)
-            </DialogTitle>
-            <DialogDescription className="space-y-2">
-              <div className="flex items-center gap-2 text-amber-600 font-bold">
-                <AlertTriangle className="h-4 w-4" />
-                Beta λειτουργία - Αυτόματη Αναγνώριση
+      {/* Transactions List */}
+      {filteredTransactions.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title={transactions.length === 0 ? "Δεν υπάρχουν κινήσεις" : "Δεν βρέθηκαν κινήσεις"}
+          description={
+            transactions.length === 0
+              ? "Εισάγετε ένα PDF τράπεζας για να ξεκινήσετε"
+              : "Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης"
+          }
+          actionLabel={transactions.length === 0 ? "Εισαγωγή PDF" : undefined}
+          onAction={transactions.length === 0 ? () => setUploadModalOpen(true) : undefined}
+        />
+      ) : (
+        <Card className="rounded-3xl overflow-hidden">
+          {Object.entries(groupedTransactions).map(([dateKey, dayTransactions]) => (
+            <div key={dateKey}>
+              {/* Date Header */}
+              <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm px-4 py-2 border-b">
+                <p className="font-medium text-sm">
+                  {format(parseISO(dateKey), "EEEE, d MMMM yyyy", { locale: el })}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Η AI προσπαθεί να αναγνωρίσει ημερομηνίες και ποσά από το PDF της τράπεζας.
-                <span className="text-amber-700 font-bold"> Παρακαλούμε ελέγξτε προσεκτικά τον παρακάτω πίνακα </span>
-                πριν πατήσετε "Εισαγωγή", καθώς ενδέχεται να υπάρξουν σφάλματα αναγνώρισης.
-              </p>
-            </DialogDescription>
-          </DialogHeader>
 
-          {pdfExtracting ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-              <p className="text-muted-foreground">Εξαγωγή κινήσεων από PDF...</p>
+              {/* Day Transactions */}
+              {dayTransactions.map((txn, index) => (
+                <TransactionRow
+                  key={txn.id}
+                  transaction={txn}
+                  packages={packages}
+                  onLinkToPackage={handleLinkToPackage}
+                  onSetCategoryType={handleSetCategoryType}
+                  onUpdateNotes={handleUpdateNotes}
+                  index={index}
+                />
+              ))}
             </div>
-          ) : pdfExtractedRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
-              <p className="text-muted-foreground">Δεν βρέθηκαν κινήσεις στο PDF.</p>
-            </div>
-          ) : (
-            <div className="max-h-96 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="text-left p-3 font-medium">Ημερομηνία</th>
-                    <th className="text-left p-3 font-medium">Περιγραφή</th>
-                    <th className="text-right p-3 font-medium">Ποσό</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {pdfExtractedRows.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-muted/30">
-                      <td className="p-3">{row.date}</td>
-                      <td className="p-3 truncate max-w-xs">{row.description}</td>
-                      <td className="p-3 text-right font-medium">€{row.amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          ))}
+        </Card>
+      )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPdfDialogOpen(false)} className="rounded-xl">
-              Ακύρωση
-            </Button>
-            <Button
-              onClick={importPDFTransactions}
-              disabled={pdfExtractedRows.length === 0 || pdfImporting}
-              className="rounded-xl gap-2"
-            >
-              {pdfImporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Εισαγωγή...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  Εισαγωγή {pdfExtractedRows.length} Κινήσεων
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Upload Modal */}
+      <BankPDFUploadModal
+        open={uploadModalOpen}
+        onOpenChange={setUploadModalOpen}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

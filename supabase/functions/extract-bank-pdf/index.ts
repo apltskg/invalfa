@@ -4,7 +4,7 @@ import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/b
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -18,7 +18,7 @@ serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       console.error('[AUTH] Missing or invalid Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - missing authentication', transactions: [] }),
+        JSON.stringify({ error: 'Unauthorized - missing authentication', transactions: [], detected_bank: null }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -32,7 +32,7 @@ serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       console.error('[CONFIG] Supabase environment variables not configured');
       return new Response(
-        JSON.stringify({ error: 'Server configuration error', transactions: [] }),
+        JSON.stringify({ error: 'Server configuration error', transactions: [], detected_bank: null }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -46,7 +46,7 @@ serve(async (req) => {
     if (authError || !userData?.user) {
       console.error('[AUTH] Authentication failed:', authError?.message);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid session', transactions: [] }),
+        JSON.stringify({ error: 'Unauthorized - invalid session', transactions: [], detected_bank: null }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -57,7 +57,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       console.error('[CONFIG] LOVABLE_API_KEY is not configured');
       return new Response(
-        JSON.stringify({ error: 'AI service not configured', transactions: [] }),
+        JSON.stringify({ error: 'AI service not configured', transactions: [], detected_bank: null }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,7 +65,7 @@ serve(async (req) => {
     if (!SUPABASE_SERVICE_ROLE_KEY) {
       console.error('[CONFIG] SUPABASE_SERVICE_ROLE_KEY is not configured');
       return new Response(
-        JSON.stringify({ error: 'Storage service not configured', transactions: [] }),
+        JSON.stringify({ error: 'Storage service not configured', transactions: [], detected_bank: null }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -76,7 +76,7 @@ serve(async (req) => {
     if (!filePath || typeof filePath !== 'string') {
       console.error('[VALIDATION] Invalid file path');
       return new Response(
-        JSON.stringify({ error: 'Invalid file path', transactions: [] }),
+        JSON.stringify({ error: 'Invalid file path', transactions: [], detected_bank: null }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -85,7 +85,7 @@ serve(async (req) => {
     if (!filePathRegex.test(filePath)) {
       console.error('[VALIDATION] Invalid file path format:', filePath);
       return new Response(
-        JSON.stringify({ error: 'Invalid file path format', transactions: [] }),
+        JSON.stringify({ error: 'Invalid file path format', transactions: [], detected_bank: null }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -106,7 +106,7 @@ serve(async (req) => {
     if (downloadError || !fileData) {
       console.error("[PDF] Failed to download PDF:", downloadError?.message);
       return new Response(
-        JSON.stringify({ error: 'Unable to access PDF file', transactions: [] }),
+        JSON.stringify({ error: 'Unable to access PDF file', transactions: [], detected_bank: null }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -117,8 +117,16 @@ serve(async (req) => {
 
     console.log(`[PDF] Encoded PDF to base64 (${fileSize} bytes)`);
 
-    // Enhanced system prompt for Greek bank statements
-    const systemPrompt = `You are an expert financial auditor. Your JOB is to extract EVERY SINGLE transaction line item from the provided bank statement PDF.
+    // Enhanced system prompt for Greek bank statements with bank detection
+    const systemPrompt = `You are an expert financial auditor specializing in Greek bank statements. Your task is to:
+1. IDENTIFY the bank from logos, headers, or formatting
+2. EXTRACT every single transaction line item
+
+BANK IDENTIFICATION:
+- Eurobank: Look for "EUROBANK", burgundy/red colors, specific header format
+- Alpha Bank: Look for "ALPHA BANK", "ΑΛΦΑ ΤΡΑΠΕΖΑ", blue branding
+- Viva Wallet: Look for "VIVA WALLET", "VIVA", green branding, digital payment format
+- Wise: Look for "WISE", "TransferWise", teal/blue-green branding, multi-currency format
 
 CRITICAL RULES FOR GREEK BANK STATEMENTS:
 
@@ -150,12 +158,9 @@ CRITICAL RULES FOR GREEK BANK STATEMENTS:
    - Page numbers, headers, footers
    - "Balance Brought Forward", "Opening Balance", "Closing Balance"
    - "Total", "Σύνολο" summary rows
-   - Only extract actual transaction movements
+   - Only extract actual transaction movements`;
 
-OUTPUT FORMAT:
-Return ONLY a JSON array: [{ "date": "YYYY-MM-DD", "description": "full description", "amount": number }]`;
-
-    console.log("[AI] Sending to Gemini 2.5 Flash for extraction...");
+    console.log("[AI] Sending to Gemini 2.5 Flash for extraction with bank detection...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -172,7 +177,18 @@ Return ONLY a JSON array: [{ "date": "YYYY-MM-DD", "description": "full descript
             content: [
               { 
                 type: "text", 
-                text: `Extract ALL transactions from this bank statement PDF: ${safeFileName}. Return only the JSON array.` 
+                text: `Analyze this bank statement PDF: ${safeFileName}. 
+                
+First identify the bank (eurobank, alpha, viva, or wise - use lowercase).
+Then extract ALL transactions.
+
+Return ONLY a JSON object in this exact format:
+{
+  "detected_bank": "eurobank" | "alpha" | "viva" | "wise" | null,
+  "transactions": [
+    { "date": "YYYY-MM-DD", "description": "full description", "amount": number }
+  ]
+}` 
               },
               { 
                 type: "image_url", 
@@ -192,20 +208,20 @@ Return ONLY a JSON array: [{ "date": "YYYY-MM-DD", "description": "full descript
 
       if (errorStatus === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again.", transactions: [] }),
+          JSON.stringify({ error: "Rate limit exceeded. Please try again.", transactions: [], detected_bank: null }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       if (errorStatus === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted.", transactions: [] }),
+          JSON.stringify({ error: "AI credits exhausted.", transactions: [], detected_bank: null }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ transactions: [] }),
+        JSON.stringify({ transactions: [], detected_bank: null }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -219,38 +235,55 @@ Return ONLY a JSON array: [{ "date": "YYYY-MM-DD", "description": "full descript
     // Clean up markdown code blocks if present
     const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
 
-    // Try finding array bracket
-    const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+    // Try to parse as a full object first
+    let detected_bank: string | null = null;
+    let transactions: any[] = [];
 
-    if (jsonMatch) {
-      try {
-        const transactions = JSON.parse(jsonMatch[0]);
-        console.log(`[EXTRACTED] Found ${transactions.length} transactions`);
+    try {
+      // Try finding JSON object
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
         
-        // Log first few transactions for debugging
-        if (transactions.length > 0) {
-          console.log("[SAMPLE] First transaction:", JSON.stringify(transactions[0]));
+        if (parsed.detected_bank && typeof parsed.detected_bank === 'string') {
+          detected_bank = parsed.detected_bank.toLowerCase();
+          console.log(`[DETECTED] Bank identified: ${detected_bank}`);
         }
         
-        return new Response(
-          JSON.stringify({ transactions }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } catch (e) {
-        console.error("[AI] JSON Parse Error:", e);
+        if (Array.isArray(parsed.transactions)) {
+          transactions = parsed.transactions;
+          console.log(`[EXTRACTED] Found ${transactions.length} transactions`);
+        }
+      }
+    } catch (e) {
+      console.log("[AI] Failed to parse as object, trying array extraction");
+      
+      // Fallback: try to find just the array
+      const arrayMatch = cleanContent.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        try {
+          transactions = JSON.parse(arrayMatch[0]);
+          console.log(`[EXTRACTED] Found ${transactions.length} transactions (array only)`);
+        } catch (e2) {
+          console.error("[AI] JSON Parse Error:", e2);
+        }
       }
     }
 
-    console.log("[AI] No transactions extracted");
+    // Log first transaction for debugging
+    if (transactions.length > 0) {
+      console.log("[SAMPLE] First transaction:", JSON.stringify(transactions[0]));
+    }
+    
     return new Response(
-      JSON.stringify({ transactions: [] }),
+      JSON.stringify({ transactions, detected_bank }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("[ERROR] Extraction error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", transactions: [] }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", transactions: [], detected_bank: null }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
