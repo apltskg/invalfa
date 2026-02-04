@@ -89,38 +89,126 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_statements: {
+        Row: {
+          bank_id: string | null
+          bank_name: string
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          statement_month: string | null
+          transaction_count: number | null
+          upload_date: string | null
+        }
+        Insert: {
+          bank_id?: string | null
+          bank_name: string
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          statement_month?: string | null
+          transaction_count?: number | null
+          upload_date?: string | null
+        }
+        Update: {
+          bank_id?: string | null
+          bank_name?: string
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          statement_month?: string | null
+          transaction_count?: number | null
+          upload_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statements_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_transactions: {
         Row: {
           amount: number
+          bank_id: string | null
+          bank_name: string | null
+          category_type: string | null
+          confidence_score: number | null
           created_at: string
           description: string
+          folder_id: string | null
           id: string
+          match_status: string | null
+          matched_record_id: string | null
+          matched_record_type: string | null
           needs_invoice: boolean
+          notes: string | null
           package_id: string | null
+          statement_id: string | null
           transaction_date: string
           updated_at: string
         }
         Insert: {
           amount: number
+          bank_id?: string | null
+          bank_name?: string | null
+          category_type?: string | null
+          confidence_score?: number | null
           created_at?: string
           description: string
+          folder_id?: string | null
           id?: string
+          match_status?: string | null
+          matched_record_id?: string | null
+          matched_record_type?: string | null
           needs_invoice?: boolean
+          notes?: string | null
           package_id?: string | null
+          statement_id?: string | null
           transaction_date: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          bank_id?: string | null
+          bank_name?: string | null
+          category_type?: string | null
+          confidence_score?: number | null
           created_at?: string
           description?: string
+          folder_id?: string | null
           id?: string
+          match_status?: string | null
+          matched_record_id?: string | null
+          matched_record_type?: string | null
           needs_invoice?: boolean
+          notes?: string | null
           package_id?: string | null
+          statement_id?: string | null
           transaction_date?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bank_transactions_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transactions_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bank_transactions_package_id_fkey"
             columns: ["package_id"]
@@ -128,7 +216,44 @@ export type Database = {
             referencedRelation: "packages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bank_transactions_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statements"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      banks: {
+        Row: {
+          brand_color: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          name_el: string
+        }
+        Insert: {
+          brand_color: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          name_el: string
+        }
+        Update: {
+          brand_color?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          name_el?: string
+        }
+        Relationships: []
       }
       customers: {
         Row: {
@@ -169,33 +294,132 @@ export type Database = {
         }
         Relationships: []
       }
+      excel_imports: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          mapped_columns: Json | null
+          matched_count: number | null
+          row_count: number | null
+          upload_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          mapped_columns?: Json | null
+          matched_count?: number | null
+          row_count?: number | null
+          upload_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mapped_columns?: Json | null
+          matched_count?: number | null
+          row_count?: number | null
+          upload_date?: string | null
+        }
+        Relationships: []
+      }
+      excel_invoice_rows: {
+        Row: {
+          client_name: string | null
+          created_at: string | null
+          id: string
+          import_id: string | null
+          invoice_date: string | null
+          invoice_number: string | null
+          match_status: string | null
+          matched_income_id: string | null
+          net_amount: number | null
+          total_amount: number | null
+          vat_amount: number | null
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          match_status?: string | null
+          matched_income_id?: string | null
+          net_amount?: number | null
+          total_amount?: number | null
+          vat_amount?: number | null
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          match_status?: string | null
+          matched_income_id?: string | null
+          net_amount?: number | null
+          total_amount?: number | null
+          vat_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "excel_invoice_rows_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "excel_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "excel_invoice_rows_matched_income_id_fkey"
+            columns: ["matched_income_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           color: string | null
           created_at: string | null
+          description: string | null
           icon: string | null
           id: string
+          is_default: boolean | null
           is_operational: boolean | null
           name: string
           name_el: string
+          sort_order: number | null
         }
         Insert: {
           color?: string | null
           created_at?: string | null
+          description?: string | null
           icon?: string | null
           id?: string
+          is_default?: boolean | null
           is_operational?: boolean | null
           name: string
           name_el: string
+          sort_order?: number | null
         }
         Update: {
           color?: string | null
           created_at?: string | null
+          description?: string | null
           icon?: string | null
           id?: string
+          is_default?: boolean | null
           is_operational?: boolean | null
           name?: string
           name_el?: string
+          sort_order?: number | null
         }
         Relationships: []
       }
