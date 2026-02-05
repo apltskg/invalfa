@@ -17,9 +17,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { BankLogo, getBankBorderColor } from "./BankLogo";
+import { MatchSuggestionCard } from "./MatchSuggestionCard";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { MatchSuggestion } from "@/lib/matching-engine";
 
 interface Package {
   id: string;
@@ -44,6 +46,9 @@ interface TransactionRowProps {
   onSetCategoryType: (txnId: string, type: string) => void;
   onUpdateNotes: (txnId: string, notes: string) => void;
   onViewSourcePDF?: (txnId: string) => void;
+  onApproveMatch?: (txnId: string, recordId: string, recordType: string) => void;
+  onRejectMatch?: (txnId: string) => void;
+  suggestions?: MatchSuggestion[];
   index: number;
 }
 
@@ -54,12 +59,15 @@ export function TransactionRow({
   onSetCategoryType,
   onUpdateNotes,
   onViewSourcePDF,
+  onApproveMatch,
+  onRejectMatch,
+  suggestions = [],
   index,
 }: TransactionRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(transaction.notes || "");
-
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const borderColor = getBankBorderColor(transaction.bank_name || null);
   const isIncome = transaction.amount > 0;
   const matchStatus = transaction.match_status || "unmatched";
@@ -183,6 +191,36 @@ export function TransactionRow({
 
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-2 bg-muted/20 space-y-4">
+            {/* Match Suggestions */}
+            {suggestions.length > 0 && matchStatus !== 'matched' && onApproveMatch && onRejectMatch && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Προτεινόμενες Αντιστοιχίσεις ({suggestions.length})
+                </label>
+                <div className="space-y-2">
+                  {(showAllSuggestions ? suggestions : suggestions.slice(0, 1)).map((suggestion) => (
+                    <MatchSuggestionCard
+                      key={suggestion.recordId}
+                      suggestion={suggestion}
+                      onApprove={() => onApproveMatch(transaction.id, suggestion.recordId, suggestion.recordType)}
+                      onReject={() => onRejectMatch(transaction.id)}
+                      onSelectDifferent={() => setShowAllSuggestions(!showAllSuggestions)}
+                    />
+                  ))}
+                </div>
+                {suggestions.length > 1 && !showAllSuggestions && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllSuggestions(true)}
+                    className="text-xs text-muted-foreground"
+                  >
+                    +{suggestions.length - 1} ακόμα προτάσεις
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* Assign to Folder */}
               <div className="space-y-1.5">

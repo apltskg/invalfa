@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { FileText, Filter, ArrowUpDown, Check, X, AlertTriangle, Search, Download } from "lucide-react";
+import { FileText, Filter, ArrowUpDown, Check, X, AlertTriangle, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,8 @@ import { useMonth } from "@/contexts/MonthContext";
 import { BankLogo, SUPPORTED_BANKS, getBankBorderColor } from "@/components/bank/BankLogo";
 import { BankPDFUploadModal } from "@/components/bank/BankPDFUploadModal";
 import { TransactionRow } from "@/components/bank/TransactionRow";
+import { BulkMatchingView } from "@/components/bank/BulkMatchingView";
+import { useMatchingSuggestions } from "@/hooks/useMatchingSuggestions";
 
 interface BankTransaction {
   id: string;
@@ -58,6 +61,7 @@ export default function BankSync() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("transactions");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,6 +69,14 @@ export default function BankSync() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Matching suggestions hook
+  const { 
+    getSuggestionsForTransaction, 
+    transactionsWithSuggestions,
+    stats: matchingStats,
+    loading: matchingLoading 
+  } = useMatchingSuggestions(transactions);
 
   useEffect(() => {
     fetchData();
@@ -84,6 +96,54 @@ export default function BankSync() {
     setTransactions((txns as BankTransaction[]) || []);
     setPackages((pkgs as Package[]) || []);
     setLoading(false);
+  }
+
+  async function handleApproveMatch(txnId: string, recordId: string, recordType: string) {
+    // Update the transaction with the match
+    const { error } = await supabase
+      .from("bank_transactions")
+      .update({ 
+        match_status: "matched",
+        matched_record_id: recordId,
+        matched_record_type: recordType,
+      })
+      .eq("id", txnId);
+
+    if (error) {
+      toast.error("Αποτυχία αντιστοίχισης");
+      throw error;
+    }
+
+    // Create match record in invoice_transaction_matches
+    await supabase
+      .from("invoice_transaction_matches")
+      .insert({
+        transaction_id: txnId,
+        invoice_id: recordId,
+        status: "confirmed",
+      });
+
+    toast.success("Αντιστοίχιση επιβεβαιώθηκε");
+    fetchData();
+  }
+
+  async function handleRejectMatch(txnId: string) {
+    // Mark as unmatched (rejected suggestion)
+    const { error } = await supabase
+      .from("bank_transactions")
+      .update({ 
+        match_status: "unmatched",
+        matched_record_id: null,
+        matched_record_type: null,
+      })
+      .eq("id", txnId);
+
+    if (error) {
+      toast.error("Αποτυχία ενημέρωσης");
+      throw error;
+    }
+    toast.success("Πρόταση απορρίφθηκε");
+    fetchData();
   }
 
   async function handleLinkToPackage(txnId: string, packageId: string | null) {
@@ -222,13 +282,25 @@ export default function BankSync() {
             Διαχείριση τραπεζικών κινήσεων και αντιστοίχιση με παραστατικά
           </p>
         </div>
-        <Button
-          onClick={() => setUploadModalOpen(true)}
-          className="rounded-xl gap-2"
-        >
-          <FileText className="h-4 w-4" />
-          Εισαγωγή PDF
-        </Button>
+        <div className="flex gap-2">
+          {matchingStats.total > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setActiveTab("suggestions")}
+              className="rounded-xl gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              {matchingStats.total} Προτάσεις
+            </Button>
+          )}
+          <Button
+            onClick={() => setUploadModalOpen(true)}
+            className="rounded-xl gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Εισαγωγή PDF
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -238,13 +310,13 @@ export default function BankSync() {
             <p className="text-xs text-muted-foreground">Σύνολο</p>
             <p className="text-2xl font-bold">{stats.total}</p>
           </Card>
-          <Card className="p-4 rounded-2xl border-l-4 border-l-green-500">
+          <Card className="p-4 rounded-2xl border-l-4 border-l-emerald-500">
             <p className="text-xs text-muted-foreground">Ταιριασμένα</p>
-            <p className="text-2xl font-bold text-green-600">{stats.matched}</p>
+            <p className="text-2xl font-bold text-emerald-600">{stats.matched}</p>
           </Card>
-          <Card className="p-4 rounded-2xl border-l-4 border-l-yellow-500">
-            <p className="text-xs text-muted-foreground">Προτεινόμενα</p>
-            <p className="text-2xl font-bold text-yellow-600">{stats.suggested}</p>
+          <Card className="p-4 rounded-2xl border-l-4 border-l-amber-500">
+            <p className="text-xs text-muted-foreground">Με Προτάσεις</p>
+            <p className="text-2xl font-bold text-amber-600">{matchingStats.total}</p>
           </Card>
           <Card className="p-4 rounded-2xl">
             <p className="text-xs text-muted-foreground">Εισπράξεις</p>
@@ -257,178 +329,211 @@ export default function BankSync() {
         </div>
       )}
 
-      {/* Filters */}
-      {transactions.length > 0 && (
-        <Card className="p-4 rounded-2xl">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Αναζήτηση περιγραφής..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 rounded-xl"
-              />
-            </div>
-
-            {/* Bank Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-xl gap-2">
-                  <Filter className="h-4 w-4" />
-                  Τράπεζα
-                  {selectedBanks.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {selectedBanks.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuLabel>Επιλέξτε Τράπεζες</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {SUPPORTED_BANKS.map((bank) => (
-                  <DropdownMenuCheckboxItem
-                    key={bank.value}
-                    checked={selectedBanks.includes(bank.value)}
-                    onCheckedChange={() => toggleBankFilter(bank.value)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <BankLogo bankName={bank.value} size="sm" />
-                      {bank.label}
-                    </div>
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px] rounded-xl">
-                <SelectValue placeholder="Κατάσταση" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Όλες</SelectItem>
-                <SelectItem value="matched">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-3 w-3 text-green-600" />
-                    Ταιριασμένες
-                  </div>
-                </SelectItem>
-                <SelectItem value="suggested">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                    Προτεινόμενες
-                  </div>
-                </SelectItem>
-                <SelectItem value="unmatched">
-                  <div className="flex items-center gap-2">
-                    <X className="h-3 w-3 text-muted-foreground" />
-                    Χωρίς αντιστοίχιση
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-xl gap-2">
-                  <ArrowUpDown className="h-4 w-4" />
-                  Ταξινόμηση
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Ταξινόμηση κατά</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={sortField === "date"}
-                  onCheckedChange={() => setSortField("date")}
-                >
-                  Ημερομηνία
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={sortField === "amount"}
-                  onCheckedChange={() => setSortField("amount")}
-                >
-                  Ποσό
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={sortField === "bank"}
-                  onCheckedChange={() => setSortField("bank")}
-                >
-                  Τράπεζα
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={sortDirection === "desc"}
-                  onCheckedChange={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
-                >
-                  {sortDirection === "desc" ? "Φθίνουσα" : "Αύξουσα"}
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Clear Filters */}
-            {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedBanks([]);
-                  setStatusFilter("all");
-                }}
-                className="text-muted-foreground"
-              >
-                Καθαρισμός
-              </Button>
+      {/* Tabs for Transactions / Bulk Matching */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="rounded-xl">
+          <TabsTrigger value="transactions" className="rounded-lg gap-2">
+            <FileText className="h-4 w-4" />
+            Κινήσεις
+          </TabsTrigger>
+          <TabsTrigger value="suggestions" className="rounded-lg gap-2">
+            <Sparkles className="h-4 w-4" />
+            Προτάσεις Αντιστοίχισης
+            {matchingStats.total > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {matchingStats.total}
+              </Badge>
             )}
-          </div>
-        </Card>
-      )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Transactions List */}
-      {filteredTransactions.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title={transactions.length === 0 ? "Δεν υπάρχουν κινήσεις" : "Δεν βρέθηκαν κινήσεις"}
-          description={
-            transactions.length === 0
-              ? "Εισάγετε ένα PDF τράπεζας για να ξεκινήσετε"
-              : "Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης"
-          }
-          actionLabel={transactions.length === 0 ? "Εισαγωγή PDF" : undefined}
-          onAction={transactions.length === 0 ? () => setUploadModalOpen(true) : undefined}
-        />
-      ) : (
-        <Card className="rounded-3xl overflow-hidden">
-          {Object.entries(groupedTransactions).map(([dateKey, dayTransactions]) => (
-            <div key={dateKey}>
-              {/* Date Header */}
-              <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm px-4 py-2 border-b">
-                <p className="font-medium text-sm">
-                  {format(parseISO(dateKey), "EEEE, d MMMM yyyy", { locale: el })}
-                </p>
+        <TabsContent value="transactions" className="space-y-4">
+          {/* Filters */}
+          {transactions.length > 0 && (
+            <Card className="p-4 rounded-2xl">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Αναζήτηση περιγραφής..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 rounded-xl"
+                  />
+                </div>
+
+                {/* Bank Filter */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-xl gap-2">
+                      <Filter className="h-4 w-4" />
+                      Τράπεζα
+                      {selectedBanks.length > 0 && (
+                        <Badge variant="secondary" className="ml-1">
+                          {selectedBanks.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuLabel>Επιλέξτε Τράπεζες</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {SUPPORTED_BANKS.map((bank) => (
+                      <DropdownMenuCheckboxItem
+                        key={bank.value}
+                        checked={selectedBanks.includes(bank.value)}
+                        onCheckedChange={() => toggleBankFilter(bank.value)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <BankLogo bankName={bank.value} size="sm" />
+                          {bank.label}
+                        </div>
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px] rounded-xl">
+                    <SelectValue placeholder="Κατάσταση" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Όλες</SelectItem>
+                    <SelectItem value="matched">
+                      <div className="flex items-center gap-2">
+                        <Check className="h-3 w-3 text-emerald-600" />
+                        Ταιριασμένες
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="suggested">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-3 w-3 text-amber-600" />
+                        Προτεινόμενες
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="unmatched">
+                      <div className="flex items-center gap-2">
+                        <X className="h-3 w-3 text-muted-foreground" />
+                        Χωρίς αντιστοίχιση
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Sort */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-xl gap-2">
+                      <ArrowUpDown className="h-4 w-4" />
+                      Ταξινόμηση
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Ταξινόμηση κατά</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={sortField === "date"}
+                      onCheckedChange={() => setSortField("date")}
+                    >
+                      Ημερομηνία
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={sortField === "amount"}
+                      onCheckedChange={() => setSortField("amount")}
+                    >
+                      Ποσό
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={sortField === "bank"}
+                      onCheckedChange={() => setSortField("bank")}
+                    >
+                      Τράπεζα
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={sortDirection === "desc"}
+                      onCheckedChange={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+                    >
+                      {sortDirection === "desc" ? "Φθίνουσα" : "Αύξουσα"}
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Clear Filters */}
+                {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedBanks([]);
+                      setStatusFilter("all");
+                    }}
+                    className="text-muted-foreground"
+                  >
+                    Καθαρισμός
+                  </Button>
+                )}
               </div>
+            </Card>
+          )}
 
-              {/* Day Transactions */}
-              {dayTransactions.map((txn, index) => (
-                <TransactionRow
-                  key={txn.id}
-                  transaction={txn}
-                  packages={packages}
-                  onLinkToPackage={handleLinkToPackage}
-                  onSetCategoryType={handleSetCategoryType}
-                  onUpdateNotes={handleUpdateNotes}
-                  index={index}
-                />
+          {/* Transactions List */}
+          {filteredTransactions.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title={transactions.length === 0 ? "Δεν υπάρχουν κινήσεις" : "Δεν βρέθηκαν κινήσεις"}
+              description={
+                transactions.length === 0
+                  ? "Εισάγετε ένα PDF τράπεζας για να ξεκινήσετε"
+                  : "Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης"
+              }
+              actionLabel={transactions.length === 0 ? "Εισαγωγή PDF" : undefined}
+              onAction={transactions.length === 0 ? () => setUploadModalOpen(true) : undefined}
+            />
+          ) : (
+            <Card className="rounded-3xl overflow-hidden">
+              {Object.entries(groupedTransactions).map(([dateKey, dayTransactions]) => (
+                <div key={dateKey}>
+                  {/* Date Header */}
+                  <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm px-4 py-2 border-b">
+                    <p className="font-medium text-sm">
+                      {format(parseISO(dateKey), "EEEE, d MMMM yyyy", { locale: el })}
+                    </p>
+                  </div>
+
+                  {/* Day Transactions */}
+                  {dayTransactions.map((txn, index) => (
+                    <TransactionRow
+                      key={txn.id}
+                      transaction={txn}
+                      packages={packages}
+                      onLinkToPackage={handleLinkToPackage}
+                      onSetCategoryType={handleSetCategoryType}
+                      onUpdateNotes={handleUpdateNotes}
+                      onApproveMatch={handleApproveMatch}
+                      onRejectMatch={handleRejectMatch}
+                      suggestions={getSuggestionsForTransaction(txn.id)}
+                      index={index}
+                    />
+                  ))}
+                </div>
               ))}
-            </div>
-          ))}
-        </Card>
-      )}
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="suggestions" className="space-y-4">
+          <BulkMatchingView
+            suggestions={transactionsWithSuggestions}
+            onApproveMatch={handleApproveMatch}
+            onRejectMatch={handleRejectMatch}
+            onClose={() => setActiveTab("transactions")}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Upload Modal */}
       <BankPDFUploadModal
