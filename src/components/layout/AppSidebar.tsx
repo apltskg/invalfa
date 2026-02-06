@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users, LayoutDashboard, Shield, Receipt } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users, LayoutDashboard, Shield, Receipt, Infinity as InfinityIcon } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -47,12 +47,17 @@ export function AppSidebar() {
     <Sidebar className="border-r border-border bg-sidebar-background">
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-            <Package className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-md">
+            <InfinityIcon className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">TravelDocs</h1>
-            <p className="text-xs text-muted-foreground">Διαχείριση Τιμολογίων</p>
+            <h1 className="text-lg font-bold text-foreground tracking-tight leading-none">
+              Always <span className="text-blue-600">First</span>
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded text-muted-foreground">v15</span>
+              <p className="text-xs text-muted-foreground truncate max-w-[100px]">Enterprise</p>
+            </div>
           </div>
         </div>
       </SidebarHeader>

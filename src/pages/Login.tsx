@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, FileText, Eye, EyeOff } from 'lucide-react';
+import { Loader2, FileText, Eye, EyeOff, Infinity as InfinityIcon } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth } from '@/components/auth/AuthProvider';
 
@@ -33,7 +33,7 @@ export default function Login() {
 
   const validateForm = () => {
     setErrors({});
-    
+
     try {
       loginSchema.parse({ email, password });
       return true;
@@ -53,9 +53,9 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -81,10 +81,12 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <Card className="w-full max-w-md rounded-3xl border-border/50 shadow-2xl">
         <CardHeader className="space-y-2 text-center pb-6">
-          <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-            <FileText className="h-7 w-7 text-primary" />
+          <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-md flex items-center justify-center mb-2">
+            <InfinityIcon className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">TravelDocs</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Always <span className="text-blue-600">First</span>
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in to manage your invoices
           </CardDescription>
@@ -108,7 +110,7 @@ export default function Login() {
                 <p className="text-xs text-destructive">{errors.email}</p>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -139,9 +141,9 @@ export default function Login() {
             </div>
 
 
-            <Button 
-              type="submit" 
-              className="w-full rounded-xl h-11 font-medium" 
+            <Button
+              type="submit"
+              className="w-full rounded-xl h-11 font-medium"
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
