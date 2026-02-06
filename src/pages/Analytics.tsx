@@ -2,15 +2,15 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Target } from "lucide-react";
+import { useMonth } from "@/contexts/MonthContext";
 
-const COLORS = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "# 3b82f6", "#ef4444"];
+const COLORS = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444"];
 
 export default function Analytics() {
+    const { startDate, endDate, displayLabel } = useMonth();
     const [loading, setLoading] = useState(true);
-    const [period, setPeriod] = useState("thisMonth");
     const [data, setData] = useState<any>({
         summary: { income: 0, expenses: 0, profit: 0, margin: 0 },
         monthlyTrends: [],
@@ -19,12 +19,16 @@ export default function Analytics() {
 
     useEffect(() => {
         fetchAnalytics();
-    }, [period]);
+    }, [startDate, endDate]);
 
     async function fetchAnalytics() {
         try {
-            // Fetch all invoices
-            const { data: invoices } = await supabase.from("invoices").select("*");
+            // Fetch invoices for selected period
+            const { data: invoices } = await supabase
+                .from("invoices")
+                .select("*")
+                .gte("invoice_date", startDate)
+                .lte("invoice_date", endDate);
 
             if (!invoices) return;
 
@@ -56,9 +60,10 @@ export default function Analytics() {
 
             const categoryBreakdown = Object.values(categories);
 
-            // Monthly trends (simplified - group by month)
+            // Monthly trends (group by day if range is small, or month if large)
             const monthlyData: any = {};
             invoices.forEach((inv: any) => {
+                // Group by month for simplicity, or change to day if needed
                 const month = inv.invoice_date?.substring(0, 7) || "Unknown";
                 if (!monthlyData[month]) {
                     monthlyData[month] = { month, income: 0, expenses: 0 };
@@ -72,8 +77,7 @@ export default function Analytics() {
 
             const monthlyTrends = Object.values(monthlyData)
                 .filter((m: any) => m.month !== "Unknown")
-                .sort((a: any, b: any) => a.month.localeCompare(b.month))
-                .slice(-6); // Last 6 months
+                .sort((a: any, b: any) => a.month.localeCompare(b.month));
 
             setData({
                 summary: { income, expenses, profit, margin },
@@ -100,20 +104,10 @@ export default function Analytics() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Αναλύσεις</h1>
-                    <p className="mt-1 text-muted-foreground">Οικονομική ανάλυση και γραφήματα</p>
+                    <p className="mt-1 text-muted-foreground">
+                        Οικονομική ανάλυση για <span className="font-medium capitalize">{displayLabel}</span>
+                    </p>
                 </div>
-
-                <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger className="w-48 rounded-xl">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="thisMonth">Τρέχων Μήνας</SelectItem>
-                        <SelectItem value="lastMonth">Προηγούμενος Μήνας</SelectItem>
-                        <SelectItem value="thisYear">Φέτος</SelectItem>
-                        <SelectItem value="all">Όλα</SelectItem>
-                    </SelectContent>
-                </Select>
             </div>
 
             {/* Summary Cards */}
