@@ -85,7 +85,7 @@ serve(async (req) => {
 
     if (isPDF) {
       console.log("[PDF] Downloading PDF bytes for base64 encoding...");
-      
+
       const { data: fileData, error: downloadError } = await supabase.storage
         .from("invoices")
         .download(filePath);
@@ -119,7 +119,7 @@ serve(async (req) => {
     } else {
       // For images, use signed URL
       console.log("[IMAGE] Generating signed URL for image...");
-      
+
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from("invoices")
         .createSignedUrl(filePath, 300);
@@ -146,45 +146,56 @@ serve(async (req) => {
 
     console.log("[AI] Sending to Gemini 2.5 Flash for extraction...");
 
-    // Enhanced system prompt for Greek documents
+    // Enhanced system prompt for Greek documents - AGGRESSIVE EXTRACTION
     const systemPrompt = `You are an expert financial auditor specializing in Greek and European tax documents.
-Analyze the document meticulously and extract structured data.
+Your task is to ACCURATELY extract ALL invoice data. Be AGGRESSIVE in finding the correct values.
 
 CRITICAL RULES FOR GREEK INVOICES:
 
-1. **NUMBER FORMATS (VERY IMPORTANT)**:
-   - Greek format: dot (.) = thousands separator, comma (,) = decimal
-   - Example: "1.234,56" means one thousand two hundred thirty-four point fifty-six = 1234.56
-   - Example: "12.500,00" = 12500.00
-   - Always convert to standard decimal (no thousands separator, dot for decimal)
+1. **NUMBER FORMATS (EXTREMELY IMPORTANT)**:
+   - Greek format uses DOT (.) for thousands and COMMA (,) for decimals
+   - "1.234,56" = 1234.56 (NOT 1.23456 or 1234.56)
+   - "12.500,00" = 12500.00
+   - "500,00" = 500.00
+   - "-1.234,56" = -1234.56
+   - ALWAYS convert to standard decimal format in your response
 
 2. **DATE FORMATS**:
    - Greek dates: DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY
    - Convert ALL dates to ISO format: YYYY-MM-DD
+   - Example: 15/03/2026 → 2026-03-15
 
-3. **MERCHANT NAME**:
-   - Prefer trading/brand name over legal entity (e.g., "Aegean Airlines" not "ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ Α.Ε.")
-   - Keep Greek characters if no common English equivalent exists
-   - Look for: ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης
+3. **MERCHANT NAME (IMPORTANT)**:
+   - ALWAYS prefer the BRAND/TRADING name over legal entity
+   - "Aegean Airlines" NOT "ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ Α.Ε."
+   - "Vodafone" NOT "Vodafone-Panafon Α.Ε.Ε.Τ."
+   - "Cosmote" NOT "COSMOTE - ΚΙΝΗΤΕΣ ΤΗΛΕΠΙΚΟΙΝΩΝΙΕΣ Α.Ε."
+   - Look for logos, brand names at the top of document
+   - Look for: ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης, Προμηθευτής
 
 4. **VAT/TAX ID (ΑΦΜ)**:
-   - Greek VAT numbers are exactly 9 digits
-   - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number
+   - Greek VAT numbers are EXACTLY 9 digits
+   - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number, TIN
+   - Extract ONLY the 9-digit number, no prefixes
 
-5. **AMOUNTS**:
+5. **AMOUNTS (CRITICAL)**:
    - Extract the FINAL TOTAL (Σύνολο Πληρωμής, Grand Total) INCLUDING VAT
+   - This is usually the LARGEST amount on the invoice
    - NOT the net amount (Καθαρή Αξία)
-   - Look for: ΣΥΝΟΛΟ, Πληρωτέο, Total
+   - Look for: ΣΥΝΟΛΟ, Πληρωτέο, Total, Σύνολο με ΦΠΑ, Πληρωτέο Ποσό
+   - If multiple totals exist, use the FINAL one (bottom of invoice)
 
-6. **CATEGORIES** (choose one):
-   - "airline": Αεροπορικά, Aegean, Sky Express, Ryanair, Olympic, Volotea, boarding pass
-   - "hotel": Ξενοδοχείο, διαμονή, Airbnb, Booking.com, Hotels.com, accommodation
-   - "tolls": Διόδια, Attiki Odos, Egnatia, Gefyra, Olympia Odos, Moreas, Ionia Odos, e-pass
-   - "other": Everything else (taxi, fuel, restaurant, parking, supplies, software, services)
+6. **CATEGORIES** (choose the BEST match):
+   - "airline": Αεροπορικά, Aegean, Sky Express, Ryanair, Olympic, Volotea, boarding pass, flight, ticket
+   - "hotel": Ξενοδοχείο, διαμονή, Airbnb, Booking.com, Hotels.com, accommodation, room, stay
+   - "tolls": Διόδια, Attiki Odos, Egnatia, Gefyra, Olympia Odos, Moreas, Ionia Odos, e-pass, motorway
+   - "other": Everything else (taxi, fuel, restaurant, parking, supplies, software, services, utilities, telecom)
 
 7. **INVOICE NUMBER**:
-   - Look for: Αριθμός Τιμολογίου, Αρ. Παραστατικού, Invoice No, Receipt No`;
+   - Look for: Αριθμός Τιμολογίου, Αρ. Παραστατικού, Invoice No, Receipt No, Σειρά/Αριθμός
+   - Include the full number with any prefix letters
 
+REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.`;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -286,7 +297,7 @@ CRITICAL RULES FOR GREEK INVOICES:
     if (toolCall?.function?.arguments) {
       try {
         const parsed = JSON.parse(toolCall.function.arguments);
-        
+
         console.log("[EXTRACTED] merchant:", parsed.merchant);
         console.log("[EXTRACTED] amount:", parsed.amount);
         console.log("[EXTRACTED] date:", parsed.date);
@@ -319,7 +330,11 @@ CRITICAL RULES FOR GREEK INVOICES:
     const content = aiResponse.choices?.[0]?.message?.content;
     if (content) {
       console.log("[AI] Attempting fallback content parsing...");
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+
+      // Clean up markdown code blocks if present (like in bank extractor)
+      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -328,16 +343,19 @@ CRITICAL RULES FOR GREEK INVOICES:
             JSON.stringify({
               extracted: {
                 merchant: parsed.merchant || null,
+                tax_id: parsed.tax_id || null,
                 amount: parsed.amount ? parseFloat(parsed.amount) : null,
                 date: parsed.date || null,
                 category: parsed.category || "other",
+                currency: parsed.currency || "EUR",
+                invoice_number: parsed.invoice_number || null,
                 confidence: 0.7
               }
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         } catch (e) {
-          console.error("[FALLBACK] JSON parse failed");
+          console.error("[FALLBACK] JSON parse failed:", e);
         }
       }
     }
