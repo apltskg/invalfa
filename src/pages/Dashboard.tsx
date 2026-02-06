@@ -5,11 +5,10 @@ import { Invoice, BankTransaction } from "@/types/database";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, CreditCard, DollarSign, Calendar as CalendarIcon, Filter, AlertTriangle, MessageSquare, CalendarDays } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { FileText, CreditCard, DollarSign, AlertTriangle, MessageSquare, Filter, Calendar as CalendarIcon } from "lucide-react";
+import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useMonth } from "@/contexts/MonthContext";
 
 interface TimelineItem {
     id: string;
@@ -23,12 +22,14 @@ export default function Dashboard() {
     const [items, setItems] = useState<TimelineItem[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedMonth, setSelectedMonth] = useState(new Date());
+
+    // Use global month context
+    const { startDate, endDate, monthKey, displayLabel } = useMonth();
 
     useEffect(() => {
         fetchData();
         fetchNotifications();
-    }, [selectedMonth]);
+    }, [startDate, endDate]);
 
     async function fetchNotifications() {
         try {
@@ -44,12 +45,9 @@ export default function Dashboard() {
 
     async function fetchData() {
         try {
-            const start = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
-            const end = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
-
             const [{ data: invoices }, { data: transactions }, { data: packages }] = await Promise.all([
-                supabase.from("invoices").select("*").gte("invoice_date", start).lte("invoice_date", end).order("invoice_date", { ascending: false }),
-                supabase.from("bank_transactions").select("*").gte("transaction_date", start).lte("transaction_date", end).order("transaction_date", { ascending: false }),
+                supabase.from("invoices").select("*").gte("invoice_date", startDate).lte("invoice_date", endDate).order("invoice_date", { ascending: false }),
+                supabase.from("bank_transactions").select("*").gte("transaction_date", startDate).lte("transaction_date", endDate).order("transaction_date", { ascending: false }),
                 supabase.from("packages").select("*")
             ]);
 
@@ -93,28 +91,11 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Dashboard</h1>
-                    <p className="text-muted-foreground">Overview of all transactions by date</p>
-                </div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" className="h-10 gap-2 rounded-xl bg-background hover:bg-muted/50 border-input font-medium min-w-[180px] justify-start text-left font-normal">
-                            <CalendarDays className="h-4 w-4 text-primary" />
-                            {format(selectedMonth, "MMMM yyyy")}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 rounded-2xl shadow-xl" align="end">
-                        <Calendar
-                            mode="single"
-                            selected={selectedMonth}
-                            onSelect={(date) => date && setSelectedMonth(date)}
-                            initialFocus
-                            className="p-3"
-                        />
-                    </PopoverContent>
-                </Popover>
+            <div>
+                <h1 className="text-3xl font-bold">Dashboard</h1>
+                <p className="text-muted-foreground">
+                    Επισκόπηση συναλλαγών - <span className="font-medium capitalize">{displayLabel}</span>
+                </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Send, Check, Archive, Link2, FileSpreadsheet, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -12,11 +11,14 @@ import { toast } from "sonner";
 import JSZip from "jszip";
 import ExcelJS from "exceljs";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { useMonth } from "@/contexts/MonthContext";
 
 export default function ExportHub() {
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  // Use global month context instead of local state
+  const { monthKey: selectedMonth, displayLabel: currentMonthLabel } = useMonth();
+
   const [generalInvoices, setGeneralInvoices] = useState<Invoice[]>([]);
   const [packages, setPackages] = useState<(Package & { invoices: Invoice[] })[]>([]);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -29,15 +31,9 @@ export default function ExportHub() {
   const [confirmSendDialog, setConfirmSendDialog] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Generate last 12 months for dropdown
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const date = subMonths(new Date(), i);
-    return { value: format(date, "yyyy-MM"), label: format(date, "MMMM yyyy") };
-  });
-
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMonth]); // Re-fetch when month changes
 
   async function fetchData() {
     const [{ data: pkgs }, { data: invs }, { data: logs }, { data: txns }, { data: matchData }] = await Promise.all([
@@ -353,27 +349,13 @@ export default function ExportHub() {
   const totalGeneralAmount = filteredGeneralInvoices.reduce((acc, i) => acc + (i.amount || 0), 0);
   const totalAmount = totalPackageAmount + totalGeneralAmount;
 
-  const currentMonthLabel = months.find((m) => m.value === selectedMonth)?.label || selectedMonth;
-
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Export Hub</h1>
-          <p className="mt-1 text-muted-foreground">Δημιουργία μηνιαίων αναφορών για τον λογιστή</p>
-        </div>
-        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-48 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {months.map((m) => (
-              <SelectItem key={m.value} value={m.value}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold tracking-tight">Export Hub</h1>
+        <p className="mt-1 text-muted-foreground">
+          Δημιουργία μηνιαίων αναφορών για τον λογιστή - <span className="font-medium capitalize">{currentMonthLabel}</span>
+        </p>
       </div>
 
       {/* Stats Cards */}

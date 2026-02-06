@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { FileSpreadsheet, Download, Trash2, Check, RefreshCw, ChevronDown, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import { FileSpreadsheet, Download, Trash2, Check, RefreshCw, ChevronDown, Calendar, AlertCircle, CheckCircle, Sparkles, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { el } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,8 @@ import { InvoiceListUpload } from "@/components/invoicelist/InvoiceListUpload";
 import { InvoiceListTable, InvoiceListItem } from "@/components/invoicelist/InvoiceListTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
+import { useInvoiceListMatching } from "@/hooks/useInvoiceListMatching";
+import { getConfidenceStyles } from "@/lib/matching-engine";
 
 interface InvoiceListImport {
   id: string;
@@ -88,7 +90,7 @@ export default function InvoiceList() {
 
       if (error) throw error;
       setImports(data || []);
-      
+
       // Auto-select first import if exists
       if (data && data.length > 0 && !selectedImportId) {
         setSelectedImportId(data[0].id);
@@ -155,17 +157,17 @@ export default function InvoiceList() {
 
   const handleDeleteImport = async () => {
     if (!selectedImportId) return;
-    
+
     try {
       const importRecord = imports.find(i => i.id === selectedImportId);
-      
+
       // Delete from storage
       if (importRecord?.file_path) {
         await supabase.storage
           .from('invoice-lists')
           .remove([importRecord.file_path]);
       }
-      
+
       // Delete from database (cascade will delete items)
       const { error } = await supabase
         .from('invoice_list_imports')
@@ -173,7 +175,7 @@ export default function InvoiceList() {
         .eq('id', selectedImportId);
 
       if (error) throw error;
-      
+
       toast.success('Η εισαγωγή διαγράφηκε');
       setSelectedImportId(null);
       fetchImports();
@@ -188,7 +190,7 @@ export default function InvoiceList() {
   const handleDownloadOriginal = async () => {
     const importRecord = imports.find(i => i.id === selectedImportId);
     if (!importRecord?.file_path) return;
-    
+
     try {
       const { data, error } = await supabase.storage
         .from('invoice-lists')
@@ -253,7 +255,7 @@ export default function InvoiceList() {
 
   const handleConfirmMatch = async (incomeId: string) => {
     if (!matchingItem) return;
-    
+
     try {
       const { error } = await supabase
         .from('invoice_list_items')
@@ -277,12 +279,32 @@ export default function InvoiceList() {
 
   const selectedImport = imports.find(i => i.id === selectedImportId);
 
+  // Smart matching engine
+  const {
+    loading: matchingLoading,
+    getSuggestionsForItem,
+    getBestSuggestion,
+    itemsWithSuggestions,
+    stats: matchingStats
+  } = useInvoiceListMatching(items.map(i => ({
+    id: i.id,
+    invoice_date: i.invoice_date,
+    invoice_number: i.invoice_number,
+    client_name: i.client_name,
+    client_vat: i.client_vat,
+    total_amount: i.total_amount,
+    match_status: i.match_status,
+  })));
+
   const stats = {
     total: items.length,
     matched: items.filter(i => i.match_status === 'matched').length,
-    suggested: items.filter(i => i.match_status === 'suggested').length,
-    unmatched: items.filter(i => i.match_status === 'unmatched').length,
+    suggested: matchingStats.total,
+    unmatched: items.filter(i => i.match_status === 'unmatched').length - matchingStats.total,
     totalAmount: items.reduce((sum, i) => sum + (i.total_amount || 0), 0),
+    aiHigh: matchingStats.high,
+    aiMedium: matchingStats.medium,
+    aiLow: matchingStats.low,
   };
 
   return (
@@ -308,7 +330,7 @@ export default function InvoiceList() {
               <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
               <span className="font-medium">Εισαγωγή:</span>
             </div>
-            
+
             <Select value={selectedImportId || ''} onValueChange={setSelectedImportId}>
               <SelectTrigger className="w-64 rounded-xl">
                 <SelectValue placeholder="Επιλέξτε εισαγωγή" />
@@ -337,7 +359,7 @@ export default function InvoiceList() {
                   )}
                   {selectedImport.validated_totals ? 'Επαληθευμένο' : 'Μη επαληθευμένο'}
                 </Badge>
-                
+
                 <div className="flex gap-2 ml-auto">
                   <Button
                     variant="outline"
@@ -365,7 +387,7 @@ export default function InvoiceList() {
 
       {/* Stats */}
       {selectedImportId && items.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card className="p-4 rounded-2xl">
             <p className="text-sm text-muted-foreground">Σύνολο</p>
             <p className="text-2xl font-bold">{stats.total}</p>
@@ -374,15 +396,32 @@ export default function InvoiceList() {
             <p className="text-sm text-green-600">Αντιστοιχισμένα</p>
             <p className="text-2xl font-bold text-green-700">{stats.matched}</p>
           </Card>
-          <Card className="p-4 rounded-2xl bg-amber-50 border-amber-200">
-            <p className="text-sm text-amber-600">Προτεινόμενα</p>
-            <p className="text-2xl font-bold text-amber-700">{stats.suggested}</p>
+          <Card className="p-4 rounded-2xl bg-violet-50 border-violet-200">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              <p className="text-sm text-violet-600">AI Προτάσεις</p>
+            </div>
+            <p className="text-2xl font-bold text-violet-700">{stats.suggested}</p>
+            {stats.suggested > 0 && (
+              <div className="flex gap-1 mt-1">
+                {stats.aiHigh > 0 && (
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200">
+                    {stats.aiHigh} υψηλό
+                  </Badge>
+                )}
+                {stats.aiMedium > 0 && (
+                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-600 border-yellow-200">
+                    {stats.aiMedium} μεσαίο
+                  </Badge>
+                )}
+              </div>
+            )}
           </Card>
           <Card className="p-4 rounded-2xl">
             <p className="text-sm text-muted-foreground">Ανοιχτά</p>
-            <p className="text-2xl font-bold">{stats.unmatched}</p>
+            <p className="text-2xl font-bold">{Math.max(0, stats.unmatched)}</p>
           </Card>
-          <Card className="p-4 rounded-2xl bg-primary/5 border-primary/20">
+          <Card className="p-4 rounded-2xl bg-primary/5 border-primary/20 md:col-span-2">
             <p className="text-sm text-primary">Συνολική Αξία</p>
             <p className="text-2xl font-bold text-primary">€{stats.totalAmount.toFixed(2)}</p>
           </Card>
@@ -449,74 +488,133 @@ export default function InvoiceList() {
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Αντιστοίχιση Τιμολογίου</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-500" />
+              Έξυπνη Αντιστοίχιση
+            </DialogTitle>
           </DialogHeader>
-          
+
           {matchingItem && (
             <div className="space-y-4">
+              {/* Current item being matched */}
               <Card className="p-4 rounded-xl bg-muted/50">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-semibold">{matchingItem.invoice_number}</p>
                     <p className="text-sm text-muted-foreground">{matchingItem.client_name}</p>
+                    {matchingItem.invoice_date && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(matchingItem.invoice_date), 'dd/MM/yyyy', { locale: el })}
+                      </p>
+                    )}
                   </div>
-                  <p className="font-bold">€{matchingItem.total_amount?.toFixed(2)}</p>
+                  <p className="font-bold text-lg">€{matchingItem.total_amount?.toFixed(2)}</p>
                 </div>
               </Card>
-              
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {incomeRecords
-                  .filter(inc => 
-                    // Filter by similar amount (±5%)
-                    matchingItem.total_amount && 
-                    Math.abs((inc.amount || 0) - matchingItem.total_amount) <= matchingItem.total_amount * 0.05
-                  )
-                  .slice(0, 10)
-                  .map((inc) => (
-                    <Card
-                      key={inc.id}
-                      className="p-4 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleConfirmMatch(inc.id)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{inc.merchant || 'Χωρίς τίτλο'}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {inc.invoice_date ? format(new Date(inc.invoice_date), 'dd/MM/yyyy', { locale: el }) : '-'}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">€{(inc.amount || 0).toFixed(2)}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {Math.abs((inc.amount || 0) - (matchingItem.total_amount || 0)) < 0.01
-                              ? 'Ακριβής'
-                              : `±€${Math.abs((inc.amount || 0) - (matchingItem.total_amount || 0)).toFixed(2)}`}
-                          </Badge>
-                        </div>
+
+              {/* AI Suggestions */}
+              {(() => {
+                const suggestions = getSuggestionsForItem(matchingItem.id);
+                if (suggestions.length > 0) {
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-violet-500" />
+                        <p className="text-sm font-medium text-violet-600">AI Προτάσεις</p>
                       </div>
-                    </Card>
-                  ))}
-                
-                {incomeRecords.filter(inc => 
-                  matchingItem.total_amount && 
-                  Math.abs((inc.amount || 0) - matchingItem.total_amount) <= matchingItem.total_amount * 0.05
-                ).length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">
-                    Δεν βρέθηκαν έσοδα με παρόμοιο ποσό
-                  </p>
-                )}
+                      <div className="max-h-48 overflow-y-auto space-y-2">
+                        {suggestions.map((suggestion) => {
+                          const styles = getConfidenceStyles(suggestion.confidenceLevel);
+                          return (
+                            <Card
+                              key={suggestion.recordId}
+                              className={`p-4 rounded-xl cursor-pointer transition-all hover:scale-[1.01] ${styles.bgClass} ${styles.borderClass} border-2`}
+                              onClick={() => handleConfirmMatch(suggestion.recordId)}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="font-medium">{suggestion.record.vendor_or_client || 'Χωρίς τίτλο'}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {suggestion.record.date ? format(new Date(suggestion.record.date), 'dd/MM/yyyy', { locale: el }) : '-'}
+                                  </p>
+                                  <div className="flex gap-1 mt-1">
+                                    {suggestion.reasons.map((reason, idx) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {reason}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`font-bold ${styles.textClass}`}>€{(suggestion.record.amount || 0).toFixed(2)}</p>
+                                  <Badge className={`text-xs ${styles.bgClass} ${styles.textClass}`}>
+                                    {Math.round(suggestion.confidence * 100)}%
+                                    {suggestion.confidenceLevel === 'high' ? ' 🎯' : suggestion.confidenceLevel === 'medium' ? ' ✓' : ''}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Manual search fallback */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Άλλα Πιθανά Έσοδα</p>
+                <div className="max-h-40 overflow-y-auto space-y-2">
+                  {incomeRecords
+                    .filter(inc =>
+                      matchingItem.total_amount &&
+                      Math.abs((inc.amount || 0) - matchingItem.total_amount) <= matchingItem.total_amount * 0.1
+                    )
+                    .slice(0, 5)
+                    .map((inc) => (
+                      <Card
+                        key={inc.id}
+                        className="p-3 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleConfirmMatch(inc.id)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium text-sm">{inc.merchant || 'Χωρίς τίτλο'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {inc.invoice_date ? format(new Date(inc.invoice_date), 'dd/MM/yyyy', { locale: el }) : '-'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-green-600">€{(inc.amount || 0).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+
+                  {incomeRecords.filter(inc =>
+                    matchingItem.total_amount &&
+                    Math.abs((inc.amount || 0) - matchingItem.total_amount) <= matchingItem.total_amount * 0.1
+                  ).length === 0 && getSuggestionsForItem(matchingItem.id).length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        Δεν βρέθηκαν έσοδα με παρόμοιο ποσό
+                      </p>
+                    )}
+                </div>
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setMatchDialogOpen(false)} className="rounded-xl">
               Ακύρωση
             </Button>
             <Button
               onClick={() => matchingItem && handleCreateIncome(matchingItem)}
-              className="rounded-xl"
+              className="rounded-xl gap-2"
             >
+              <Check className="h-4 w-4" />
               Δημιουργία Νέου Εσόδου
             </Button>
           </DialogFooter>
