@@ -265,6 +265,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          tax_office: string | null
           updated_at: string
           vat_number: string | null
         }
@@ -277,6 +278,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          tax_office?: string | null
           updated_at?: string
           vat_number?: string | null
         }
@@ -289,6 +291,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          tax_office?: string | null
           updated_at?: string
           vat_number?: string | null
         }
@@ -488,6 +491,140 @@ export type Database = {
             columns: ["shareable_link_id"]
             isOneToOne: false
             referencedRelation: "shareable_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_list_imports: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          matched_count: number | null
+          period_month: string | null
+          row_count: number | null
+          total_gross: number | null
+          total_net: number | null
+          total_vat: number | null
+          upload_date: string | null
+          validated_totals: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          matched_count?: number | null
+          period_month?: string | null
+          row_count?: number | null
+          total_gross?: number | null
+          total_net?: number | null
+          total_vat?: number | null
+          upload_date?: string | null
+          validated_totals?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          matched_count?: number | null
+          period_month?: string | null
+          row_count?: number | null
+          total_gross?: number | null
+          total_net?: number | null
+          total_vat?: number | null
+          upload_date?: string | null
+          validated_totals?: boolean | null
+        }
+        Relationships: []
+      }
+      invoice_list_items: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          client_vat: string | null
+          created_at: string | null
+          id: string
+          import_id: string | null
+          invoice_date: string | null
+          invoice_number: string | null
+          match_status: string | null
+          matched_folder_id: string | null
+          matched_income_id: string | null
+          mydata_code: string | null
+          mydata_mark: string | null
+          net_amount: number | null
+          notes: string | null
+          total_amount: number | null
+          vat_amount: number | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_name?: string | null
+          client_vat?: string | null
+          created_at?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          match_status?: string | null
+          matched_folder_id?: string | null
+          matched_income_id?: string | null
+          mydata_code?: string | null
+          mydata_mark?: string | null
+          net_amount?: number | null
+          notes?: string | null
+          total_amount?: number | null
+          vat_amount?: number | null
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string | null
+          client_vat?: string | null
+          created_at?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_date?: string | null
+          invoice_number?: string | null
+          match_status?: string | null
+          matched_folder_id?: string | null
+          matched_income_id?: string | null
+          mydata_code?: string | null
+          mydata_mark?: string | null
+          net_amount?: number | null
+          notes?: string | null
+          total_amount?: number | null
+          vat_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_list_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_list_items_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_list_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_list_items_matched_folder_id_fkey"
+            columns: ["matched_folder_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_list_items_matched_income_id_fkey"
+            columns: ["matched_income_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -828,39 +965,59 @@ export type Database = {
           address: string | null
           contact_person: string | null
           created_at: string
+          default_category_id: string | null
           email: string | null
+          iban: string | null
           id: string
           invoice_instructions: string | null
           name: string
           notes: string | null
           phone: string | null
+          tax_office: string | null
           updated_at: string
+          vat_number: string | null
         }
         Insert: {
           address?: string | null
           contact_person?: string | null
           created_at?: string
+          default_category_id?: string | null
           email?: string | null
+          iban?: string | null
           id?: string
           invoice_instructions?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          tax_office?: string | null
           updated_at?: string
+          vat_number?: string | null
         }
         Update: {
           address?: string | null
           contact_person?: string | null
           created_at?: string
+          default_category_id?: string | null
           email?: string | null
+          iban?: string | null
           id?: string
           invoice_instructions?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          tax_office?: string | null
           updated_at?: string
+          vat_number?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_default_category_id_fkey"
+            columns: ["default_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

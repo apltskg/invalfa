@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, FileText, Search, Filter, PieChart, Euro, ArrowUpRight, ArrowDownRight, Edit3, Wallet, Calendar, FileUp, MoreVertical, Eye, Edit, Upload } from "lucide-react";
+import { Plus, Trash2, FileText, Search, Filter, PieChart, Euro, ArrowUpRight, ArrowDownRight, Edit3, Wallet, Calendar, FileUp, MoreVertical, Eye, Edit, Upload, Files } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Invoice, InvoiceCategory } from "@/types/database";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadModal } from "@/components/upload/UploadModal";
+import { BulkUploadModal } from "@/components/upload/BulkUploadModal";
 import { useMonth } from "@/contexts/MonthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ export default function GeneralExpenses() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
@@ -170,10 +172,16 @@ export default function GeneralExpenses() {
                     <h1 className="text-3xl font-bold tracking-tight">Γενικά Έξοδα</h1>
                     <p className="mt-1 text-muted-foreground">Διαχείριση λειτουργικών εξόδων (εκτός φακέλων)</p>
                 </div>
-                <Button onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2 shadow-lg shadow-primary/20">
-                    <Upload className="h-4 w-4" />
-                    Νέο Έξοδο
-                </Button>
+                <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => setBulkUploadOpen(true)} className="rounded-xl gap-2">
+                        <Files className="h-4 w-4" />
+                        Μαζική Εισαγωγή
+                    </Button>
+                    <Button onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2 shadow-lg shadow-primary/20">
+                        <Upload className="h-4 w-4" />
+                        Νέο Έξοδο
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -289,6 +297,13 @@ export default function GeneralExpenses() {
                 open={uploadModalOpen}
                 onOpenChange={setUploadModalOpen}
                 onUploadComplete={fetchData}
+                defaultType="expense"
+            />
+
+            <BulkUploadModal
+                open={bulkUploadOpen}
+                onOpenChange={setBulkUploadOpen}
+                onComplete={fetchData}
                 defaultType="expense"
             />
 
