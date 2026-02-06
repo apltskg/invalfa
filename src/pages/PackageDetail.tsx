@@ -36,26 +36,70 @@ export default function PackageDetail() {
   const fetchData = useCallback(async () => {
     if (!id) return;
 
-    const [{ data: pkgData }, { data: invData }, { data: txnData }, { data: matchData }] = await Promise.all([
+    // 1. Fetch Package and Invoices first
+    const [{ data: pkgData }, { data: invData }] = await Promise.all([
       supabase.from("packages").select("*").eq("id", id).single(),
       supabase.from("invoices").select("*").eq("package_id", id).order('invoice_date', { ascending: false }),
-      supabase.from("bank_transactions").select("*").eq("package_id", id).order('transaction_date', { ascending: false }),
-      supabase.from("invoice_transaction_matches").select("*"),
     ]);
 
-    setPkg(pkgData as Package | null);
-    setMatches((matchData || []) as InvoiceTransactionMatch[]);
+    if (!pkgData) {
+      setLoading(false);
+      return;
+    }
 
-    const txns = (txnData as BankTransaction[]) || [];
-    setTransactions(txns);
+    setPkg(pkgData as Package);
+    const invoices = (invData as Invoice[]) || [];
 
-    // Match invoices with transactions using the matches table
-    const invoicesWithMatches = ((invData as any[]) || []).map((inv) => {
-      const match = (matchData || []).find((m: InvoiceTransactionMatch) => m.invoice_id === inv.id);
-      const matchedTransaction = match ? txns.find(t => t.id === match.transaction_id) : undefined;
+    // 2. Fetch matches for these invoices
+    // If no invoices, we still need package-linked transactions
+    const invoiceIds = invoices.map(i => i.id);
+    let matchData: InvoiceTransactionMatch[] = [];
+
+    if (invoiceIds.length > 0) {
+      const { data } = await supabase
+        .from("invoice_transaction_matches")
+        .select("*")
+        .in("invoice_id", invoiceIds);
+      matchData = (data as InvoiceTransactionMatch[]) || [];
+    }
+    setMatches(matchData);
+
+    // 3. Collect transaction IDs from matches
+    const matchedTxnIds = matchData.map(m => m.transaction_id);
+
+    // 4. Fetch transactions: either linked to package OR matched to its invoices
+    // Note: .or() syntax is `column.operator.value,column.operator.value`
+    // But dealing with arrays in .or() is tricky. 
+    // Simpler: Fetch by package_id, and if we have matchedTxnIds, fetch those too. Then merge.
+
+    const requests = [
+      supabase.from("bank_transactions").select("*").eq("package_id", id)
+    ];
+
+    if (matchedTxnIds.length > 0) {
+      requests.push(supabase.from("bank_transactions").select("*").in("id", matchedTxnIds));
+    }
+
+    const responses = await Promise.all(requests);
+    const packageTxns = (responses[0].data as BankTransaction[]) || [];
+    const matchedTxns = (responses[1]?.data as BankTransaction[]) || [];
+
+    // Merge and deduplicate
+    const allTxnsMap = new Map<string, BankTransaction>();
+    [...packageTxns, ...matchedTxns].forEach(t => allTxnsMap.set(t.id, t));
+    const uniqueTxns = Array.from(allTxnsMap.values()).sort((a, b) =>
+      new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+    );
+
+    setTransactions(uniqueTxns);
+
+    // 5. Map invoices with their matched transactions
+    const invoicesWithMatches = invoices.map((inv) => {
+      const match = matchData.find((m) => m.invoice_id === inv.id);
+      const matchedTransaction = match ? uniqueTxns.find(t => t.id === match.transaction_id) : undefined;
       return {
         ...inv,
-        type: inv.type || 'expense', // Ensure type is set for legacy data
+        type: inv.type || 'expense',
         matchedTransaction,
         matchId: match?.id,
       } as InvoiceWithMatch;
@@ -158,6 +202,21 @@ export default function PackageDetail() {
     return matchingInvoice ? { transaction: txn, invoice: matchingInvoice } : null;
   }).filter(Boolean) as { transaction: BankTransaction; invoice: Invoice }[];
 
+  // Calculate Payments
+  const relevantTransactions = [
+    ...transactions,
+    ...invoices.map(i => i.matchedTransaction).filter((t): t is BankTransaction => !!t)
+  ].filter((txn, index, self) =>
+    // Filter duplicates and only positive amounts (payments IN)
+    self.findIndex(t => t.id === txn.id) === index && txn.amount > 0
+  );
+
+  const totalPaid = relevantTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+  const recentPayments = relevantTransactions
+    .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
+    .map(t => ({ date: t.transaction_date, amount: t.amount }));
+
   // Render Helpers
   const InvoiceList = ({ items }: { items: InvoiceWithMatch[] }) => (
     <div className="space-y-3">
@@ -227,28 +286,68 @@ export default function PackageDetail() {
           </Card>
 
           {/* Summary Dashboard */}
-          <Card className="rounded-3xl p-6 bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <TrendingUp className="w-24 h-24" />
-            </div>
-            <div className="relative z-10 space-y-4">
-              <div>
-                <p className="text-primary-foreground/80 text-sm font-medium">Net Profit</p>
-                <h2 className="text-3xl font-bold tracking-tight">€{netProfit.toFixed(2)}</h2>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
+          {/* Summary Dashboard */}
+          <div className="grid gap-4 md:grid-cols-2 lg:col-span-1">
+            <Card className="rounded-3xl p-6 bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 opacity-10">
+                <TrendingUp className="w-24 h-24" />
+              </div>
+              <div className="relative z-10 space-y-4">
                 <div>
-                  <p className="text-xs text-primary-foreground/70">Income</p>
-                  <p className="font-semibold text-lg">€{totalIncome.toFixed(0)}</p>
+                  <p className="text-primary-foreground/80 text-sm font-medium">Net Profit</p>
+                  <h2 className="text-3xl font-bold tracking-tight">€{netProfit.toFixed(2)}</h2>
                 </div>
-                <div>
-                  <p className="text-xs text-primary-foreground/70">Expenses</p>
-                  <p className="font-semibold text-lg">€{totalExpenses.toFixed(0)}</p>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
+                  <div>
+                    <p className="text-xs text-primary-foreground/70">Income</p>
+                    <p className="font-semibold text-lg">€{totalIncome.toFixed(0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-primary-foreground/70">Expenses</p>
+                    <p className="font-semibold text-lg">€{totalExpenses.toFixed(0)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+
+            <Card className="rounded-3xl p-6 border-border/50 bg-card">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">Payment Status</h3>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-bold">€{totalPaid.toFixed(2)}</span>
+                    <span className="text-sm text-muted-foreground">collected</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 my-2 overflow-hidden">
+                    <div
+                      className="bg-green-500 h-full rounded-full transition-all"
+                      style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Invoiced: €{totalIncome.toFixed(2)}</span>
+                    <span>{totalIncome > 0 ? ((totalPaid / totalIncome) * 100).toFixed(0) : 0}%</span>
+                  </div>
+                </div>
+
+                {recentPayments.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Recent Payments</p>
+                    <div className="space-y-2">
+                      {recentPayments.slice(0, 3).map((p, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{format(new Date(p.date), 'dd MMM yyyy')}</span>
+                          <span className="font-medium text-green-600">+€{p.amount.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
 

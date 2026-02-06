@@ -23,6 +23,7 @@ type PackageWithStats = Package & {
     matched: number;
     totalAmount: number;
     income: number;
+    collected: number;
     expenses: number;
     profit: number;
     margin: number;
@@ -64,7 +65,7 @@ export default function Packages() {
   async function fetchData() {
     try {
       setLoading(true);
-      const [{ data: pkgs }, { data: invs }] = await Promise.all([
+      const [{ data: pkgs }, { data: invs }, { data: matches }] = await Promise.all([
         supabase
           .from("packages")
           .select("*")
@@ -72,7 +73,10 @@ export default function Packages() {
           .lte("start_date", endDate)
           .order("created_at", { ascending: false }),
         supabase.from("invoices").select("*"),
+        supabase.from("invoice_transaction_matches").select("invoice_id"),
       ]);
+
+      const matchedInvoiceIds = new Set(((matches as any[]) || []).map(m => m.invoice_id));
 
       const processedPackages = ((pkgs as Package[]) || []).map((pkg) => {
         // Cast and map invoices to match new interface with defaults
@@ -83,17 +87,21 @@ export default function Packages() {
             type: inv.type || 'expense', // Default to expense if missing
             payment_status: inv.payment_status || 'pending',
             supplier_id: inv.supplier_id || null,
-            customer_id: inv.customer_id || null
-          })) as Invoice[];
+            customer_id: inv.customer_id || null,
+            isMatched: matchedInvoiceIds.has(inv.id)
+          })) as (Invoice & { isMatched: boolean })[];
 
         // Calculate financial stats
-        // Note: We need to safely check 'type' as it might be missing in old data
         const expenses = pkgInvoices
-          .filter(i => (i as any).type === 'expense' || !(i as any).type) // Assume expense if undefined for backward compat
+          .filter(i => (i as any).type === 'expense' || !(i as any).type)
           .reduce((sum, i) => sum + (i.amount || 0), 0);
 
         const income = pkgInvoices
           .filter(i => (i as any).type === 'income')
+          .reduce((sum, i) => sum + (i.amount || 0), 0);
+
+        const collected = pkgInvoices
+          .filter(i => (i as any).type === 'income' && i.isMatched)
           .reduce((sum, i) => sum + (i.amount || 0), 0);
 
         const profit = income - expenses;
@@ -104,9 +112,10 @@ export default function Packages() {
           invoices: pkgInvoices,
           stats: {
             total: pkgInvoices.length,
-            matched: pkgInvoices.filter((inv) => (inv as any).matchedTransaction).length, // simplified check
+            matched: pkgInvoices.filter((inv) => inv.isMatched).length,
             totalAmount: pkgInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
             income,
+            collected,
             expenses,
             profit,
             margin
@@ -347,19 +356,23 @@ export default function Packages() {
                         </div>
                       </div>
 
-                      {/* Progress Bar for Matching */}
+                      {/* Progress Bar for Payments */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Αντιστοίχιση</span>
-                          <span>{pkg.stats.total > 0 ? Math.round((pkg.stats.matched / pkg.stats.total) * 100) : 0}%</span>
+                          <span>Είσπραξη</span>
+                          <span>{pkg.stats.income > 0 ? Math.round((pkg.stats.collected / pkg.stats.income) * 100) : 0}%</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                           <div
-                            className="h-full rounded-full bg-primary transition-all duration-500"
+                            className="h-full rounded-full bg-green-500 transition-all duration-500"
                             style={{
-                              width: `${pkg.stats.total > 0 ? (pkg.stats.matched / pkg.stats.total) * 100 : 0}%`
+                              width: `${pkg.stats.income > 0 ? (pkg.stats.collected / pkg.stats.income) * 100 : 0}%`
                             }}
                           />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                          <span>€{pkg.stats.collected.toFixed(0)}</span>
+                          <span>από €{pkg.stats.income.toFixed(0)}</span>
                         </div>
                       </div>
                     </div>
