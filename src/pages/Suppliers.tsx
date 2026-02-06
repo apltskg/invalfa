@@ -1,23 +1,40 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2, Mail, Phone, MapPin, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Building2, Mail, Phone, MapPin, Edit, Trash2, Search, AlertTriangle, Check, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Supplier } from "@/types/database";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
+interface ExtendedSupplier extends Supplier {
+    vat_number?: string | null;
+    tax_office?: string | null;
+    iban?: string | null;
+    default_category_id?: string | null;
+}
+
 export default function Suppliers() {
-    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [suppliers, setSuppliers] = useState<ExtendedSupplier[]>([]);
+    const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false); // Added saving state
+    const [saving, setSaving] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null); // Changed to editingId
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [duplicateWarning, setDuplicateWarning] = useState<ExtendedSupplier | null>(null);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -25,12 +42,17 @@ export default function Suppliers() {
         email: "",
         phone: "",
         address: "",
+        vat_number: "",
+        tax_office: "",
+        iban: "",
+        default_category_id: "",
         notes: "",
-        invoice_instructions: "", // NEW: How to receive invoices from this supplier
+        invoice_instructions: "",
     });
 
     useEffect(() => {
         fetchSuppliers();
+        fetchCategories();
     }, []);
 
     async function fetchSuppliers() {
@@ -41,70 +63,128 @@ export default function Suppliers() {
                 .order("name", { ascending: true });
 
             if (error) throw error;
-            setSuppliers((data as Supplier[]) || []); // Changed error handling slightly
+            setSuppliers((data as ExtendedSupplier[]) || []);
         } catch (error: any) {
             console.error("Error fetching suppliers:", error);
-            toast.error("Αποτυχία φόρτωσης προμηθευτών"); // Translated
+            toast.error("Αποτυχία φόρτωσης προμηθευτών");
         } finally {
             setLoading(false);
         }
     }
 
-    async function handleSave() {
-        if (!formData.name.trim()) {
-            toast.error("Το όνομα προμηθευτή είναι υποχρεωτικό"); // Translated
+    async function fetchCategories() {
+        const { data } = await supabase
+            .from('expense_categories')
+            .select('*')
+            .order('sort_order', { ascending: true });
+        if (data) setExpenseCategories(data);
+    }
+
+    const checkDuplicate = (vat: string) => {
+        if (!vat || vat.length < 9) {
+            setDuplicateWarning(null);
             return;
         }
-        setSaving(true); // Set saving to true
+        
+        const existing = suppliers.find(s => 
+            s.vat_number === vat && s.id !== editingId
+        );
+        
+        setDuplicateWarning(existing || null);
+    };
+
+    const handleVatChange = (vat: string) => {
+        setFormData({ ...formData, vat_number: vat });
+        checkDuplicate(vat);
+    };
+
+    async function handleSave() {
+        if (!formData.name.trim()) {
+            toast.error("Το όνομα προμηθευτή είναι υποχρεωτικό");
+            return;
+        }
+        
+        if (duplicateWarning && !editingId) {
+            toast.error("Υπάρχει ήδη προμηθευτής με αυτό το ΑΦΜ");
+            return;
+        }
+        
+        setSaving(true);
         try {
-            if (editingId) { // Changed to editingId
+            const dataToSave = {
+                name: formData.name,
+                contact_person: formData.contact_person || null,
+                email: formData.email || null,
+                phone: formData.phone || null,
+                address: formData.address || null,
+                vat_number: formData.vat_number || null,
+                tax_office: formData.tax_office || null,
+                iban: formData.iban || null,
+                default_category_id: formData.default_category_id || null,
+                notes: formData.notes || null,
+                invoice_instructions: formData.invoice_instructions || null,
+            };
+
+            if (editingId) {
                 const { error } = await supabase
                     .from("suppliers")
-                    .update({ // Explicitly list fields
-                        name: formData.name,
-                        contact_person: formData.contact_person,
-                        email: formData.email,
-                        phone: formData.phone,
-                        address: formData.address,
-                        notes: formData.notes,
-                        invoice_instructions: formData.invoice_instructions,
-                    })
-                    .eq("id", editingId); // Changed to editingId
+                    .update(dataToSave)
+                    .eq("id", editingId);
 
                 if (error) throw error;
-                toast.success("Προμηθευτής ενημερώθηκε!"); // Translated
+                toast.success("Προμηθευτής ενημερώθηκε!");
             } else {
                 const { error } = await supabase
                     .from("suppliers")
-                    .insert([ // Explicitly list fields
-                        {
-                            name: formData.name,
-                            contact_person: formData.contact_person,
-                            email: formData.email,
-                            phone: formData.phone,
-                            address: formData.address,
-                            notes: formData.notes,
-                            invoice_instructions: formData.invoice_instructions,
-                        },
-                    ]);
+                    .insert([dataToSave]);
 
                 if (error) throw error;
-                toast.success("Προμηθευτής προστέθηκε!"); // Translated
+                toast.success("Προμηθευτής προστέθηκε!");
             }
 
             setDialogOpen(false);
-            resetForm(); // Use resetForm to clear form and editingId
+            resetForm();
             fetchSuppliers();
         } catch (error: any) {
             console.error("Save error:", error);
-            toast.error(error.message || "Αποτυχία αποθήκευσης"); // Translated
+            toast.error(error.message || "Αποτυχία αποθήκευσης");
         } finally {
-            setSaving(false); // Reset saving
+            setSaving(false);
+        }
+    }
+
+    async function handleUpdateExisting() {
+        if (!duplicateWarning) return;
+        
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from("suppliers")
+                .update({
+                    name: formData.name,
+                    contact_person: formData.contact_person || duplicateWarning.contact_person,
+                    email: formData.email || duplicateWarning.email,
+                    phone: formData.phone || duplicateWarning.phone,
+                    address: formData.address || duplicateWarning.address,
+                    notes: formData.notes || duplicateWarning.notes,
+                })
+                .eq("id", duplicateWarning.id);
+
+            if (error) throw error;
+            toast.success("Ο υπάρχων προμηθευτής ενημερώθηκε!");
+            setDialogOpen(false);
+            resetForm();
+            fetchSuppliers();
+        } catch (error: any) {
+            console.error("Update error:", error);
+            toast.error("Αποτυχία ενημέρωσης");
+        } finally {
+            setSaving(false);
         }
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον προμηθευτή;")) return; // Translated
+        if (!confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον προμηθευτή;")) return;
 
         try {
             const { error } = await supabase
@@ -113,46 +193,86 @@ export default function Suppliers() {
                 .eq("id", id);
 
             if (error) throw error;
-            toast.success("Προμηθευτής διαγράφηκε!"); // Translated
+            toast.success("Προμηθευτής διαγράφηκε!");
             fetchSuppliers();
         } catch (error: any) {
             console.error("Delete error:", error);
-            toast.error(`Αποτυχία διαγραφής προμηθευτή: ${error.message}`); // Translated
+            toast.error(`Αποτυχία διαγραφής προμηθευτή: ${error.message}`);
         }
     }
 
-    function handleEdit(supplier: Supplier) { // Renamed from openEditDialog
-        setEditingId(supplier.id); // Changed to setEditingId
+    function handleEdit(supplier: ExtendedSupplier) {
+        setEditingId(supplier.id);
         setFormData({
             name: supplier.name,
             contact_person: supplier.contact_person || "",
             email: supplier.email || "",
             phone: supplier.phone || "",
             address: supplier.address || "",
+            vat_number: supplier.vat_number || "",
+            tax_office: supplier.tax_office || "",
+            iban: supplier.iban || "",
+            default_category_id: supplier.default_category_id || "",
             notes: supplier.notes || "",
-            invoice_instructions: supplier.invoice_instructions || "", // Added
+            invoice_instructions: supplier.invoice_instructions || "",
         });
+        setDuplicateWarning(null);
         setDialogOpen(true);
     }
 
     function resetForm() {
-        setEditingId(null); // Changed to setEditingId
+        setEditingId(null);
+        setDuplicateWarning(null);
         setFormData({
             name: "",
             contact_person: "",
             email: "",
             phone: "",
             address: "",
+            vat_number: "",
+            tax_office: "",
+            iban: "",
+            default_category_id: "",
             notes: "",
-            invoice_instructions: "", // Added
+            invoice_instructions: "",
         });
     }
+
+    // Get invoice count for each supplier
+    const [invoiceCounts, setInvoiceCounts] = useState<Record<string, number>>({});
+    
+    useEffect(() => {
+        async function fetchCounts() {
+            const { data } = await supabase
+                .from('invoices')
+                .select('supplier_id')
+                .not('supplier_id', 'is', null);
+            
+            if (data) {
+                const counts: Record<string, number> = {};
+                data.forEach((item: any) => {
+                    if (item.supplier_id) {
+                        counts[item.supplier_id] = (counts[item.supplier_id] || 0) + 1;
+                    }
+                });
+                setInvoiceCounts(counts);
+            }
+        }
+        fetchCounts();
+    }, []);
 
     const filteredSuppliers = suppliers.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        s.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.vat_number?.includes(searchQuery)
     );
+
+    const getCategoryName = (categoryId: string | null | undefined) => {
+        if (!categoryId) return null;
+        const cat = expenseCategories.find(c => c.id === categoryId);
+        return cat?.name_el || null;
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -172,7 +292,7 @@ export default function Suppliers() {
                             Προσθήκη Προμηθευτή
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px] rounded-3xl">
+                    <DialogContent className="sm:max-w-[550px] rounded-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="text-2xl">{editingId ? "Επεξεργασία Προμηθευτή" : "Νέος Προμηθευτής"}</DialogTitle>
                         </DialogHeader>
@@ -188,6 +308,54 @@ export default function Suppliers() {
                                     className="rounded-xl h-11"
                                 />
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="vat">ΑΦΜ</Label>
+                                    <Input
+                                        id="vat"
+                                        value={formData.vat_number}
+                                        onChange={(e) => handleVatChange(e.target.value)}
+                                        placeholder="000000000"
+                                        className={`rounded-xl h-11 ${duplicateWarning ? 'border-amber-500 focus-visible:ring-amber-500' : ''}`}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="tax_office">Δ.Ο.Υ.</Label>
+                                    <Input
+                                        id="tax_office"
+                                        value={formData.tax_office}
+                                        onChange={(e) => setFormData({ ...formData, tax_office: e.target.value })}
+                                        placeholder="π.χ., Α' Αθηνών"
+                                        className="rounded-xl h-11"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Duplicate Warning */}
+                            {duplicateWarning && (
+                                <Card className="p-4 rounded-xl border-amber-200 bg-amber-50">
+                                    <div className="flex items-start gap-3">
+                                        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="font-medium text-amber-800">Υπάρχει ήδη προμηθευτής με αυτό το ΑΦΜ</p>
+                                            <p className="text-sm text-amber-700 mt-1">
+                                                "{duplicateWarning.name}"
+                                            </p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="mt-3 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100"
+                                                onClick={handleUpdateExisting}
+                                                disabled={saving}
+                                            >
+                                                <Check className="h-4 w-4 mr-2" />
+                                                Ενημέρωση υπάρχοντος
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </Card>
+                            )}
 
                             <div className="space-y-2">
                                 <Label htmlFor="contact">Υπεύθυνος Επικοινωνίας</Label>
@@ -237,6 +405,36 @@ export default function Suppliers() {
                             </div>
 
                             <div className="space-y-2">
+                                <Label htmlFor="iban">IBAN</Label>
+                                <Input
+                                    id="iban"
+                                    value={formData.iban}
+                                    onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                                    placeholder="GR..."
+                                    className="rounded-xl h-11 font-mono"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="category">Προεπιλεγμένη Κατηγορία Εξόδων</Label>
+                                <Select 
+                                    value={formData.default_category_id} 
+                                    onValueChange={(v) => setFormData({ ...formData, default_category_id: v })}
+                                >
+                                    <SelectTrigger className="rounded-xl h-11">
+                                        <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {expenseCategories.map((cat) => (
+                                            <SelectItem key={cat.id} value={cat.id}>
+                                                {cat.name_el}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label htmlFor="invoice_instructions">Οδηγίες Παραλαβής Τιμολογίων</Label>
                                 <Textarea
                                     id="invoice_instructions"
@@ -263,7 +461,11 @@ export default function Suppliers() {
                             <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
                                 Ακύρωση
                             </Button>
-                            <Button onClick={handleSave} disabled={saving} className="rounded-xl h-11 px-8">
+                            <Button 
+                                onClick={handleSave} 
+                                disabled={saving || (!!duplicateWarning && !editingId)} 
+                                className="rounded-xl h-11 px-8"
+                            >
                                 {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
                             </Button>
                         </DialogFooter>
@@ -276,7 +478,7 @@ export default function Suppliers() {
                 <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Αναζήτηση προμηθευτών..."
+                    placeholder="Αναζήτηση με όνομα, email ή ΑΦΜ..."
                     className="pl-10 rounded-2xl h-12 bg-muted/50"
                 />
             </div>
@@ -317,8 +519,8 @@ export default function Suppliers() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg">{supplier.name}</h3>
-                                            {supplier.contact_person && (
-                                                <p className="text-sm text-muted-foreground">{supplier.contact_person}</p>
+                                            {supplier.vat_number && (
+                                                <p className="text-xs text-muted-foreground font-mono">ΑΦΜ: {supplier.vat_number}</p>
                                             )}
                                         </div>
                                     </div>
@@ -344,6 +546,9 @@ export default function Suppliers() {
                                 </div>
 
                                 <div className="space-y-2">
+                                    {supplier.contact_person && (
+                                        <p className="text-sm text-muted-foreground">{supplier.contact_person}</p>
+                                    )}
                                     {supplier.email && (
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Mail className="h-4 w-4" />
@@ -364,11 +569,20 @@ export default function Suppliers() {
                                     )}
                                 </div>
 
-                                {supplier.notes && (
-                                    <p className="mt-4 pt-4 border-t border-border/50 text-sm text-muted-foreground line-clamp-2">
-                                        {supplier.notes}
-                                    </p>
-                                )}
+                                {/* Category & invoice count */}
+                                <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap gap-2">
+                                    {getCategoryName(supplier.default_category_id) && (
+                                        <Badge variant="secondary">
+                                            {getCategoryName(supplier.default_category_id)}
+                                        </Badge>
+                                    )}
+                                    {invoiceCounts[supplier.id] && (
+                                        <Badge variant="outline" className="gap-1">
+                                            <FileText className="h-3 w-3" />
+                                            {invoiceCounts[supplier.id]} έξοδα
+                                        </Badge>
+                                    )}
+                                </div>
                             </Card>
                         </motion.div>
                     ))}

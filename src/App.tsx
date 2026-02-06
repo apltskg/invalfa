@@ -20,6 +20,7 @@ import AccountantPortal from "./pages/AccountantPortal";
 import NotFound from "./pages/NotFound";
 import GeneralExpenses from "./pages/GeneralExpenses";
 import GeneralIncome from "./pages/GeneralIncome";
+import InvoiceList from "./pages/InvoiceList";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
 import AdminSettings from "./pages/AdminSettings";
@@ -57,6 +58,7 @@ const App = () => (
                       <Route path="settings" element={<Settings />} />
                       <Route path="general-expenses" element={<GeneralExpenses />} />
                       <Route path="general-income" element={<GeneralIncome />} />
+                      <Route path="invoice-list" element={<InvoiceList />} />
                       <Route path="suppliers" element={<Suppliers />} />
                       <Route path="customers" element={<Customers />} />
                       <Route path="admin" element={<AdminSettings />} />
