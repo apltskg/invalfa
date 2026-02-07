@@ -22,7 +22,7 @@ const menuItems = [
   { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
   { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Λίστα Παραστατικών", icon: Receipt, url: "/invoice-list" },
-  { title: "eInvoicing", icon: ArrowLeftRight, url: "/einvoicing" },
+  { title: "Invoice Hub", icon: ArrowLeftRight, url: "/invoice-hub" },
   { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
   { title: "Αναφορές", icon: ClipboardList, url: "/reports" },
   { title: "Insights", icon: Brain, url: "/business-intelligence" },

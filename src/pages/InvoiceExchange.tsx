@@ -292,7 +292,7 @@ export default function InvoiceExchange() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">eInvoicing</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Invoice Hub</h1>
                     <p className="text-muted-foreground mt-1">
                         Ανταλλαγή ηλεκτρονικών παραστατικών με άλλες επιχειρήσεις
                     </p>

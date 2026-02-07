@@ -68,7 +68,7 @@ const App = () => (
                       <Route path="customers" element={<Customers />} />
                       <Route path="admin" element={<AdminSettings />} />
                       <Route path="reports" element={<Reports />} />
-                      <Route path="einvoicing" element={<InvoiceExchange />} />
+                      <Route path="invoice-hub" element={<InvoiceExchange />} />
                       <Route path="business-intelligence" element={<BusinessIntelligence />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
