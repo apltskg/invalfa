@@ -194,13 +194,36 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
 
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        if (!e.target?.result) {
+          reject(new Error('Αποτυχία ανάγνωσης αρχείου - κενό αρχείο'));
+          return;
+        }
+
+        const data = new Uint8Array(e.target.result as ArrayBuffer);
+
+        let workbook;
+        try {
+          workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        } catch (xlsxError: any) {
+          console.error('XLSX read error:', xlsxError);
+          reject(new Error(`Μη έγκυρο αρχείο Excel: ${xlsxError.message || 'Άγνωστο σφάλμα'}`));
+          return;
+        }
+
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          reject(new Error('Το αρχείο Excel δεν περιέχει φύλλα εργασίας'));
+          return;
+        }
 
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!firstSheet) {
+          reject(new Error('Δεν βρέθηκε φύλλο εργασίας στο αρχείο'));
+          return;
+        }
+
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
 
-        if (jsonData.length < 2) {
+        if (!jsonData || jsonData.length < 2) {
           reject(new Error('Το αρχείο είναι κενό ή δεν περιέχει δεδομένα'));
           return;
         }
@@ -310,9 +333,9 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
           validationMessage,
         });
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Excel parsing error:', error);
-        reject(new Error('Σφάλμα ανάγνωσης αρχείου Excel'));
+        reject(new Error(error.message || 'Σφάλμα ανάγνωσης αρχείου Excel'));
       }
     };
 
