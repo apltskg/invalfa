@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { FileText, Filter, ArrowUpDown, Check, X, AlertTriangle, Search, Sparkles } from "lucide-react";
+import { FileText, Filter, ArrowUpDown, Check, X, AlertTriangle, Search, Sparkles, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import { BankPDFUploadModal } from "@/components/bank/BankPDFUploadModal";
 import { TransactionRow } from "@/components/bank/TransactionRow";
 import { BulkMatchingView } from "@/components/bank/BulkMatchingView";
 import { useMatchingSuggestions } from "@/hooks/useMatchingSuggestions";
+import { useAutoMatching } from "@/lib/auto-matching";
 
 interface BankTransaction {
   id: string;
@@ -62,6 +63,7 @@ export default function BankSync() {
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("transactions");
+  const [autoMatchingRunning, setAutoMatchingRunning] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,12 +73,29 @@ export default function BankSync() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Matching suggestions hook
-  const { 
-    getSuggestionsForTransaction, 
+  const {
+    getSuggestionsForTransaction,
     transactionsWithSuggestions,
     stats: matchingStats,
-    loading: matchingLoading 
+    loading: matchingLoading
   } = useMatchingSuggestions(transactions);
+
+  // Auto-matching hook
+  const { runMatching } = useAutoMatching();
+
+  const handleAutoMatch = async () => {
+    setAutoMatchingRunning(true);
+    try {
+      const result = await runMatching({ minConfidence: 80 });
+      if (result.matched > 0) {
+        fetchData(); // Refresh data after matching
+      }
+    } catch (error) {
+      console.error("Auto-matching error:", error);
+    } finally {
+      setAutoMatchingRunning(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -102,7 +121,7 @@ export default function BankSync() {
     // Update the transaction with the match
     const { error } = await supabase
       .from("bank_transactions")
-      .update({ 
+      .update({
         match_status: "matched",
         matched_record_id: recordId,
         matched_record_type: recordType,
@@ -131,7 +150,7 @@ export default function BankSync() {
     // Mark as unmatched (rejected suggestion)
     const { error } = await supabase
       .from("bank_transactions")
-      .update({ 
+      .update({
         match_status: "unmatched",
         matched_record_id: null,
         matched_record_type: null,
@@ -149,7 +168,7 @@ export default function BankSync() {
   async function handleLinkToPackage(txnId: string, packageId: string | null) {
     const { error } = await supabase
       .from("bank_transactions")
-      .update({ 
+      .update({
         folder_id: packageId,
         category_type: packageId ? "folder" : "unmatched"
       })
@@ -283,6 +302,19 @@ export default function BankSync() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleAutoMatch}
+            disabled={autoMatchingRunning || transactions.length === 0}
+            className="rounded-xl gap-2"
+          >
+            {autoMatchingRunning ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            Αυτόματο Ταίριασμα
+          </Button>
           {matchingStats.total > 0 && (
             <Button
               variant="outline"

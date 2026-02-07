@@ -139,6 +139,40 @@ export function NotificationBell() {
                     isSystem: true
                 });
             }
+
+            // 4. Overdue Income Invoices check (unpaid for 30+ days)
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            const { data: overdueInvoices } = await supabase
+                .from("invoices")
+                .select("id")
+                .eq("type", "income")
+                .lte("invoice_date", thirtyDaysAgo.toISOString().split('T')[0]);
+
+            // Check which are unpaid (not matched)
+            if (overdueInvoices && overdueInvoices.length > 0) {
+                const overdueIds = overdueInvoices.map(i => i.id);
+                const { data: matchedInvoices } = await supabase
+                    .from("invoice_transaction_matches")
+                    .select("invoice_id")
+                    .in("invoice_id", overdueIds);
+
+                const matchedIds = new Set((matchedInvoices || []).map(m => m.invoice_id));
+                const unpaidCount = overdueIds.filter(id => !matchedIds.has(id)).length;
+
+                if (unpaidCount > 0) {
+                    newAlerts.push({
+                        id: "overdue-invoices",
+                        type: "warning",
+                        title: "Εκκρεμείς Πληρωμές",
+                        message: `${unpaidCount} τιμολόγια εκκρεμούν πάνω από 30 ημέρες.`,
+                        action: { label: "Αναφορές", onClick: () => (window.location.href = "/reports") },
+                        date: today,
+                        isSystem: true
+                    });
+                }
+            }
         } catch (err) {
             console.error(err);
         }

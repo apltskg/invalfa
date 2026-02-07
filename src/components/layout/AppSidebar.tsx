@@ -1,4 +1,4 @@
-import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users, LayoutDashboard, Shield, Receipt, Infinity as InfinityIcon } from "lucide-react";
+import { Package, Building2, FileSpreadsheet, Settings, FileText, List, BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users, LayoutDashboard, Shield, Receipt, Infinity as InfinityIcon, ClipboardList } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -23,6 +23,7 @@ const menuItems = [
   { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Λίστα Παραστατικών", icon: Receipt, url: "/invoice-list" },
   { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
+  { title: "Αναφορές", icon: ClipboardList, url: "/reports" },
   { title: "Συγχρονισμός Τράπεζας", icon: Building2, url: "/bank-sync" },
   { title: "Κέντρο Εξαγωγών", icon: FileSpreadsheet, url: "/export-hub" },
   { title: "Νέο Proforma", icon: FileText, url: "/proforma" },

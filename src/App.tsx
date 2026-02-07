@@ -24,6 +24,8 @@ import InvoiceList from "./pages/InvoiceList";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
 import AdminSettings from "./pages/AdminSettings";
+import Reports from "./pages/Reports";
+import ClientPortal from "./pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
+            <Route path="/client-portal" element={<ClientPortal />} />
 
             {/* Protected routes */}
             <Route
@@ -62,6 +65,7 @@ const App = () => (
                       <Route path="suppliers" element={<Suppliers />} />
                       <Route path="customers" element={<Customers />} />
                       <Route path="admin" element={<AdminSettings />} />
+                      <Route path="reports" element={<Reports />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
@@ -76,3 +80,4 @@ const App = () => (
 );
 
 export default App;
+
