@@ -200,21 +200,44 @@ export default function AccountantPortal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-lg text-muted-foreground">Φόρτωση...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 mx-auto mb-6 flex items-center justify-center shadow-xl shadow-blue-500/25 animate-pulse">
+              <FileSpreadsheet className="h-10 w-10 text-white" />
+            </div>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+              <div className="flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Πύλη Λογιστή</h2>
+          <p className="text-slate-600">Επαλήθευση πρόσβασης...</p>
+        </div>
       </div>
     );
   }
 
   if (!authorized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <Card className="p-12 max-w-md text-center rounded-xl border-gray-200 shadow-sm">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Μη Έγκυρος Σύνδεσμος</h2>
-          <p className="text-muted-foreground">
-            Ο σύνδεσμος έχει λήξει ή δεν είναι έγκυρος. Παρακαλώ ζητήστε νέο σύνδεσμο από το γραφείο.
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-rose-50 to-orange-50 flex items-center justify-center p-6">
+        <Card className="p-10 max-w-md text-center rounded-3xl border-0 shadow-2xl bg-white/80 backdrop-blur-xl">
+          <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-rose-500 to-orange-500 mx-auto mb-6 flex items-center justify-center shadow-lg shadow-rose-500/25">
+            <AlertCircle className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Μη Έγκυρος Σύνδεσμος</h2>
+          <p className="text-slate-600 mb-6 leading-relaxed">
+            Ο σύνδεσμος πρόσβασης έχει λήξει ή δεν είναι έγκυρος.
+            Παρακαλώ επικοινωνήστε με το γραφείο για νέο σύνδεσμο.
           </p>
+          <div className="p-4 bg-slate-50 rounded-xl text-sm text-slate-500">
+            <p className="font-medium mb-1">Always First Travel</p>
+            <p>📧 info@alwaysfirst.gr</p>
+            <p>📞 +30 210 XXX XXXX</p>
+          </div>
         </Card>
       </div>
     );

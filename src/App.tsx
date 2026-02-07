@@ -26,6 +26,8 @@ import Customers from "./pages/Customers";
 import AdminSettings from "./pages/AdminSettings";
 import Reports from "./pages/Reports";
 import ClientPortal from "./pages/ClientPortal";
+import InvoiceExchange from "./pages/InvoiceExchange";
+import BusinessIntelligence from "./pages/BusinessIntelligence";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +68,8 @@ const App = () => (
                       <Route path="customers" element={<Customers />} />
                       <Route path="admin" element={<AdminSettings />} />
                       <Route path="reports" element={<Reports />} />
+                      <Route path="einvoicing" element={<InvoiceExchange />} />
+                      <Route path="business-intelligence" element={<BusinessIntelligence />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
