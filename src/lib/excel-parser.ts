@@ -66,17 +66,19 @@ const COLUMN_PATTERNS = {
   ],
 };
 
-function normalizeHeader(header: string): string {
-  return header
+function normalizeHeader(header: string | null | undefined): string {
+  if (!header) return '';
+  return String(header)
     .toLowerCase()
     .trim()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
 }
 
-function findColumnIndex(headers: string[], patterns: string[]): number {
+function findColumnIndex(headers: (string | null | undefined)[], patterns: string[]): number {
   for (let i = 0; i < headers.length; i++) {
     const normalized = normalizeHeader(headers[i]);
+    if (!normalized) continue;
     for (const pattern of patterns) {
       if (normalized.includes(normalizeHeader(pattern))) {
         return i;
