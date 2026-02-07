@@ -146,10 +146,37 @@ Deno.serve(async (req) => {
 
       const transactions = txnData || [];
 
+      // Fetch invoice list imports for this month
+      const { data: invoiceListImportsData } = await supabase
+        .from('invoice_list_imports')
+        .select('*')
+        .eq('period_month', monthYear)
+        .order('upload_date', { ascending: false });
+
+      const invoiceListImports = invoiceListImportsData || [];
+
+      // Fetch invoice list items for these imports
+      let invoiceListItems: any[] = [];
+      const importIds = invoiceListImports.map(i => i.id);
+      if (importIds.length > 0) {
+        const { data: itemsData } = await supabase
+          .from('invoice_list_items')
+          .select('*')
+          .in('import_id', importIds)
+          .order('invoice_date', { ascending: false });
+        invoiceListItems = itemsData || [];
+      }
+
       // Combine packages with their invoices
       const packagesWithInvoices = (packages || []).map(pkg => ({
         ...pkg,
         invoices: invoices.filter(inv => inv.package_id === pkg.id)
+      }));
+
+      // Combine imports with their items
+      const invoiceListImportsWithItems = invoiceListImports.map(imp => ({
+        ...imp,
+        items: invoiceListItems.filter(item => item.import_id === imp.id)
       }));
 
       return new Response(
@@ -158,7 +185,8 @@ Deno.serve(async (req) => {
           monthYear,
           packages: packagesWithInvoices,
           transactions,
-          generalInvoices
+          generalInvoices,
+          invoiceListImports: invoiceListImportsWithItems
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
