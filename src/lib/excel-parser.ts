@@ -28,37 +28,44 @@ export interface ParsedInvoiceData {
 const COLUMN_PATTERNS = {
   date: [
     'ημερ/νία', 'ημερομηνία', 'date', 'ημερ', 'ημ/νια', 'ημ.', 'ημερ.',
-    'ημ/νία παραστατικού', 'ημνια', 'hmeromhnia', 'ημ παραστ'
+    'ημ/νία παραστατικού', 'ημνια', 'hmeromhnia', 'ημ παραστ', 'ημ/νία',
+    'ημερ/νια', 'ημερομ', 'ημ'
   ],
   invoiceNumber: [
     'παραστατικό', 'αριθμός', 'invoice', 'τιμολόγιο', 'παραστατικό/mydata',
     'αρ.', 'αρ. παραστ', 'αρ. τιμ', 'αριθ.', 'αρ. παραστατικού',
-    'σειρά/αριθμ', 'κωδ. παραστ', 'invoice no', 'doc no', 'αρ.παρ.'
+    'σειρά/αριθμ', 'κωδ. παραστ', 'invoice no', 'doc no', 'αρ.παρ.',
+    'σειρά', 'αριθμ', 'παραστ', 'τιμ.'
   ],
   clientName: [
     'επωνυμία', 'πελάτης', 'client', 'company', 'όνομα', 'επωνυμια',
     'επων.', 'πελατης', 'customer', 'counterpart', 'αντισυμβαλλόμενος',
-    'αντισυμβ.', 'εκδότης', 'εταιρεία', 'onoma', 'client name'
+    'αντισυμβ.', 'εκδότης', 'εταιρεία', 'onoma', 'client name',
+    'επων', 'πελατ', 'αντισ'
   ],
   clientVat: [
     'α.φ.μ.', 'αφμ', 'vat', 'afm', 'α.φ.μ', 'αφμ.', 'vat no',
-    'tax id', 'αριθμός φορολ', 'φορ. μητρώο', 'tin', 'αφμ πελ'
+    'tax id', 'αριθμός φορολ', 'φορ. μητρώο', 'tin', 'αφμ πελ',
+    'αφμ αντισ', 'αφμ/δου'
   ],
   netAmount: [
     'καθαρή αξία', 'καθαρή', 'net', 'καθ. αξία', 'καθ.αξία',
     'αξία χωρίς φπα', 'net amount', 'αξία', 'ποσό χωρίς',
-    'καθαρά', 'καθ αξια', 'base amount', 'καθ.', 'αξια καθ'
+    'καθαρά', 'καθ αξια', 'base amount', 'καθ.', 'αξια καθ',
+    'καθαρ', 'αξια'  // Shorter patterns for truncated headers
   ],
   vatAmount: [
     'αξία φ.π.α.', 'φ.π.α.', 'φπα', 'vat amount', 'αξία φπα',
     'φ.π.α', 'ποσό φπα', 'vat', 'tax', 'φορος', 'φόρος',
-    'ποσό φ.π.α.', 'fpa', 'αξ.φπα', 'φ.π.α'
+    'ποσό φ.π.α.', 'fpa', 'αξ.φπα', 'φ.π.α',
+    'αξία φ', 'ποσο φπα'  // More variations
   ],
   totalAmount: [
     'συνολ. αξία', 'σύνολο', 'total', 'συνολική', 'συν. αξία',
     'συνολικό ποσό', 'gross', 'τελικό ποσό', 'total amount',
     'πληρωτέο', 'σύν.', 'αξία με φπα', 'συν αξια', 'grand total',
-    'πληρωτέο ποσό', 'αξ.+φπα', 'αξία συνολ', 'syn'
+    'πληρωτέο ποσό', 'αξ.+φπα', 'αξία συνολ', 'syn',
+    'συνολ', 'σύνολ', 'συν', 'τελικ'  // Shortened versions
   ],
   mydataMark: [
     'mark', 'mydata mark', 'μαρκ', 'mydata', 'uid', 'μοναδικός',
@@ -242,6 +249,10 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
 
         const headers = (jsonData[headerRowIndex] || []).map(h => String(h || ''));
 
+        // Debug: Log detected headers
+        console.log('Excel Parser - Detected headers:', headers);
+        console.log('Excel Parser - Header row index:', headerRowIndex);
+
         // Auto-detect column mapping
         const columnMapping: Record<string, number> = {
           date: findColumnIndex(headers, COLUMN_PATTERNS.date),
@@ -253,6 +264,14 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
           totalAmount: findColumnIndex(headers, COLUMN_PATTERNS.totalAmount),
           mydataMark: findColumnIndex(headers, COLUMN_PATTERNS.mydataMark),
         };
+
+        // Debug: Log column mapping
+        console.log('Excel Parser - Column mapping:', columnMapping);
+
+        // Debug: Log first data row
+        if (jsonData[headerRowIndex + 1]) {
+          console.log('Excel Parser - First data row:', jsonData[headerRowIndex + 1]);
+        }
 
         const rows: ParsedInvoiceRow[] = [];
         let calculatedTotals = { net: 0, vat: 0, gross: 0 };
