@@ -5,661 +5,398 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import {
-    ArrowDownLeft,
-    ArrowUpRight,
+    BarChart3,
     Search,
-    Filter,
-    Calendar as CalendarIcon,
-    Building2,
-    FileText,
-    Eye,
-    Download,
     Send,
     Inbox,
-    Clock,
-    CheckCircle2,
-    XCircle,
-    Loader2,
     Plus,
-    RefreshCw,
-    ExternalLink,
-    MailOpen,
-    Mail
+    Users,
+    ShieldCheck,
+    Brain,
+    Sparkles,
+    Zap,
+    Share2,
+    Upload,
+    FileText,
+    AlertTriangle,
+    CheckCircle2,
+    TrendingUp,
+    TrendingDown,
+    Loader2,
+    MoreVertical,
+    Camera,
+    MessageSquare
 } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
-import { el } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Toaster, toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-// Types for the B2B invoice exchange
-interface ExchangeInvoice {
-    id: string;
-    invoice_number: string;
-    invoice_type: string;
-    issue_date: string;
-    sender_company: string;
-    sender_vat: string;
-    receiver_company: string;
-    receiver_vat: string;
-    amount: number;
-    vat_amount: number;
-    total_amount: number;
-    status: 'pending' | 'accepted' | 'rejected' | 'read';
-    direction: 'incoming' | 'outgoing';
-    file_url: string | null;
-    mydata_mark: string | null;
-    created_at: string;
-    read_at: string | null;
-}
-
-// Invoice type codes (similar to AADE/myDATA)
-const INVOICE_TYPES: Record<string, string> = {
-    "1.1": "Τιμολόγιο Πώλησης",
-    "1.2": "Τιμολόγιο Παροχής Υπηρεσιών",
-    "1.6": "Πιστωτικό Τιμολόγιο",
-    "2.1": "Απόδειξη Λιανικής",
-    "11.1": "ΑΠΥ Πώλησης",
-    "11.2": "ΑΠΥ Παροχής Υπηρεσιών",
-};
+import { format } from "date-fns";
+import { el } from "date-fns/locale";
+import { AI_CATEGORIES, generateSpendingInsights, analyzeInvoiceAI, SmartInvoiceData } from "@/lib/ai-invoice-service";
 
 export default function InvoiceExchange() {
-    const [loading, setLoading] = useState(true);
-    const [invoices, setInvoices] = useState<ExchangeInvoice[]>([]);
-    const [activeTab, setActiveTab] = useState<'incoming' | 'outgoing'>('incoming');
-    const [searchQuery, setSearchQuery] = useState("");
-    const [dateRange, setDateRange] = useState({
-        from: startOfMonth(new Date()),
-        to: endOfMonth(new Date()),
-    });
-    const [typeFilter, setTypeFilter] = useState<string>("all");
-    const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [selectedInvoice, setSelectedInvoice] = useState<ExchangeInvoice | null>(null);
-    const [sendDialogOpen, setSendDialogOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("hub");
+    const [isUploading, setIsUploading] = useState(false);
+    const [analyzingFile, setAnalyzingFile] = useState<File | null>(null);
+    const [aiInsights, setAiInsights] = useState<any[]>([]);
+    const [showInviteDialog, setShowInviteDialog] = useState(false);
 
     useEffect(() => {
-        fetchInvoices();
-    }, [activeTab, dateRange]);
+        loadInsights();
+    }, []);
 
-    async function fetchInvoices() {
-        setLoading(true);
-        try {
-            // For now, we'll simulate data - in production, this would query exchange_invoices table
-            const mockInvoices: ExchangeInvoice[] = [
-                {
-                    id: "1",
-                    invoice_number: "ΧΔ-37167T",
-                    invoice_type: "2.1",
-                    issue_date: "2026-02-03T23:51:00Z",
-                    sender_company: "ΑΥΤΟΚΙΝΗΤΟΔΡΟΜΟΣ ΑΙΓΑΙΟΥ Α.Ε.",
-                    sender_vat: "099559637",
-                    receiver_company: "ALFA MONOPROSOPI IKE",
-                    receiver_vat: "801234567",
-                    amount: 43.38,
-                    vat_amount: 10.41,
-                    total_amount: 53.79,
-                    status: "pending",
-                    direction: "incoming",
-                    file_url: null,
-                    mydata_mark: "400001234567890",
-                    created_at: new Date().toISOString(),
-                    read_at: null,
-                },
-                {
-                    id: "2",
-                    invoice_number: "ΧΤΡΟM-179446",
-                    invoice_type: "2.1",
-                    issue_date: "2026-01-30T16:41:00Z",
-                    sender_company: "EUROBANK S.A.",
-                    sender_vat: "094014201",
-                    receiver_company: "ALFA MONOPROSOPI IKE",
-                    receiver_vat: "801234567",
-                    amount: 3.06,
-                    vat_amount: 0.74,
-                    total_amount: 3.80,
-                    status: "read",
-                    direction: "incoming",
-                    file_url: null,
-                    mydata_mark: "400001234567891",
-                    created_at: new Date().toISOString(),
-                    read_at: new Date().toISOString(),
-                },
-                {
-                    id: "3",
-                    invoice_number: "ΧΔΑΡ-32783",
-                    invoice_type: "2.1",
-                    issue_date: "2026-01-30T14:08:00Z",
-                    sender_company: "EUROBANK S.A.",
-                    sender_vat: "094014201",
-                    receiver_company: "ALFA MONOPROSOPI IKE",
-                    receiver_vat: "801234567",
-                    amount: 2.90,
-                    vat_amount: 0.70,
-                    total_amount: 3.60,
-                    status: "accepted",
-                    direction: "incoming",
-                    file_url: null,
-                    mydata_mark: "400001234567892",
-                    created_at: new Date().toISOString(),
-                    read_at: new Date().toISOString(),
-                },
-                {
-                    id: "4",
-                    invoice_number: "ΧΑ-27066",
-                    invoice_type: "2.1",
-                    issue_date: "2026-01-30T12:34:00Z",
-                    sender_company: "EUROBANK S.A.",
-                    sender_vat: "094014201",
-                    receiver_company: "ALFA MONOPROSOPI IKE",
-                    receiver_vat: "801234567",
-                    amount: 100.81,
-                    vat_amount: 24.19,
-                    total_amount: 125.00,
-                    status: "pending",
-                    direction: "incoming",
-                    file_url: null,
-                    mydata_mark: "400001234567893",
-                    created_at: new Date().toISOString(),
-                    read_at: null,
-                },
-                {
-                    id: "5",
-                    invoice_number: "ΟΤΛΑ-74",
-                    invoice_type: "1.1",
-                    issue_date: "2026-01-26T14:53:00Z",
-                    sender_company: "ΣΤΕΦΑΝΟΣ ΚΟΚΚΙΝΟΠΑΝΤΗΣ ΚΑΙ ΣΙΑ Ε.Ε.",
-                    sender_vat: "082456789",
-                    receiver_company: "ALFA MONOPROSOPI IKE",
-                    receiver_vat: "801234567",
-                    amount: 40.32,
-                    vat_amount: 9.68,
-                    total_amount: 50.00,
-                    status: "pending",
-                    direction: "incoming",
-                    file_url: null,
-                    mydata_mark: "400001234567894",
-                    created_at: new Date().toISOString(),
-                    read_at: null,
-                },
-            ];
-
-            // Filter by direction
-            const filtered = mockInvoices.filter(inv => inv.direction === activeTab);
-            setInvoices(filtered);
-        } catch (error) {
-            console.error("Error fetching invoices:", error);
-            toast.error("Σφάλμα φόρτωσης παραστατικών");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    // Filter invoices
-    const filteredInvoices = invoices.filter(inv => {
-        // Search filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            if (
-                !inv.invoice_number.toLowerCase().includes(query) &&
-                !inv.sender_company.toLowerCase().includes(query) &&
-                !inv.sender_vat.includes(query)
-            ) {
-                return false;
-            }
-        }
-
-        // Type filter
-        if (typeFilter !== "all" && inv.invoice_type !== typeFilter) {
-            return false;
-        }
-
-        // Status filter
-        if (statusFilter !== "all" && inv.status !== statusFilter) {
-            return false;
-        }
-
-        return true;
-    });
-
-    // Stats
-    const stats = {
-        total: invoices.length,
-        pending: invoices.filter(i => i.status === 'pending').length,
-        unread: invoices.filter(i => !i.read_at).length,
-        totalAmount: invoices.reduce((sum, i) => sum + i.total_amount, 0),
+    const loadInsights = async () => {
+        const insights = await generateSpendingInsights("current");
+        setAiInsights(insights);
     };
 
-    // Mark as read
-    async function markAsRead(invoice: ExchangeInvoice) {
-        // In production, update the database
-        setInvoices(prev => prev.map(i =>
-            i.id === invoice.id ? { ...i, status: 'read' as const, read_at: new Date().toISOString() } : i
-        ));
-        setSelectedInvoice({ ...invoice, status: 'read', read_at: new Date().toISOString() });
-    }
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setAnalyzingFile(file);
+            setIsUploading(true);
 
-    // Accept invoice
-    async function acceptInvoice(invoice: ExchangeInvoice) {
-        setInvoices(prev => prev.map(i =>
-            i.id === invoice.id ? { ...i, status: 'accepted' as const } : i
-        ));
-        toast.success("Το παραστατικό αποδέχτηκε");
-        setSelectedInvoice(null);
-    }
-
-    // Reject invoice
-    async function rejectInvoice(invoice: ExchangeInvoice) {
-        setInvoices(prev => prev.map(i =>
-            i.id === invoice.id ? { ...i, status: 'rejected' as const } : i
-        ));
-        toast.success("Το παραστατικό απορρίφθηκε");
-        setSelectedInvoice(null);
-    }
-
-    const getStatusBadge = (status: ExchangeInvoice['status']) => {
-        switch (status) {
-            case 'pending':
-                return <Badge variant="secondary" className="bg-amber-100 text-amber-700 rounded-lg">Εκκρεμεί</Badge>;
-            case 'read':
-                return <Badge variant="secondary" className="bg-blue-100 text-blue-700 rounded-lg">Αναγνώσθηκε</Badge>;
-            case 'accepted':
-                return <Badge variant="secondary" className="bg-green-100 text-green-700 rounded-lg">Αποδεκτό</Badge>;
-            case 'rejected':
-                return <Badge variant="destructive" className="rounded-lg">Απορρίφθηκε</Badge>;
+            try {
+                const result = await analyzeInvoiceAI(file);
+                toast.success("Η ανάλυση ολοκληρώθηκε!", {
+                    description: `Κατηγορία: ${result.analysis.categoryName} • Εμπιστοσύνη: ${(result.analysis.confidence * 100).toFixed(0)}%`
+                });
+            } catch (error) {
+                toast.error("Σφάλμα κατά την ανάλυση");
+            } finally {
+                setIsUploading(false);
+                setAnalyzingFile(null);
+            }
         }
+    };
+
+    const handleInvite = () => {
+        setShowInviteDialog(false);
+        toast.success("Η πρόσκληση στάλθηκε!", {
+            description: "Ο συνεργάτης θα λάβει email με οδηγίες εγγραφής."
+        });
     };
 
     return (
-        <div className="space-y-6 pb-20">
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Invoice Hub</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Ανταλλαγή ηλεκτρονικών παραστατικών με άλλες επιχειρήσεις
-                    </p>
+        <div className="space-y-8 pb-24 animate-in fade-in duration-500">
+            {/* Hero Section */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-600 p-8 text-white shadow-2xl">
+                <div className="absolute top-0 right-0 -mt-20 -mr-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
+
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-md">
+                                <Sparkles className="w-3 h-3 mr-1" /> AI-Powered
+                            </Badge>
+                            <Badge className="bg-emerald-500/80 text-white border-0 backdrop-blur-md">
+                                <ShieldCheck className="w-3 h-3 mr-1" /> Secure Network
+                            </Badge>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">Invoice Hub</h1>
+                        <p className="text-indigo-100 max-w-xl text-lg opacity-90">
+                            Το κέντρο διαχείρισης παραστατικών της νέας εποχής.
+                            Ανταλλάξτε, αναλύστε και πληρώστε τιμολόγια με τη δύναμη της Τεχνητής Νοημοσύνης.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Button
+                            onClick={() => setShowInviteDialog(true)}
+                            className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl h-12 px-6"
+                        >
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Πρόσκληση Συνεργάτη
+                        </Button>
+                        <div className="relative">
+                            <input
+                                type="file"
+                                className="hidden"
+                                id="invoice-upload"
+                                onChange={handleFileUpload}
+                                accept=".pdf,.jpg,.png"
+                                disabled={isUploading}
+                            />
+                            <label htmlFor="invoice-upload">
+                                <Button
+                                    asChild
+                                    className="bg-indigo-500 hover:bg-indigo-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl h-12 px-6 cursor-pointer border border-indigo-400/30"
+                                >
+                                    <span>
+                                        {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                        {isUploading ? "Ανάλυση..." : "Μεταφόρτωση"}
+                                    </span>
+                                </Button>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={fetchInvoices} className="rounded-xl gap-2">
-                        <RefreshCw className="h-4 w-4" />
-                        Ανανέωση
-                    </Button>
-                    <Button onClick={() => setSendDialogOpen(true)} className="rounded-xl gap-2">
-                        <Send className="h-4 w-4" />
-                        Αποστολή Παραστατικού
-                    </Button>
+
+                {/* Quick Stats in Hero */}
+                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <p className="text-indigo-100 text-sm font-medium mb-1">Νέα Εισερχόμενα</p>
+                        <p className="text-3xl font-bold">12</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <p className="text-indigo-100 text-sm font-medium mb-1">Προς Έγκριση</p>
+                        <p className="text-3xl font-bold">4</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <p className="text-indigo-100 text-sm font-medium mb-1">Ανωμαλίες (AI)</p>
+                        <p className="text-3xl font-bold text-rose-200">2</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <p className="text-indigo-100 text-sm font-medium mb-1">Κέρδος Δικτύου</p>
+                        <p className="text-3xl font-bold text-emerald-200">+15%</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="p-5 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <FileText className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Σύνολο</p>
-                            <p className="text-3xl font-bold">{stats.total}</p>
-                        </div>
-                    </div>
-                </Card>
-                <Card className="p-5 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                            <Clock className="h-6 w-6 text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Εκκρεμούν</p>
-                            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
-                        </div>
-                    </div>
-                </Card>
-                <Card className="p-5 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                            <Mail className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Νέα</p>
-                            <p className="text-3xl font-bold text-blue-600">{stats.unread}</p>
-                        </div>
-                    </div>
-                </Card>
-                <Card className="p-5 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                            <Building2 className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Αξία</p>
-                            <p className="text-2xl font-bold">€{stats.totalAmount.toFixed(2)}</p>
-                        </div>
-                    </div>
-                </Card>
-            </div>
+            {/* Main Content Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="bg-white p-1 rounded-2xl border shadow-sm w-full md:w-auto overflow-x-auto flex-nowrap justify-start">
+                    <TabsTrigger value="hub" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+                        <Inbox className="w-4 h-4 mr-2" />
+                        Smart Inbox
+                    </TabsTrigger>
+                    <TabsTrigger value="insights" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
+                        <Brain className="w-4 h-4 mr-2" />
+                        AI Insights
+                    </TabsTrigger>
+                    <TabsTrigger value="network" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">
+                        <Users className="w-4 h-4 mr-2" />
+                        Δίκτυο Συνεργατών
+                    </TabsTrigger>
+                </TabsList>
 
-            {/* Main Content */}
-            <Card className="rounded-2xl overflow-hidden">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'incoming' | 'outgoing')}>
-                    <div className="p-4 border-b bg-muted/30">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <TabsList className="rounded-xl">
-                                <TabsTrigger value="incoming" className="rounded-lg gap-2 px-4">
-                                    <ArrowDownLeft className="h-4 w-4" />
-                                    Εισερχόμενα
-                                    {stats.unread > 0 && (
-                                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-md">
-                                            {stats.unread}
-                                        </span>
-                                    )}
-                                </TabsTrigger>
-                                <TabsTrigger value="outgoing" className="rounded-lg gap-2 px-4">
-                                    <ArrowUpRight className="h-4 w-4" />
-                                    Εξερχόμενα
-                                </TabsTrigger>
-                            </TabsList>
-
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Αναζήτηση..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9 w-[200px] rounded-xl"
-                                    />
+                {/* Smart Inbox Tab */}
+                <TabsContent value="hub" className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Inbox List */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Inbox className="w-5 h-5 text-indigo-500" />
+                                    Πρόσφατα Παραστατικά
+                                </h2>
+                                <div className="flex gap-2">
+                                    <Input placeholder="Αναζήτηση..." className="w-64 rounded-xl bg-white" />
+                                    <Button variant="outline" size="icon" className="rounded-xl"><Search className="w-4 h-4" /></Button>
                                 </div>
-                                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                    <SelectTrigger className="w-[160px] rounded-xl">
-                                        <SelectValue placeholder="Τύπος" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Όλοι οι τύποι</SelectItem>
-                                        {Object.entries(INVOICE_TYPES).map(([code, name]) => (
-                                            <SelectItem key={code} value={code}>{code} - {name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                    <SelectTrigger className="w-[140px] rounded-xl">
-                                        <SelectValue placeholder="Κατάσταση" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Όλες</SelectItem>
-                                        <SelectItem value="pending">Εκκρεμή</SelectItem>
-                                        <SelectItem value="read">Αναγνωσμένα</SelectItem>
-                                        <SelectItem value="accepted">Αποδεκτά</SelectItem>
-                                        <SelectItem value="rejected">Απορριφθέντα</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
-                        </div>
-                    </div>
 
-                    <TabsContent value="incoming" className="m-0">
-                        {loading ? (
-                            <div className="flex items-center justify-center h-64">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : filteredInvoices.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                                <Inbox className="h-12 w-12 mb-4 opacity-50" />
-                                <p className="font-medium">Δεν βρέθηκαν παραστατικά</p>
-                                <p className="text-sm">Τα εισερχόμενα παραστατικά θα εμφανιστούν εδώ</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y">
-                                {/* Table Header */}
-                                <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 text-sm font-medium text-muted-foreground">
-                                    <div className="col-span-2">Σειρά-Αριθμός</div>
-                                    <div className="col-span-1">Τύπος</div>
-                                    <div className="col-span-2">Ημ/νία Έκδοσης</div>
-                                    <div className="col-span-4">Επωνυμία</div>
-                                    <div className="col-span-1 text-right">Αξία</div>
-                                    <div className="col-span-1 text-center">Κατάσταση</div>
-                                    <div className="col-span-1 text-right">Ενέργειες</div>
-                                </div>
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <Card key={i} className="group p-4 rounded-2xl hover:shadow-lg transition-all duration-300 border-slate-100 hover:border-indigo-100 cursor-pointer bg-white">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "h-12 w-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm group-hover:scale-110 transition-transform",
+                                                    i % 2 === 0 ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600"
+                                                )}>
+                                                    {i % 2 === 0 ? <FileText className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">Digital Solutions Ltd</h3>
+                                                        {i === 1 && <Badge variant="secondary" className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0 rounded-md">AI Alert</Badge>}
+                                                    </div>
+                                                    <p className="text-sm text-slate-500">
+                                                        Τιμολόγιο #{2024000 + i} • {format(new Date(), 'dd MMM yyyy', { locale: el })}
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                {/* Table Rows */}
-                                {filteredInvoices.map((invoice) => (
-                                    <div
-                                        key={invoice.id}
-                                        className={cn(
-                                            "grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-muted/30 transition-colors cursor-pointer",
-                                            !invoice.read_at && "bg-blue-50/50"
-                                        )}
-                                        onClick={() => {
-                                            setSelectedInvoice(invoice);
-                                            if (!invoice.read_at) markAsRead(invoice);
-                                        }}
-                                    >
-                                        <div className="col-span-2">
-                                            <div className="flex items-center gap-2">
-                                                {!invoice.read_at && (
-                                                    <span className="h-2 w-2 rounded-full bg-blue-500" />
-                                                )}
-                                                <span className="font-medium text-primary hover:underline">
-                                                    {invoice.invoice_number}
-                                                </span>
+                                            <div className="text-right">
+                                                <p className="font-bold text-slate-900 text-lg">€{(Math.random() * 1000).toFixed(2)}</p>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className={cn(
+                                                        "h-2 w-2 rounded-full",
+                                                        i === 1 ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
+                                                    )} />
+                                                    <span className="text-xs font-medium text-slate-500">
+                                                        {i === 1 ? 'Έλεγχος' : 'Εγκρίθηκε'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="col-span-1">
-                                            <span className="text-primary hover:underline">{invoice.invoice_type}</span>
+                                        {/* AI Context Preview */}
+                                        {i === 1 && (
+                                            <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3">
+                                                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="text-sm font-semibold text-rose-700">Ανίχνευση Ανωμαλίας (AI)</p>
+                                                    <p className="text-sm text-rose-600/90">Το ποσό είναι 45% υψηλότερο από το μέσο όρο των τελευταίων 6 μηνών για αυτόν τον προμηθευτή.</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Smart Actions & Sidebar */}
+                        <div className="space-y-6">
+                            {/* Quick Actions Card */}
+                            <Card className="p-6 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-800 text-white border-0 shadow-xl">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-yellow-400" />
+                                    Quick Actions
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
+                                        <Camera className="w-6 h-6" />
+                                        <span className="text-xs">Scan</span>
+                                    </Button>
+                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
+                                        <Upload className="w-6 h-6" />
+                                        <span className="text-xs">Upload</span>
+                                    </Button>
+                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
+                                        <Send className="w-6 h-6" />
+                                        <span className="text-xs">Send</span>
+                                    </Button>
+                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
+                                        <MessageSquare className="w-6 h-6" />
+                                        <span className="text-xs">Ask AI</span>
+                                    </Button>
+                                </div>
+                            </Card>
+
+                            {/* Verified Partners */}
+                            <Card className="p-6 rounded-3xl border-slate-100 shadow-lg bg-white">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-bold text-slate-800">Top Partners</h3>
+                                    <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 p-0 h-auto font-medium">View All</Button>
+                                </div>
+                                <div className="space-y-4">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                                                {String.fromCharCode(64 + i)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-1">
+                                                    <p className="font-semibold text-sm text-slate-900">Partner Corp {i}</p>
+                                                    <CheckCircle2 className="w-3 h-3 text-emerald-500 fill-emerald-100" />
+                                                </div>
+                                                <p className="text-xs text-slate-500">Verified • 4.9/5.0</p>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-indigo-50 text-indigo-600">
+                                                <Send className="w-4 h-4" />
+                                            </Button>
                                         </div>
-                                        <div className="col-span-2 text-muted-foreground text-sm">
-                                            {format(new Date(invoice.issue_date), 'dd/MM/yyyy HH:mm')}
+                                    ))}
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                {/* AI Insights Tab */}
+                <TabsContent value="insights" className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="p-6 rounded-3xl border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-white">
+                            <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-indigo-600" />
+                                Spending Intelligence
+                            </h3>
+                            <div className="space-y-4">
+                                {aiInsights.map((insight, idx) => (
+                                    <div key={idx} className="p-4 bg-white rounded-2xl shadow-sm border border-indigo-50/50 flex gap-4">
+                                        <div className={cn(
+                                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                                            insight.type === 'warning' ? "bg-rose-100 text-rose-600" :
+                                                insight.type === 'success' ? "bg-emerald-100 text-emerald-600" :
+                                                    "bg-blue-100 text-blue-600"
+                                        )}>
+                                            {insight.type === 'warning' ? <TrendingUp className="w-5 h-5" /> :
+                                                insight.type === 'success' ? <TrendingDown className="w-5 h-5" /> :
+                                                    <Sparkles className="w-5 h-5" />}
                                         </div>
-                                        <div className="col-span-4">
-                                            <span className="text-primary hover:underline">{invoice.sender_company}</span>
-                                        </div>
-                                        <div className="col-span-1 text-right font-medium">
-                                            €{invoice.total_amount.toFixed(2)}
-                                        </div>
-                                        <div className="col-span-1 text-center">
-                                            {getStatusBadge(invoice.status)}
-                                        </div>
-                                        <div className="col-span-1 text-right">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-lg"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedInvoice(invoice);
-                                                }}
-                                            >
-                                                Προβολή
+                                        <div>
+                                            <h4 className="font-semibold text-slate-800">{insight.title}</h4>
+                                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">{insight.message}</p>
+                                            <Button variant="link" className="p-0 h-auto mt-2 text-indigo-600 font-medium text-xs">
+                                                {insight.action} →
                                             </Button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </TabsContent>
+                        </Card>
 
-                    <TabsContent value="outgoing" className="m-0">
-                        <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                            <Send className="h-12 w-12 mb-4 opacity-50" />
-                            <p className="font-medium">Δεν έχετε στείλει παραστατικά</p>
-                            <p className="text-sm mb-4">Αποστείλτε παραστατικά σε άλλες επιχειρήσεις</p>
-                            <Button onClick={() => setSendDialogOpen(true)} className="rounded-xl">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Αποστολή Παραστατικού
-                            </Button>
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </Card>
-
-            {/* Invoice Detail Dialog */}
-            <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
-                <DialogContent className="max-w-2xl rounded-2xl">
-                    {selectedInvoice && (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5" />
-                                    Παραστατικό {selectedInvoice.invoice_number}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {INVOICE_TYPES[selectedInvoice.invoice_type] || selectedInvoice.invoice_type}
-                                </DialogDescription>
-                            </DialogHeader>
-
-                            <div className="space-y-6">
-                                {/* Status */}
-                                <div className="flex items-center justify-between">
-                                    {getStatusBadge(selectedInvoice.status)}
-                                    <span className="text-sm text-muted-foreground">
-                                        ΜΑΡΚ: {selectedInvoice.mydata_mark}
-                                    </span>
-                                </div>
-
-                                <Separator />
-
-                                {/* Sender Info */}
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Αποστολέας</p>
-                                        <p className="font-semibold">{selectedInvoice.sender_company}</p>
-                                        <p className="text-sm text-muted-foreground">ΑΦΜ: {selectedInvoice.sender_vat}</p>
+                        <div className="space-y-6">
+                            <Card className="p-6 rounded-3xl bg-slate-900 text-white border-0 shadow-lg">
+                                <h3 className="font-bold text-lg mb-2">My Assistant</h3>
+                                <div className="h-64 flex flex-col justify-end">
+                                    <div className="space-y-3 mb-4">
+                                        <div className="bg-white/10 rounded-2xl p-3 rounded-bl-sm self-start max-w-[80%] backdrop-blur-sm">
+                                            <p className="text-sm">Καλημέρα! Παρατήρησα μια αύξηση 15% στα κόστη Marketing αυτόν τον μήνα. Θέλετε ανάλυση;</p>
+                                        </div>
+                                        <div className="bg-indigo-600 rounded-2xl p-3 rounded-br-sm self-end max-w-[80%]">
+                                            <p className="text-sm">Ναι, δείξε μου τα top 3 έξοδα.</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">Ημερομηνία Έκδοσης</p>
-                                        <p className="font-semibold">
-                                            {format(new Date(selectedInvoice.issue_date), "dd MMMM yyyy, HH:mm", { locale: el })}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                {/* Amounts */}
-                                <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Καθαρή Αξία</span>
-                                        <span>€{selectedInvoice.amount.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">ΦΠΑ</span>
-                                        <span>€{selectedInvoice.vat_amount.toFixed(2)}</span>
-                                    </div>
-                                    <Separator className="my-2" />
-                                    <div className="flex justify-between text-lg font-bold">
-                                        <span>Σύνολο</span>
-                                        <span>€{selectedInvoice.total_amount.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <DialogFooter className="flex-col sm:flex-row gap-2">
-                                {selectedInvoice.status === 'pending' && (
-                                    <>
-                                        <Button
-                                            variant="destructive"
-                                            onClick={() => rejectInvoice(selectedInvoice)}
-                                            className="rounded-xl gap-2"
-                                        >
-                                            <XCircle className="h-4 w-4" />
-                                            Απόρριψη
+                                    <div className="relative">
+                                        <Input placeholder="Ρωτήστε κάτι..." className="bg-white/10 border-white/20 text-white placeholder:text-white/40 pr-10 rounded-xl" />
+                                        <Button size="icon" variant="ghost" className="absolute right-0 top-0 text-white hover:bg-white/10 rounded-xl">
+                                            <Send className="w-4 h-4" />
                                         </Button>
-                                        <Button
-                                            onClick={() => acceptInvoice(selectedInvoice)}
-                                            className="rounded-xl gap-2 bg-green-600 hover:bg-green-700"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" />
-                                            Αποδοχή
-                                        </Button>
-                                    </>
-                                )}
-                                <Button variant="outline" className="rounded-xl gap-2">
-                                    <Download className="h-4 w-4" />
-                                    Λήψη PDF
-                                </Button>
-                                <Button variant="outline" className="rounded-xl gap-2">
-                                    <ExternalLink className="h-4 w-4" />
-                                    Άνοιγμα στο myDATA
-                                </Button>
-                            </DialogFooter>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Send Invoice Dialog */}
-            <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-                <DialogContent className="max-w-lg rounded-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Αποστολή Παραστατικού</DialogTitle>
-                        <DialogDescription>
-                            Αποστείλτε παραστατικό σε άλλη επιχείρηση μέσω του δικτύου eInvoicing
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">ΑΦΜ Παραλήπτη</label>
-                            <Input placeholder="π.χ. 123456789" className="rounded-xl" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">Αριθμός Τιμολογίου</label>
-                            <Input placeholder="π.χ. ΤΙΜ-001" className="rounded-xl" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">Τύπος Παραστατικού</label>
-                            <Select>
-                                <SelectTrigger className="rounded-xl">
-                                    <SelectValue placeholder="Επιλέξτε τύπο" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(INVOICE_TYPES).map(([code, name]) => (
-                                        <SelectItem key={code} value={code}>{name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">Καθαρή Αξία</label>
-                                <Input type="number" step="0.01" placeholder="0.00" className="rounded-xl" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">ΦΠΑ</label>
-                                <Input type="number" step="0.01" placeholder="0.00" className="rounded-xl" />
-                            </div>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                     </div>
+                </TabsContent>
 
+                {/* Network & Invite Tab */}
+                <TabsContent value="network">
+                    <Card className="p-12 text-center rounded-3xl border-dashed border-2 bg-slate-50/50">
+                        <div className="mx-auto h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center mb-6">
+                            <Users className="w-8 h-8 text-indigo-600" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Μεγαλώστε το Δίκτυό σας</h3>
+                        <p className="text-slate-600 max-w-md mx-auto mb-8">
+                            Προσκαλέστε συνεργάτες για να ανταλλάσσετε παραστατικά αυτόματα, χωρίς emails και καθυστερήσεις.
+                        </p>
+                        <Button size="lg" onClick={() => setShowInviteDialog(true)} className="rounded-xl px-8 h-12 bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-200">
+                            <Share2 className="w-5 h-5 mr-2" />
+                            Αποστολή Πρόσκλησης
+                        </Button>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            {/* Invite Dialog */}
+            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogContent className="sm:max-w-md rounded-3xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">Πρόσκληση Συνεργάτη</DialogTitle>
+                        <DialogDescription>
+                            Στείλτε πρόσκληση για άμεση σύνδεση στο Invoice Hub.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Email Συνεργάτη</label>
+                            <Input placeholder="partner@company.com" className="rounded-xl" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Μήνυμα (προαιρετικό)</label>
+                            <Input placeholder="Γεια σου, έλα να συνδεθούμε στο Invoice Hub..." className="rounded-xl" />
+                        </div>
+                    </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setSendDialogOpen(false)} className="rounded-xl">
-                            Ακύρωση
-                        </Button>
-                        <Button className="rounded-xl gap-2">
-                            <Send className="h-4 w-4" />
-                            Αποστολή
-                        </Button>
+                        <Button variant="outline" onClick={() => setShowInviteDialog(false)} className="rounded-xl">Ακύρωση</Button>
+                        <Button onClick={handleInvite} className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">Αποστολή</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
+
