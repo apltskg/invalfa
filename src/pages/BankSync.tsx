@@ -56,6 +56,8 @@ interface BankTransaction {
 type SortField = "date" | "amount" | "bank" | "status";
 type SortDirection = "asc" | "desc";
 
+import { InvoiceSelectorDialog } from "@/components/bank/InvoiceSelectorDialog";
+
 export default function BankSync() {
   const { startDate, endDate, monthKey } = useMonth();
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -63,6 +65,8 @@ export default function BankSync() {
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("transactions");
+  const [invoiceSelectorOpen, setInvoiceSelectorOpen] = useState(false);
+  const [selectedTransactionForInvoice, setSelectedTransactionForInvoice] = useState<string | null>(null);
   const [autoMatchingRunning, setAutoMatchingRunning] = useState(false);
 
   // Filters
@@ -142,9 +146,41 @@ export default function BankSync() {
         status: "confirmed",
       });
 
+    // If matching with invoice list item, update its status
+    if (recordType === 'invoice_list') {
+      await supabase
+        .from('invoice_list_items')
+        .update({
+          match_status: 'matched',
+          matched_income_id: txnId
+        })
+        .eq('id', recordId);
+    }
+
     toast.success("Αντιστοίχιση επιβεβαιώθηκε");
     fetchData();
   }
+
+  // Handle manual linking to invoice
+  async function handleInvoiceSelected(invoiceId: string, invoiceNumber: string) {
+    if (!selectedTransactionForInvoice) return;
+
+    try {
+      // Use existing approve match logic
+      // Assuming 'invoice_list' is the record type for items from the list
+      await handleApproveMatch(selectedTransactionForInvoice, invoiceId, 'invoice_list');
+      setInvoiceSelectorOpen(false);
+      setSelectedTransactionForInvoice(null);
+    } catch (error) {
+      console.error("Error linking invoice:", error);
+      toast.error("Σφάλμα σύνδεσης παραστατικού");
+    }
+  }
+
+  const handleLinkToInvoice = (txnId: string) => {
+    setSelectedTransactionForInvoice(txnId);
+    setInvoiceSelectorOpen(true);
+  };
 
   async function handleRejectMatch(txnId: string) {
     // Mark as unmatched (rejected suggestion)
@@ -156,6 +192,14 @@ export default function BankSync() {
         matched_record_type: null,
       })
       .eq("id", txnId);
+
+    // If we are rejecting a match that was previously confirmed (though usually this function is for suggestions)
+    // We might need to handle unmatching logic if we add an 'Unmatch' button later.
+    // For now, this function handles rejecting suggestions.
+
+    // For unmatching a confused match, we'd need a separate function or expand this one.
+    // Assuming this is used for 'reject suggestion', we don't need to update invoice_list_items 
+    // because it wasn't matched yet.
 
     if (error) {
       toast.error("Αποτυχία ενημέρωσης");
@@ -290,6 +334,8 @@ export default function BankSync() {
       </div>
     );
   }
+
+  const selectedTransaction = transactions.find(t => t.id === selectedTransactionForInvoice);
 
   return (
     <div className="space-y-6">
@@ -547,6 +593,7 @@ export default function BankSync() {
                       onUpdateNotes={handleUpdateNotes}
                       onApproveMatch={handleApproveMatch}
                       onRejectMatch={handleRejectMatch}
+                      onLinkToInvoice={() => handleLinkToInvoice(txn.id)}
                       suggestions={getSuggestionsForTransaction(txn.id)}
                       index={index}
                     />
@@ -572,6 +619,14 @@ export default function BankSync() {
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
         onSuccess={fetchData}
+      />
+
+      <InvoiceSelectorDialog
+        open={invoiceSelectorOpen}
+        onOpenChange={setInvoiceSelectorOpen}
+        onSelect={handleInvoiceSelected}
+        transactionAmount={selectedTransaction?.amount || 0}
+        transactionDate={selectedTransaction?.transaction_date || ""}
       />
     </div>
   );

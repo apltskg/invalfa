@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, AlertTriangle, X, FileText, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Check, AlertTriangle, X, FileText, ChevronDown, ChevronUp, Pencil, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ interface TransactionRowProps {
   onViewSourcePDF?: (txnId: string) => void;
   onApproveMatch?: (txnId: string, recordId: string, recordType: string) => void;
   onRejectMatch?: (txnId: string) => void;
+  onLinkToInvoice?: (txnId: string) => void;
   suggestions?: MatchSuggestion[];
   index: number;
 }
@@ -61,6 +62,7 @@ export function TransactionRow({
   onViewSourcePDF,
   onApproveMatch,
   onRejectMatch,
+  onLinkToInvoice,
   suggestions = [],
   index,
 }: TransactionRowProps) {
@@ -87,8 +89,8 @@ export function TransactionRow({
         confidence >= 90
           ? "bg-green-50 text-green-700 border-green-200"
           : confidence >= 70
-          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-          : "bg-orange-50 text-orange-700 border-orange-200";
+            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+            : "bg-orange-50 text-orange-700 border-orange-200";
       return (
         <Badge variant="outline" className={cn(badgeColor, "gap-1")}>
           <AlertTriangle className="h-3 w-3" /> {confidence.toFixed(0)}%
@@ -255,14 +257,14 @@ export function TransactionRow({
               {/* Quick Assign Buttons */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Γρήγορη Κατηγοριοποίηση
+                  Γρήγορες Ενέργειες
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={categoryType === "general_income" ? "default" : "outline"}
                     size="sm"
                     onClick={() => onSetCategoryType(transaction.id, "general_income")}
-                    className="flex-1 rounded-xl"
+                    className="rounded-xl h-8 text-xs"
                   >
                     Γ. Έσοδα
                   </Button>
@@ -270,10 +272,21 @@ export function TransactionRow({
                     variant={categoryType === "general_expense" ? "default" : "outline"}
                     size="sm"
                     onClick={() => onSetCategoryType(transaction.id, "general_expense")}
-                    className="flex-1 rounded-xl"
+                    className="rounded-xl h-8 text-xs"
                   >
                     Γ. Έξοδα
                   </Button>
+                  {onLinkToInvoice && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onLinkToInvoice(transaction.id)}
+                      className="col-span-2 rounded-xl h-8 text-xs gap-2"
+                    >
+                      <Link2 className="h-3 w-3" />
+                      Σύνδεση με Παραστατικό
+                    </Button>
+                  )}
                 </div>
               </div>
 
