@@ -99,7 +99,7 @@ export default function Dashboard() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-6 rounded-3xl bg-gradient-to-br from-green-50 to-green-100/50">
+                <Card className="p-4 md:p-6 rounded-3xl bg-gradient-to-br from-green-50 to-green-100/50">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-green-100 rounded-2xl flex items-center justify-center">
                             <DollarSign className="h-6 w-6 text-green-600" />
@@ -111,7 +111,7 @@ export default function Dashboard() {
                     </div>
                 </Card>
 
-                <Card className="p-6 rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50">
+                <Card className="p-4 md:p-6 rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-red-100 rounded-2xl flex items-center justify-center">
                             <DollarSign className="h-6 w-6 text-red-600" />
@@ -123,7 +123,7 @@ export default function Dashboard() {
                     </div>
                 </Card>
 
-                <Card className="p-6 rounded-3xl bg-gradient-to-br from-blue-50 to-blue-100/50">
+                <Card className="p-4 md:p-6 rounded-3xl bg-gradient-to-br from-blue-50 to-blue-100/50">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-blue-100 rounded-2xl flex items-center justify-center">
                             <CreditCard className="h-6 w-6 text-blue-600" />
@@ -177,7 +177,7 @@ export default function Dashboard() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1, duration: 0.3 }}
-                                className="p-6"
+                                className="p-4 md:p-6"
                             >
                                 <div className="flex items-center gap-3 mb-4">
                                     <CalendarIcon className="h-5 w-5 text-primary" />
@@ -193,7 +193,7 @@ export default function Dashboard() {
                                                     <div className="flex items-center gap-3">
                                                         <FileText className={cn("h-4 w-4", inv.type === 'income' ? 'text-green-600' : 'text-red-600')} />
                                                         <div>
-                                                            <p className="font-medium text-sm">{inv.merchant || 'Unknown'}</p>
+                                                            <p className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{inv.merchant || 'Unknown'}</p>
                                                             <div className="flex gap-2 items-center">
                                                                 <Badge variant="secondary" className="text-xs">{inv.category}</Badge>
                                                                 {item.packageName && <Badge variant="outline" className="text-xs">{item.packageName}</Badge>}

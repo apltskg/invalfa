@@ -144,7 +144,7 @@ export function TransactionRow({
       style={{ borderLeftWidth: "4px", borderLeftColor: borderColor }}
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <div className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
+        <div className="flex items-center gap-3 p-3 sm:p-4 hover:bg-muted/30 transition-colors">
           {/* Bank Logo */}
           <BankLogo bankName={transaction.bank_name || null} size="md" />
 
@@ -165,10 +165,10 @@ export function TransactionRow({
           </div>
 
           {/* Match Status */}
-          <div className="shrink-0">{getMatchBadge()}</div>
+          <div className="shrink-0 hidden sm:block">{getMatchBadge()}</div>
 
           {/* Amount */}
-          <div className="text-right shrink-0 min-w-[100px]">
+          <div className="text-right shrink-0 min-w-[80px] sm:min-w-[100px]">
             <p
               className={cn(
                 "font-semibold text-lg",

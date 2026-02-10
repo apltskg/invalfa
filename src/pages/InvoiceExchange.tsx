@@ -355,7 +355,7 @@ export default function InvoiceExchange() {
 
                 {/* Network & Invite Tab */}
                 <TabsContent value="network">
-                    <Card className="p-12 text-center rounded-3xl border-dashed border-2 bg-slate-50/50">
+                    <Card className="p-6 md:p-12 text-center rounded-3xl border-dashed border-2 bg-slate-50/50">
                         <div className="mx-auto h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center mb-6">
                             <Users className="w-8 h-8 text-indigo-600" />
                         </div>
