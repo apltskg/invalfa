@@ -594,6 +594,7 @@ export default function BankSync() {
                       onApproveMatch={handleApproveMatch}
                       onRejectMatch={handleRejectMatch}
                       onLinkToInvoice={() => handleLinkToInvoice(txn.id)}
+                      onRefresh={fetchData}
                       suggestions={getSuggestionsForTransaction(txn.id)}
                       index={index}
                     />

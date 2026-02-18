@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Download,
     FileSpreadsheet,
@@ -14,14 +12,13 @@ import {
     DollarSign,
     Users,
     AlertTriangle,
-    CalendarDays,
     TrendingUp,
     BarChart3,
     Loader2,
     ArrowUpRight,
     ArrowDownRight
 } from "lucide-react";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { el } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgedReceivables, getOverdueInvoices } from "@/lib/payment-reminders";
@@ -196,26 +193,26 @@ export default function Reports() {
 
     return (
         <AppLayout>
-            <div className="space-y-8 p-6">
+            <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold">Αναφορές</h1>
-                    <p className="text-muted-foreground mt-1">
+                    <h1 className="text-2xl font-bold text-slate-900">Αναφορές</h1>
+                    <p className="text-slate-500 text-sm mt-1">
                         Οικονομικές αναφορές και στατιστικά πληρωμών
                     </p>
                 </div>
 
                 <Tabs defaultValue="aged" className="space-y-6">
-                    <TabsList className="rounded-xl h-12 p-1">
-                        <TabsTrigger value="aged" className="rounded-lg gap-2 px-4">
+                    <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
+                        <TabsTrigger value="aged" className="rounded-lg gap-2 text-sm">
                             <Clock className="h-4 w-4" />
                             Ηλικιακή Ανάλυση
                         </TabsTrigger>
-                        <TabsTrigger value="payments" className="rounded-lg gap-2 px-4">
+                        <TabsTrigger value="payments" className="rounded-lg gap-2 text-sm">
                             <DollarSign className="h-4 w-4" />
                             Ιστορικό Πληρωμών
                         </TabsTrigger>
-                        <TabsTrigger value="overdue" className="rounded-lg gap-2 px-4">
+                        <TabsTrigger value="overdue" className="rounded-lg gap-2 text-sm">
                             <AlertTriangle className="h-4 w-4" />
                             Εκκρεμότητες
                         </TabsTrigger>
