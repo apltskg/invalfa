@@ -49,7 +49,9 @@ export function useInvoiceListMatching(items: InvoiceListItem[]) {
                 // Process invoices
                 if (invoices) {
                     for (const inv of invoices) {
-                        const extractedData = inv.extracted_data as Record<string, unknown> | null;
+                        const rawExtracted = inv.extracted_data as Record<string, unknown> | null;
+                        // Handle both { extracted: {...} } and flat { merchant, ... } formats
+                        const extractedData = (rawExtracted?.extracted as Record<string, unknown>) || rawExtracted;
                         matchableRecords.push({
                             id: inv.id,
                             type: 'income',

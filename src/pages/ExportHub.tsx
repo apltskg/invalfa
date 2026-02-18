@@ -108,7 +108,8 @@ export default function ExportHub() {
       for (const pkg of filteredPackages) {
         for (const inv of pkg.invoices) {
           const matchedTxn = getMatchInfo(inv.id);
-          const extractedData = inv.extracted_data as any;
+          const rawExtracted = inv.extracted_data as any;
+          const extractedData = rawExtracted?.extracted || rawExtracted;
           hasData = true;
 
           worksheet.addRow({
@@ -129,7 +130,8 @@ export default function ExportHub() {
       // Add General Invoices
       for (const inv of filteredGeneralInvoices) {
         const matchedTxn = getMatchInfo(inv.id);
-        const extractedData = inv.extracted_data as any;
+        const rawExtracted = inv.extracted_data as any;
+        const extractedData = rawExtracted?.extracted || rawExtracted;
         hasData = true;
 
         worksheet.addRow({

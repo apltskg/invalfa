@@ -114,7 +114,7 @@ export function BulkUploadModal({
     try {
       // Upload
       updateFile(item.id, { status: 'uploading', progress: 20 });
-      
+
       const fileExt = item.file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
@@ -135,13 +135,15 @@ export function BulkUploadModal({
         });
 
         if (response.data && typeof response.data === 'object') {
-          extractedData = response.data as ExtractedData;
+          // Edge function returns { extracted: { merchant, amount, ... } }
+          const rawData = response.data as any;
+          extractedData = (rawData.extracted || rawData) as ExtractedData;
         }
       } catch (extractError) {
         console.warn('Extraction failed for', item.file.name);
       }
 
-      const needsReview = !extractedData || 
+      const needsReview = !extractedData ||
         (extractedData.confidence && extractedData.confidence < 0.7) ||
         !extractedData.amount ||
         !extractedData.date;
@@ -164,12 +166,12 @@ export function BulkUploadModal({
 
   const startProcessing = async () => {
     if (files.length === 0) return;
-    
+
     setProcessing(true);
     setStep('processing');
 
     const pendingFiles = files.filter(f => f.status === 'pending');
-    
+
     // Process in batches
     for (let i = 0; i < pendingFiles.length; i += CONCURRENT_PROCESSING) {
       const batch = pendingFiles.slice(i, i + CONCURRENT_PROCESSING);
@@ -182,7 +184,7 @@ export function BulkUploadModal({
 
   const saveAllValid = async () => {
     const validFiles = files.filter(f => f.status === 'done' && f.filePath);
-    
+
     if (validFiles.length === 0) {
       toast.warning('Δεν υπάρχουν έγκυρα αρχεία για αποθήκευση');
       return;
@@ -284,13 +286,12 @@ export function BulkUploadModal({
               {/* Drop zone */}
               <Card
                 {...getRootProps()}
-                className={`p-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${
-                  isDragActive
+                className={`p-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${isDragActive
                     ? 'border-primary bg-primary/5'
                     : files.length >= MAX_FILES
-                    ? 'border-muted bg-muted/20 cursor-not-allowed'
-                    : 'border-border hover:border-primary/50'
-                }`}
+                      ? 'border-muted bg-muted/20 cursor-not-allowed'
+                      : 'border-border hover:border-primary/50'
+                  }`}
               >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center text-center gap-2">
@@ -299,8 +300,8 @@ export function BulkUploadModal({
                     {files.length >= MAX_FILES
                       ? `Μέγιστο όριο ${MAX_FILES} αρχείων`
                       : isDragActive
-                      ? 'Αφήστε τα αρχεία εδώ...'
-                      : 'Σύρετε πολλαπλά PDF αρχεία ή κάντε κλικ'}
+                        ? 'Αφήστε τα αρχεία εδώ...'
+                        : 'Σύρετε πολλαπλά PDF αρχεία ή κάντε κλικ'}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Υποστηριζόμενα: PDF, PNG, JPG (max {MAX_FILES} αρχεία)
@@ -430,12 +431,11 @@ export function BulkUploadModal({
                   {files.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg ${
-                        item.status === 'error' ? 'bg-red-50' :
-                        item.status === 'review' ? 'bg-amber-50' :
-                        item.status === 'done' ? 'bg-green-50' :
-                        'hover:bg-muted/50'
-                      }`}
+                      className={`flex items-center gap-3 p-3 rounded-lg ${item.status === 'error' ? 'bg-red-50' :
+                          item.status === 'review' ? 'bg-amber-50' :
+                            item.status === 'done' ? 'bg-green-50' :
+                              'hover:bg-muted/50'
+                        }`}
                     >
                       {getStatusIcon(item.status)}
                       <div className="flex-1 min-w-0">

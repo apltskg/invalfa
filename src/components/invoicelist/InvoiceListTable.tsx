@@ -37,6 +37,7 @@ import {
   Check,
   X,
   ArrowUpDown,
+  User,
 } from "lucide-react";
 
 export interface InvoiceListItem {
@@ -104,17 +105,17 @@ export function InvoiceListTable({
             item.client_vat?.includes(query);
           if (!matchesSearch) return false;
         }
-        
+
         // Status filter
         if (statusFilter !== 'all' && item.match_status !== statusFilter) {
           return false;
         }
-        
+
         return true;
       })
       .sort((a, b) => {
         let comparison = 0;
-        
+
         switch (sortField) {
           case 'invoice_date':
             comparison = (a.invoice_date || '').localeCompare(b.invoice_date || '');
@@ -129,7 +130,7 @@ export function InvoiceListTable({
             comparison = (a.total_amount || 0) - (b.total_amount || 0);
             break;
         }
-        
+
         return sortDirection === 'asc' ? comparison : -comparison;
       });
   }, [items, searchQuery, statusFilter, sortField, sortDirection]);
@@ -152,31 +153,8 @@ export function InvoiceListTable({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'matched':
-        return (
-          <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
-            <Check className="h-3 w-3" />
-            Αντιστοιχισμένο
-          </Badge>
-        );
-      case 'suggested':
-        return (
-          <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
-            <Link2 className="h-3 w-3" />
-            Προτεινόμενο
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-muted-foreground gap-1">
-            <X className="h-3 w-3" />
-            Ανοιχτό
-          </Badge>
-        );
-    }
-  };
+
+
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <TableHead
@@ -203,7 +181,7 @@ export function InvoiceListTable({
             className="pl-10 rounded-xl"
           />
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48 rounded-xl">
             <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -235,15 +213,13 @@ export function InvoiceListTable({
               <SortableHeader field="total_amount">
                 <span className="text-right w-full">Σύνολο</span>
               </SortableHeader>
-              <TableHead>MyDATA</TableHead>
-              <TableHead>Κατάσταση</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                   Δεν βρέθηκαν τιμολόγια
                 </TableCell>
               </TableRow>
@@ -251,9 +227,8 @@ export function InvoiceListTable({
               filteredItems.map((item) => (
                 <TableRow
                   key={item.id}
-                  className={`hover:bg-muted/50 transition-colors ${
-                    selectedIds.includes(item.id) ? 'bg-primary/5' : ''
-                  }`}
+                  className={`hover:bg-muted/50 transition-colors ${selectedIds.includes(item.id) ? 'bg-primary/5' : ''
+                    }`}
                 >
                   <TableCell>
                     <Checkbox
@@ -274,8 +249,13 @@ export function InvoiceListTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-48 truncate" title={item.client_name || ''}>
-                    {item.client_name || '-'}
+                  <TableCell className="max-w-48" title={item.client_name || ''}>
+                    <div className="flex items-center gap-1.5">
+                      {item.client_id && (
+                        <User className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{item.client_name || '-'}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {item.client_vat || '-'}
@@ -288,12 +268,6 @@ export function InvoiceListTable({
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
                     €{(item.total_amount || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {item.mydata_mark || '-'}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(item.match_status)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

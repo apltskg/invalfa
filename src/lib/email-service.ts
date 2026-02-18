@@ -143,7 +143,8 @@ export async function sendInvoiceEmail(invoiceId: string): Promise<boolean> {
         }
 
         const customer = invoice.customers as any;
-        const extractedData = invoice.extracted_data as any;
+        const rawExtracted = invoice.extracted_data as any;
+        const extractedData = rawExtracted?.extracted || rawExtracted;
 
         if (!customer?.email) {
             toast.error("Ο πελάτης δεν έχει email");
@@ -214,7 +215,8 @@ export async function sendPaymentReminder(invoiceId: string, daysPastDue: number
         }
 
         const customer = invoice.customers as any;
-        const extractedData = invoice.extracted_data as any;
+        const rawExtracted = invoice.extracted_data as any;
+        const extractedData = rawExtracted?.extracted || rawExtracted;
 
         if (!customer?.email) {
             toast.error("Ο πελάτης δεν έχει email");

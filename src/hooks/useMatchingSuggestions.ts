@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  findMatchSuggestions, 
-  MatchSuggestion, 
-  MatchableRecord, 
-  TransactionForMatching 
+import {
+  findMatchSuggestions,
+  MatchSuggestion,
+  MatchableRecord,
+  TransactionForMatching
 } from "@/lib/matching-engine";
 
 interface BankTransaction {
@@ -24,12 +24,12 @@ interface SuggestionResult {
 export function useMatchingSuggestions(transactions: BankTransaction[]) {
   const [records, setRecords] = useState<MatchableRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Fetch matchable records (invoices)
   useEffect(() => {
     async function fetchRecords() {
       setLoading(true);
-      
+
       try {
         // Fetch invoices (expenses and income)
         const { data: invoices } = await supabase
@@ -37,13 +37,15 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
           .select("id, type, amount, invoice_date, merchant, extracted_data, file_name")
           .order("invoice_date", { ascending: false })
           .limit(500);
-        
+
         const matchableRecords: MatchableRecord[] = [];
-        
+
         // Process invoices
         if (invoices) {
           for (const inv of invoices) {
-            const extractedData = inv.extracted_data as Record<string, unknown> | null;
+            const rawExtracted = inv.extracted_data as Record<string, unknown> | null;
+            // Handle both { extracted: {...} } and flat { merchant, ... } formats
+            const extractedData = (rawExtracted?.extracted as Record<string, unknown>) || rawExtracted;
             matchableRecords.push({
               id: inv.id,
               type: inv.type === 'income' ? 'income' : 'expense',
@@ -55,7 +57,7 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
             });
           }
         }
-        
+
         setRecords(matchableRecords);
       } catch (error) {
         console.error("Error fetching matchable records:", error);
@@ -63,18 +65,18 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
         setLoading(false);
       }
     }
-    
+
     fetchRecords();
   }, []);
-  
+
   // Calculate suggestions for each unmatched transaction
   const suggestionResults = useMemo<SuggestionResult[]>(() => {
     if (loading || records.length === 0) return [];
-    
+
     const unmatchedTransactions = transactions.filter(
       t => t.match_status !== 'matched'
     );
-    
+
     return unmatchedTransactions.map(txn => {
       const txnForMatching: TransactionForMatching = {
         id: txn.id,
@@ -82,28 +84,28 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
         transaction_date: txn.transaction_date,
         description: txn.description,
       };
-      
+
       const suggestions = findMatchSuggestions(txnForMatching, records);
-      
+
       return {
         transactionId: txn.id,
         suggestions,
       };
     });
   }, [transactions, records, loading]);
-  
+
   // Get suggestions for a specific transaction
   const getSuggestionsForTransaction = (txnId: string): MatchSuggestion[] => {
     const result = suggestionResults.find(r => r.transactionId === txnId);
     return result?.suggestions || [];
   };
-  
+
   // Get best suggestion for a transaction
   const getBestSuggestion = (txnId: string): MatchSuggestion | null => {
     const suggestions = getSuggestionsForTransaction(txnId);
     return suggestions.length > 0 ? suggestions[0] : null;
   };
-  
+
   // Get all transactions with suggestions (for bulk view)
   const transactionsWithSuggestions = useMemo(() => {
     return suggestionResults
@@ -117,7 +119,7 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
       })
       .filter(item => item.transaction !== undefined);
   }, [suggestionResults, transactions]);
-  
+
   // Stats
   const stats = useMemo(() => {
     const withSuggestions = transactionsWithSuggestions.length;
@@ -130,7 +132,7 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
     const lowConfidence = transactionsWithSuggestions.filter(
       s => s.suggestion.confidenceLevel === 'low'
     ).length;
-    
+
     return {
       total: withSuggestions,
       high: highConfidence,
@@ -138,7 +140,7 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
       low: lowConfidence,
     };
   }, [transactionsWithSuggestions]);
-  
+
   return {
     loading,
     getSuggestionsForTransaction,

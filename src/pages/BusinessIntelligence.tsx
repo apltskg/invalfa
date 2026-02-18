@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +22,7 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Target,
+    Sparkles,
 } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import { el } from "date-fns/locale";
@@ -32,6 +34,9 @@ import {
     CustomerScore,
     CashFlowForecast
 } from "@/lib/dashboard-analytics";
+import { getFinancialSummary } from "@/lib/tax-analytics";
+import { calculateTaxLiability, TaxLiability } from "@/lib/tax-engine";
+import { askAccountant } from "@/lib/ai-advisor";
 import { cn } from "@/lib/utils";
 
 export default function BusinessIntelligence() {
@@ -40,6 +45,31 @@ export default function BusinessIntelligence() {
     const [suppliers, setSuppliers] = useState<SupplierAnalytics[]>([]);
     const [customers, setCustomers] = useState<CustomerScore[]>([]);
     const [forecast, setForecast] = useState<CashFlowForecast[]>([]);
+    const [taxLiability, setTaxLiability] = useState<TaxLiability | null>(null);
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [aiLoading, setAiLoading] = useState(false);
+    const [chatLog, setChatLog] = useState<{ role: 'user' | 'assistant', content: string }[]>([
+        { role: 'assistant', content: 'Γεια σας! Είμαι ο ψηφιακός σας λογιστής. Μπορώ να απαντήσω σε ερωτήσεις για τη φορολογία σας, τον ΦΠΑ ή να προτείνω τρόπους βελτιστοποίησης.' }
+    ]);
+
+    const handleAskAI = async () => {
+        if (!aiPrompt.trim() || !taxLiability) return;
+
+        const userMessage = aiPrompt;
+        setAiPrompt("");
+        setChatLog(prev => [...prev, { role: 'user', content: userMessage }]);
+        setAiLoading(true);
+
+        try {
+            const response = await askAccountant(userMessage, taxLiability);
+            setChatLog(prev => [...prev, { role: 'assistant', content: response }]);
+        } catch (error) {
+            console.error("AI Error:", error);
+            toast.error("Σφάλμα κατά την επικοινωνία με τον AI Accountant");
+        } finally {
+            setAiLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -48,14 +78,16 @@ export default function BusinessIntelligence() {
     async function fetchData() {
         setLoading(true);
         try {
-            const [suppliersData, customersData, forecastData] = await Promise.all([
+            const [suppliersData, customersData, forecastData, taxSummary] = await Promise.all([
                 getSupplierAnalytics(),
                 getCustomerScores(),
                 getCashFlowForecast(3),
+                getFinancialSummary(new Date().getFullYear())
             ]);
             setSuppliers(suppliersData);
             setCustomers(customersData);
             setForecast(forecastData);
+            setTaxLiability(calculateTaxLiability(taxSummary, { year: new Date().getFullYear(), entityType: 'company' }));
         } catch (error) {
             console.error("Error fetching analytics:", error);
         } finally {
@@ -149,6 +181,10 @@ export default function BusinessIntelligence() {
                     <TabsTrigger value="forecast" className="rounded-lg gap-2">
                         <Target className="h-4 w-4" />
                         Προβλέψεις
+                    </TabsTrigger>
+                    <TabsTrigger value="tax" className="rounded-lg gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Φορολογία & AI
                     </TabsTrigger>
                 </TabsList>
 
@@ -436,6 +472,142 @@ export default function BusinessIntelligence() {
                             </div>
                         </div>
                     </Card>
+                </TabsContent>
+
+                {/* Tax & AI Planning */}
+                <TabsContent value="tax" className="mt-6 space-y-6">
+                    {taxLiability && (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <Card className="p-5 rounded-2xl bg-white border-blue-100 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                                            <DollarSign className="h-6 w-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Εκτιμώμενος ΦΠΑ</p>
+                                            <p className={cn("text-2xl font-bold", taxLiability.vatPayable > 0 ? "text-rose-600" : "text-emerald-600")}>
+                                                {taxLiability.vatPayable > 0 ? '-' : '+'}€{Math.abs(taxLiability.vatPayable).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Card>
+                                <Card className="p-5 rounded-2xl bg-white border-indigo-100 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+                                            <Target className="h-6 w-6 text-indigo-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Φόρος Εισοδήματος</p>
+                                            <p className="text-2xl font-bold text-rose-600">€{taxLiability.incomeTax.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                                <Card className="p-5 rounded-2xl bg-white border-amber-100 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                                            <Clock className="h-6 w-6 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Προκαταβολή Επ. Έτους</p>
+                                            <p className="text-2xl font-bold text-amber-600">€{taxLiability.advanceTax.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                                <Card className="p-5 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white border-0 shadow-lg">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center">
+                                            <Target className="h-6 w-6 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-white/70">Σύνολο Υποχρεώσεων</p>
+                                            <p className="text-2xl font-bold">€{taxLiability.totalLiability.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <Card className="lg:col-span-2 p-6 rounded-3xl bg-slate-50 border-dashed border-2 flex flex-col max-h-[500px]">
+                                    <div className="flex items-center gap-3 mb-6 shrink-0">
+                                        <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center">
+                                            <Sparkles className="h-5 w-5 text-white" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-slate-900">AI Accountant Advisor</h3>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2 custom-scrollbar">
+                                        {chatLog.map((msg, idx) => (
+                                            <div key={idx} className={cn(
+                                                "flex gap-3 max-w-[90%]",
+                                                msg.role === 'user' ? "ml-auto flex-row-reverse" : ""
+                                            )}>
+                                                <div className={cn(
+                                                    "p-3 rounded-2xl text-sm leading-relaxed",
+                                                    msg.role === 'user'
+                                                        ? "bg-indigo-600 text-white rounded-br-sm"
+                                                        : "bg-white border text-slate-700 rounded-bl-sm shadow-sm"
+                                                )}>
+                                                    {msg.content}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {aiLoading && (
+                                            <div className="flex gap-3">
+                                                <div className="bg-white border p-3 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                                                    <span className="text-xs text-muted-foreground">Ο λογιστής πληκτρολογεί...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-3 shrink-0">
+                                        <input
+                                            type="text"
+                                            value={aiPrompt}
+                                            onChange={(e) => setAiPrompt(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+                                            placeholder="Ρωτήστε τον AI Accountant (π.χ. 'Πόσο ΦΠΑ χρωστάω;', 'Πώς να μειώσω τον φόρο;')"
+                                            className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        <Button
+                                            onClick={handleAskAI}
+                                            disabled={aiLoading || !aiPrompt.trim()}
+                                            className="rounded-xl px-6 bg-indigo-600 hover:bg-indigo-700"
+                                        >
+                                            <Sparkles className="h-4 w-4 mr-2" />
+                                            Ανάλυση
+                                        </Button>
+                                    </div>
+                                </Card>
+
+                                <Card className="p-6 rounded-3xl">
+                                    <h3 className="font-bold mb-4">Ανάλυση Κερδοφορίας</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">Καθαρά Κέρδη (Προ Φόρων)</span>
+                                            <span className="font-semibold">€{taxLiability.netProfit.toLocaleString()}</span>
+                                        </div>
+                                        <Progress value={80} className="h-2" />
+
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">Φόροι & Τέλη</span>
+                                            <span className="font-semibold text-rose-600">-€{taxLiability.totalLiability.toLocaleString()}</span>
+                                        </div>
+                                        <Progress value={20} className="h-2 bg-rose-100" /> {/* Should be colored differently? Shadcn Progress color is usually primary */}
+
+                                        <div className="pt-4 border-t mt-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-slate-900">Καθαρά (Μετά Φόρων)</span>
+                                                <span className="font-bold text-xl text-emerald-600">€{taxLiability.netProfitAfterTax.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+                        </>
+                    )}
                 </TabsContent>
             </Tabs>
         </div>

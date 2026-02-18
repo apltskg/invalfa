@@ -90,7 +90,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
           console.error('Edge Function error:', response.error);
           toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
         } else if (response.data && typeof response.data === 'object') {
-          extractedData = response.data as ExtractedData;
+          // Edge function returns { extracted: { merchant, amount, ... } }
+          const rawData = response.data as any;
+          extractedData = (rawData.extracted || rawData) as ExtractedData;
         } else {
           console.warn('Unexpected non-JSON response from AI extraction');
           toast.info("AI could not read some fields automatically. Please fill them manually.");
@@ -233,7 +235,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
                 >
                   <input {...getInputProps()} />
 
-              {uploading || extracting ? (
+                  {uploading || extracting ? (
                     <ExtractionProgress
                       stage={uploading ? "uploading" : "extracting"}
                     />

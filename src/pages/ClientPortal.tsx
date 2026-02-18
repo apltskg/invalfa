@@ -125,7 +125,8 @@ export default function ClientPortal() {
 
             // Process invoices
             const processedInvoices: CustomerInvoice[] = (invoices || []).map((inv: any) => {
-                const extractedData = inv.extracted_data as any;
+                const rawExtracted = inv.extracted_data as any;
+                const extractedData = rawExtracted?.extracted || rawExtracted;
                 const isPaid = matchedInvoiceIds.has(inv.id);
 
                 return {
@@ -366,8 +367,8 @@ export default function ClientPortal() {
                                                     >
                                                         <div className="flex items-center gap-4">
                                                             <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${invoice.status === 'paid'
-                                                                    ? 'bg-green-500/10 text-green-600'
-                                                                    : 'bg-orange-500/10 text-orange-600'
+                                                                ? 'bg-green-500/10 text-green-600'
+                                                                : 'bg-orange-500/10 text-orange-600'
                                                                 }`}>
                                                                 {invoice.status === 'paid' ? (
                                                                     <CheckCircle2 className="h-5 w-5" />

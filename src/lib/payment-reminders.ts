@@ -82,7 +82,8 @@ export async function getOverdueInvoices(daysThreshold: number = 30): Promise<{
 
         const customer = inv.customers as any;
         const pkg = inv.packages as any;
-        const extractedData = inv.extracted_data as any;
+        const rawExtracted = inv.extracted_data as any;
+        const extractedData = rawExtracted?.extracted || rawExtracted;
 
         const reminder: PaymentReminder = {
             id: `reminder-${inv.id}`,
@@ -209,7 +210,8 @@ export async function getAgedReceivables(): Promise<{
         const amount = inv.amount || 0;
 
         const customer = inv.customers as any;
-        const extractedData = inv.extracted_data as any;
+        const rawExtracted = inv.extracted_data as any;
+        const extractedData = rawExtracted?.extracted || rawExtracted;
         const customerName = customer?.name || inv.merchant || extractedData?.merchant || "Άγνωστος";
         const customerId = inv.customer_id || customerName;
 

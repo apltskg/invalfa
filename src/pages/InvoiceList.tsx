@@ -153,6 +153,8 @@ export default function InvoiceList() {
   const handleUploadComplete = useCallback((importId: string) => {
     fetchImports();
     setSelectedImportId(importId);
+    // Auto-link customers by VAT number after upload
+    linkCustomersToItems(importId);
   }, []);
 
   const handleDeleteImport = async () => {
@@ -211,7 +213,37 @@ export default function InvoiceList() {
 
   const handleCreateIncome = async (item: InvoiceListItem) => {
     try {
-      // Create new income record
+      // 1. Find or create customer based on VAT number
+      let customerId: string | null = null;
+      if (item.client_vat && item.client_vat.trim()) {
+        // Try to find existing customer
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('vat_number', item.client_vat.trim())
+          .maybeSingle();
+
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+        } else {
+          // Create new customer
+          const { data: newCustomer, error: custError } = await supabase
+            .from('customers')
+            .insert({
+              name: item.client_name || `Πελάτης ${item.client_vat}`,
+              vat_number: item.client_vat.trim(),
+            })
+            .select('id')
+            .single();
+
+          if (!custError && newCustomer) {
+            customerId = newCustomer.id;
+            toast.success(`Δημιουργήθηκε νέος πελάτης: ${item.client_name || item.client_vat}`);
+          }
+        }
+      }
+
+      // 2. Create new income record linked to customer
       const { data: newIncome, error: createError } = await supabase
         .from('invoices')
         .insert({
@@ -222,18 +254,28 @@ export default function InvoiceList() {
           category: 'other',
           file_path: 'manual/' + Date.now(),
           file_name: `Income - ${item.invoice_number || item.client_name}`,
+          customer_id: customerId,
+          extracted_data: {
+            invoice_number: item.invoice_number,
+            merchant: item.client_name,
+            tax_id: item.client_vat,
+            amount: item.total_amount,
+            vat_amount: item.vat_amount,
+            date: item.invoice_date,
+          },
         })
         .select()
         .single();
 
       if (createError) throw createError;
 
-      // Update the list item to matched
+      // 3. Update the list item to matched & link customer
       const { error: updateError } = await supabase
         .from('invoice_list_items')
         .update({
           match_status: 'matched',
           matched_income_id: newIncome.id,
+          client_id: customerId,
         })
         .eq('id', item.id);
 
@@ -245,6 +287,82 @@ export default function InvoiceList() {
     } catch (error) {
       console.error('Create income error:', error);
       toast.error('Αποτυχία δημιουργίας');
+    }
+  };
+
+  /**
+   * Auto-link invoice list items to existing customers by VAT number.
+   * Creates new customers for any VAT numbers not found in the system.
+   */
+  const linkCustomersToItems = async (importId: string) => {
+    try {
+      // Fetch items for this import
+      const { data: importItems } = await supabase
+        .from('invoice_list_items')
+        .select('id, client_name, client_vat')
+        .eq('import_id', importId)
+        .not('client_vat', 'is', null);
+
+      if (!importItems || importItems.length === 0) return;
+
+      // Get unique VAT numbers
+      const uniqueVats = [...new Set(importItems.map(i => i.client_vat?.trim()).filter(Boolean))] as string[];
+      if (uniqueVats.length === 0) return;
+
+      // Fetch existing customers
+      const { data: existingCustomers } = await supabase
+        .from('customers')
+        .select('id, vat_number')
+        .in('vat_number', uniqueVats);
+
+      const vatToCustomerId = new Map<string, string>();
+      (existingCustomers || []).forEach(c => {
+        if (c.vat_number) vatToCustomerId.set(c.vat_number, c.id);
+      });
+
+      // Find VATs that need new customers
+      const newVats = uniqueVats.filter(v => !vatToCustomerId.has(v));
+      let createdCount = 0;
+
+      for (const vat of newVats) {
+        // Find the first item with this VAT to get the name
+        const itemWithName = importItems.find(i => i.client_vat?.trim() === vat);
+        const name = itemWithName?.client_name || `Πελάτης ${vat}`;
+
+        const { data: newCust, error: custErr } = await supabase
+          .from('customers')
+          .insert({ name, vat_number: vat })
+          .select('id')
+          .single();
+
+        if (!custErr && newCust) {
+          vatToCustomerId.set(vat, newCust.id);
+          createdCount++;
+        }
+      }
+
+      // Now update all items with their customer IDs
+      let linkedCount = 0;
+      for (const item of importItems) {
+        const vat = item.client_vat?.trim();
+        const customerId = vat ? vatToCustomerId.get(vat) : undefined;
+        if (customerId && customerId !== item.id) {
+          await supabase
+            .from('invoice_list_items')
+            .update({ client_id: customerId })
+            .eq('id', item.id);
+          linkedCount++;
+        }
+      }
+
+      if (createdCount > 0) {
+        toast.success(`Δημιουργήθηκαν ${createdCount} νέοι πελάτες`);
+      }
+      if (linkedCount > 0) {
+        toast.success(`Συνδέθηκαν ${linkedCount} τιμολόγια με πελάτες`);
+      }
+    } catch (error) {
+      console.error('Customer linking error:', error);
     }
   };
 

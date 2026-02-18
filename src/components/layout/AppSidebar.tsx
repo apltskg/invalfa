@@ -16,22 +16,37 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 
-const menuItems = [
-  { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
-  { title: "Φάκελοι", icon: Package, url: "/packages" },
-  { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
-  { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
-  { title: "Λίστα Παραστατικών", icon: Receipt, url: "/invoice-list" },
-  { title: "Invoice Hub", icon: ArrowLeftRight, url: "/invoice-hub" },
-  { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
-  { title: "Αναφορές", icon: ClipboardList, url: "/reports" },
-  { title: "Insights", icon: Brain, url: "/business-intelligence" },
-  { title: "Συγχρονισμός Τράπεζας", icon: Building2, url: "/bank-sync" },
-  { title: "Κέντρο Εξαγωγών", icon: FileSpreadsheet, url: "/export-hub" },
-  { title: "Νέο Proforma", icon: FileText, url: "/proforma" },
-  { title: "Διαχείριση Proforma", icon: List, url: "/proformas" },
-  { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
-  { title: "Πελάτες", icon: Users, url: "/customers" },
+const menuGroups = [
+  {
+    label: "Overview",
+    items: [
+      { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
+    ]
+  },
+  {
+    label: "Business Operations",
+    items: [
+      { title: "Φάκελοι", icon: Package, url: "/packages" },
+      { title: "Λίστα Παραστατικών", icon: Receipt, url: "/invoice-list" },
+      { title: "Συγχρονισμός Τράπεζας", icon: Building2, url: "/bank-sync" },
+      { title: "Γενικά Έξοδα", icon: ArrowDownCircle, url: "/general-expenses" },
+      { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
+      { title: "Νέο Proforma", icon: FileText, url: "/proforma" },
+      { title: "Διαχείριση Proforma", icon: List, url: "/proformas" },
+      { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
+      { title: "Πελάτες", icon: Users, url: "/customers" },
+    ]
+  },
+  {
+    label: "Platform Suite",
+    items: [
+      { title: "Invoice Hub", icon: ArrowLeftRight, url: "/invoice-hub" },
+      { title: "Insights", icon: Brain, url: "/business-intelligence" },
+      { title: "Αναλύσεις", icon: BarChart3, url: "/analytics" },
+      { title: "Αναφορές", icon: ClipboardList, url: "/reports" },
+      { title: "Κέντρο Εξαγωγών", icon: FileSpreadsheet, url: "/export-hub" },
+    ]
+  }
 ];
 
 export function AppSidebar() {
@@ -66,32 +81,34 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Πλοήγηση
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="px-3">
-              {menuItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className="h-11 rounded-xl transition-all duration-200"
-                    >
-                      <Link to={item.url}>
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {menuGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="px-3">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className="h-11 rounded-xl transition-all duration-200"
+                      >
+                        <Link to={item.url}>
+                          <item.icon className="h-5 w-5" />
+                          <span className="font-medium">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="p-3 space-y-1">
