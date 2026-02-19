@@ -1,36 +1,33 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, FileText, Search, Filter, PieChart, Euro, ArrowUpRight, ArrowDownRight, Edit3, Wallet, Calendar, FileUp, MoreVertical, Eye, Edit, Upload, Files } from "lucide-react";
-import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import {
+    FileText, TrendingDown, MoreVertical, Eye,
+    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Invoice, InvoiceCategory } from "@/types/database";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { Invoice } from "@/types/database";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { BulkUploadModal } from "@/components/upload/BulkUploadModal";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import { useMonth } from "@/contexts/MonthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSeparator,
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog, DialogContent, DialogHeader,
+    DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function GeneralExpenses() {
     const { startDate, endDate, monthKey } = useMonth();
@@ -38,25 +35,18 @@ export default function GeneralExpenses() {
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<string>("all");
-
-    // Edit state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [saving, setSaving] = useState(false);
+    const [search, setSearch] = useState("");
 
-    // Delete state
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-
-    useEffect(() => {
-        fetchData();
-    }, [monthKey]); // Re-fetch when month changes
+    useEffect(() => { fetchData(); }, [monthKey]);
 
     async function fetchData() {
+        setLoading(true);
         try {
-            setLoading(true);
             const { data, error } = await supabase
                 .from("invoices")
                 .select("*")
@@ -65,307 +55,281 @@ export default function GeneralExpenses() {
                 .gte("invoice_date", startDate)
                 .lte("invoice_date", endDate)
                 .order("invoice_date", { ascending: false });
-
             if (error) throw error;
             setInvoices(((data as any[]) || []) as Invoice[]);
-        } catch (error) {
-            console.error("Error fetching general expenses:", error);
+        } catch (e) {
+            console.error(e);
         } finally {
             setLoading(false);
         }
     }
 
     const handleView = async (inv: Invoice) => {
-        if (inv.file_path && inv.file_path.startsWith("manual/")) {
-            toast.info("This is a manual entry with no file attached yet");
+        if (!inv.file_path || inv.file_path.startsWith("manual/")) {
+            toast.info("Δεν υπάρχει αρχείο για αυτή την εγγραφή");
             return;
         }
-
-        try {
-            const { data, error } = await supabase.storage
-                .from("invoices")
-                .createSignedUrl(inv.file_path, 3600);
-
-            if (error || !data?.signedUrl) {
-                toast.error("Failed to get file URL");
-                return;
-            }
-
-            window.open(data.signedUrl, "_blank");
-        } catch (error) {
-            console.error("Preview error:", error);
-            toast.error("Failed to open file");
-        }
+        const { data, error } = await supabase.storage.from("invoices").createSignedUrl(inv.file_path, 3600);
+        if (error || !data?.signedUrl) { toast.error("Αποτυχία φόρτωσης αρχείου"); return; }
+        window.open(data.signedUrl, "_blank");
     };
 
     async function handleUpdate() {
         if (!editingInvoice) return;
         setSaving(true);
         try {
-            const { error } = await supabase
-                .from('invoices')
-                .update({
-                    merchant: editingInvoice.merchant,
-                    amount: editingInvoice.amount,
-                    invoice_date: editingInvoice.invoice_date,
-                    category: editingInvoice.category
-                })
-                .eq('id', editingInvoice.id);
-
+            const { error } = await supabase.from("invoices")
+                .update({ merchant: editingInvoice.merchant, amount: editingInvoice.amount, invoice_date: editingInvoice.invoice_date })
+                .eq("id", editingInvoice.id);
             if (error) throw error;
             toast.success("Ενημερώθηκε επιτυχώς");
             setEditDialogOpen(false);
             fetchData();
-        } catch (error: any) {
-            console.error("Update error:", error);
-            toast.error("Αποτυχία ενημέρωσης");
-        } finally {
-            setSaving(false);
-        }
+        } catch { toast.error("Αποτυχία ενημέρωσης"); }
+        finally { setSaving(false); }
     }
-
-    const handleEdit = (inv: Invoice) => {
-        setEditingInvoice(inv);
-        setEditDialogOpen(true);
-    };
 
     const handleDelete = async () => {
         if (!selectedInvoice) return;
-
         try {
-            const { error } = await supabase
-                .from("invoices")
-                .delete()
-                .eq("id", selectedInvoice.id);
-
+            const { error } = await supabase.from("invoices").delete().eq("id", selectedInvoice.id);
             if (error) throw error;
-
-            toast.success("Expense deleted successfully");
+            toast.success("Διαγράφηκε επιτυχώς");
             fetchData();
-        } catch (error) {
-            console.error("Delete error:", error);
-            toast.error("Failed to delete expense");
-        } finally {
-            setDeleteDialogOpen(false);
-            setSelectedInvoice(null);
-        }
+        } catch { toast.error("Αποτυχία διαγραφής"); }
+        finally { setDeleteDialogOpen(false); setSelectedInvoice(null); }
     };
 
-    const confirmDelete = (inv: Invoice) => {
-        setSelectedInvoice(inv);
-        setDeleteDialogOpen(true);
-    };
+    const totalAmount = invoices.reduce((s, i) => s + (i.amount || 0), 0);
+    const filtered = invoices.filter(i =>
+        !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase())
+    );
 
-    const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-
-    const groupedInvoices = invoices.reduce((acc, inv) => {
-        const category = inv.category || "Other";
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(inv);
+    // Group by category for the stat breakdown
+    const byCategory = invoices.reduce((acc, inv) => {
+        const cat = inv.category || "other";
+        acc[cat] = (acc[cat] || 0) + (inv.amount || 0);
         return acc;
-    }, {} as Record<string, Invoice[]>);
+    }, {} as Record<string, number>);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6">
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Γενικά Έξοδα</h1>
-                    <p className="mt-1 text-muted-foreground">Διαχείριση λειτουργικών εξόδων (εκτός φακέλων)</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Γενικά Έξοδα</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Λειτουργικά έξοδα εκτός φακέλων</p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => setBulkUploadOpen(true)} className="rounded-xl gap-2">
-                        <Files className="h-4 w-4" />
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setBulkUploadOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm border-slate-200"
+                    >
+                        <FileText className="h-4 w-4" />
                         Μαζική Εισαγωγή
                     </Button>
-                    <Button onClick={() => setUploadModalOpen(true)} className="rounded-xl gap-2 shadow-lg shadow-primary/20">
-                        <Upload className="h-4 w-4" />
+                    <Button
+                        onClick={() => setUploadModalOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm bg-rose-600 hover:bg-rose-700"
+                    >
+                        <Plus className="h-4 w-4" />
                         Νέο Έξοδο
                     </Button>
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-6 rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50 border-none shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
-                            <Wallet className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-red-600 mb-1">Σύνολο Εξόδων</p>
-                            <p className="text-2xl font-bold text-red-700">€{totalAmount.toFixed(2)}</p>
-                        </div>
-                    </div>
+            {/* Stats row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-rose-500">
+                    <CardContent className="p-4">
+                        <p className="text-xs font-medium text-slate-500">Σύνολο Εξόδων</p>
+                        <p className="text-2xl font-bold text-rose-600 mt-0.5">€{totalAmount.toFixed(2)}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{invoices.length} καταχωρήσεις</p>
+                    </CardContent>
                 </Card>
+                {Object.entries(byCategory).slice(0, 3).map(([cat, amt]) => (
+                    <Card key={cat} className="rounded-xl border-slate-200 bg-white">
+                        <CardContent className="p-4">
+                            <p className="text-xs font-medium text-slate-500 capitalize">{cat}</p>
+                            <p className="text-lg font-bold text-slate-700 mt-0.5">€{amt.toFixed(2)}</p>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
-            <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
+            {/* Search */}
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                    placeholder="Αναζήτηση..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                />
+            </div>
+
+            {/* Table */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <div className="grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    <span>Πληρωμή / Προμηθευτής</span>
+                    <span>Κατηγορία</span>
+                    <span>Ημερομηνία</span>
+                    <span className="text-right">Ποσό</span>
+                    <span />
+                </div>
+
                 {loading ? (
-                    <div className="p-8 text-center text-muted-foreground">Φόρτωση...</div>
-                ) : invoices.length === 0 ? (
-                    <div className="p-16 flex flex-col items-center justify-center text-center">
-                        <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                            <FileText className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-semibold">Δεν υπάρχουν καταχωρήσεις</h3>
-                        <p className="text-muted-foreground mt-2 max-w-sm">
-                            Καταχωρήστε μισθοδοσίες, ενοίκια, ή άλλα γενικά έξοδα που δεν ανήκουν σε συγκεκριμένο ταξίδι.
+                    <div className="flex items-center justify-center p-16">
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="p-16 text-center">
+                        <TrendingDown className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                        <p className="text-slate-400 text-sm">
+                            {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν υπάρχουν καταχωρίσεις"}
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-8">
-                        {Object.entries(groupedInvoices).map(([category, catInvoices]) => (
-                            <div key={category} className="space-y-4">
-                                <div className="px-6 py-2 bg-muted/40 flex items-center justify-between border-y border-border/50">
-                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{category}</h3>
-                                    <Badge variant="outline" className="font-bold border-muted-foreground/20">
-                                        €{catInvoices.reduce((sum, i) => sum + (i.amount || 0), 0).toFixed(2)}
+                    <div className="divide-y divide-slate-100">
+                        {filtered.map(inv => {
+                            const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
+                            return (
+                                <div key={inv.id} className="grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-8 w-8 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
+                                            {hasFile
+                                                ? <FileText className="h-4 w-4 text-rose-600" />
+                                                : <FileUp className="h-4 w-4 text-slate-300" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-slate-800 truncate">
+                                                {inv.merchant || "Άγνωστος Προμηθευτής"}
+                                            </p>
+                                            {!hasFile && (
+                                                <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 py-0 mt-0.5">
+                                                    Χωρίς αρχείο
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Badge variant="secondary" className="w-fit rounded-md text-xs capitalize">
+                                        {inv.category || "—"}
                                     </Badge>
-                                </div>
-                                <div className="divide-y divide-border/30">
-                                    {catInvoices.map((inv) => {
-                                        const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
-                                        return (
-                                            <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors group">
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                                                        {hasFile ? <FileText className="h-5 w-5" /> : <FileUp className="h-5 w-5 opacity-50" />}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-medium text-foreground">{inv.merchant || "Άγνωστος Προμηθευτής"}</p>
-                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar className="h-3 w-3" />
-                                                                {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "-"}
-                                                            </span>
-                                                            {!hasFile && (
-                                                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                                                                    No file
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
 
-                                                <div className="flex items-center gap-3">
-                                                    <p className="font-bold text-red-600">-€{(inv.amount || 0).toFixed(2)}</p>
+                                    <p className="text-sm text-slate-500 flex items-center gap-1.5">
+                                        <Calendar className="h-3.5 w-3.5 text-slate-300" />
+                                        {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "—"}
+                                    </p>
 
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <MoreVertical className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-48">
-                                                            {hasFile && (
-                                                                <DropdownMenuItem onClick={() => handleView(inv)}>
-                                                                    <Eye className="h-4 w-4 mr-2" />
-                                                                    View File
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            {!hasFile && (
-                                                                <DropdownMenuItem onClick={() => toast.info("Upload file feature coming soon!")}>
-                                                                    <FileUp className="h-4 w-4 mr-2" />
-                                                                    Upload File
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            <DropdownMenuItem onClick={() => handleEdit(inv)}>
-                                                                <Edit className="h-4 w-4 mr-2" />
-                                                                Edit Details
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                onClick={() => confirmDelete(inv)}
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    <p className="text-sm font-semibold text-rose-600 text-right tabular-nums">
+                                        -€{(inv.amount || 0).toFixed(2)}
+                                    </p>
+
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                            {hasFile && (
+                                                <DropdownMenuItem onClick={() => handleView(inv)} className="gap-2 text-sm">
+                                                    <Eye className="h-4 w-4" /> Προβολή
+                                                </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem onClick={() => { setEditingInvoice(inv); setEditDialogOpen(true); }} className="gap-2 text-sm">
+                                                <Edit className="h-4 w-4" /> Επεξεργασία
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() => { setSelectedInvoice(inv); setDeleteDialogOpen(true); }}
+                                                className="gap-2 text-sm text-rose-600 focus:text-rose-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" /> Διαγραφή
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
+                    </div>
+                )}
+
+                {filtered.length > 0 && (
+                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-xs text-slate-400">{filtered.length} εγγραφές</span>
+                        <span className="text-sm font-bold text-rose-600">
+                            Σύνολο: €{filtered.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
+                        </span>
                     </div>
                 )}
             </Card>
 
-            <UploadModal
-                open={uploadModalOpen}
-                onOpenChange={setUploadModalOpen}
-                onUploadComplete={fetchData}
-                defaultType="expense"
-            />
-
-            <BulkUploadModal
-                open={bulkUploadOpen}
-                onOpenChange={setBulkUploadOpen}
-                onComplete={fetchData}
-                defaultType="expense"
-            />
+            {/* Modals */}
+            <UploadModal open={uploadModalOpen} onOpenChange={setUploadModalOpen} onUploadComplete={fetchData} defaultType="expense" />
+            <BulkUploadModal open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} onComplete={fetchData} defaultType="expense" />
 
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="rounded-3xl">
+                <DialogContent className="rounded-2xl max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Επεξεργασία Εξόδου</DialogTitle>
+                        <DialogTitle className="text-base">Επεξεργασία Εξόδου</DialogTitle>
                     </DialogHeader>
                     {editingInvoice && (
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Έμπορος</Label>
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500">Προμηθευτής</Label>
                                 <Input
                                     value={editingInvoice.merchant || ""}
-                                    onChange={(e) => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
-                                    className="rounded-xl"
+                                    onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
+                                    className="rounded-xl border-slate-200 text-sm"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Ποσό (€)</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold text-slate-500">Ποσό (€)</Label>
                                     <Input
                                         type="number"
                                         value={editingInvoice.amount || 0}
-                                        onChange={(e) => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
-                                        className="rounded-xl"
+                                        onChange={e => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
+                                        className="rounded-xl border-slate-200 text-sm"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Ημερομηνία</Label>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold text-slate-500">Ημερομηνία</Label>
                                     <Input
                                         type="date"
                                         value={editingInvoice.invoice_date || ""}
-                                        onChange={(e) => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
-                                        className="rounded-xl"
+                                        onChange={e => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
+                                        className="rounded-xl border-slate-200 text-sm"
                                     />
                                 </div>
                             </div>
                         </div>
                     )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl">Ακύρωση</Button>
-                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl">
-                            {saving ? "Αποθήκευση..." : "Αποθήκευση"}
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm border-slate-200">Ακύρωση</Button>
+                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700">
+                            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                            Αποθήκευση
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
+                <AlertDialogContent className="rounded-2xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Διαγραφή Εξόδου</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete <strong>{selectedInvoice?.merchant}</strong> ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : 'amount unknown'}). This action cannot be undone.
+                            Να διαγραφεί το έξοδο <strong>{selectedInvoice?.merchant}</strong>{" "}
+                            ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""}); Η ενέργεια δεν αναιρείται.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                            Delete
-                        </AlertDialogAction>
+                        <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">Διαγραφή</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

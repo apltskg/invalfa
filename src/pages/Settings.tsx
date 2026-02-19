@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Save, Building2, Tag } from "lucide-react";
+import { Save, Building2, Tag, CreditCard, Mail, Phone, MapPin, Globe, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,31 +24,22 @@ interface AgencySettings {
 export default function Settings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
     const [settings, setSettings] = useState<AgencySettings>({
-        company_name: "",
-        vat_number: "",
-        address: "",
-        phone: "",
-        email: "",
-        iban: "",
-        swift: "",
-        bank_name: "",
-        logo_url: ""
+        company_name: "", vat_number: "", address: "",
+        phone: "", email: "", iban: "", swift: "",
+        bank_name: "", logo_url: ""
     });
 
-    useEffect(() => {
-        fetchSettings();
-    }, []);
+    useEffect(() => { fetchSettings(); }, []);
 
     async function fetchSettings() {
         try {
-            const { data, error } = await supabase.from('agency_settings').select('*').single();
-            if (error && error.code !== 'PGRST116') throw error;
-            if (data) {
-                setSettings(data);
-            }
-        } catch (error) {
-            console.error("Error fetching settings:", error);
+            const { data, error } = await supabase.from("agency_settings").select("*").single();
+            if (error && error.code !== "PGRST116") throw error;
+            if (data) setSettings(data);
+        } catch (e) {
+            console.error(e);
             toast.error("Αποτυχία φόρτωσης ρυθμίσεων");
         } finally {
             setLoading(false);
@@ -58,201 +49,177 @@ export default function Settings() {
     async function handleSave() {
         setSaving(true);
         try {
-            const { data: existing } = await supabase.from('agency_settings').select('id').single();
-
+            const { data: existing } = await supabase.from("agency_settings").select("id").single();
             if (existing) {
-                const { error } = await supabase
-                    .from('agency_settings')
-                    .update(settings)
-                    .eq('id', existing.id);
+                const { error } = await supabase.from("agency_settings").update(settings).eq("id", existing.id);
                 if (error) throw error;
             } else {
-                const { error } = await supabase
-                    .from('agency_settings')
-                    .insert([settings]);
+                const { error } = await supabase.from("agency_settings").insert([settings]);
                 if (error) throw error;
             }
-
-            toast.success("Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς");
-        } catch (error: any) {
-            console.error("Save error:", error);
-            toast.error("Αποτυχία αποθήκευσης ρυθμίσεων");
+            toast.success("Αποθηκεύτηκε επιτυχώς");
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (e: any) {
+            console.error(e);
+            toast.error("Αποτυχία αποθήκευσης");
         } finally {
             setSaving(false);
         }
     }
 
+    const field = (
+        id: keyof AgencySettings,
+        label: string,
+        placeholder: string,
+        type = "text",
+        multiline = false
+    ) => (
+        <div className="space-y-1.5">
+            <Label htmlFor={id} className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</Label>
+            {multiline ? (
+                <Textarea
+                    id={id}
+                    value={settings[id]}
+                    onChange={e => setSettings({ ...settings, [id]: e.target.value })}
+                    placeholder={placeholder}
+                    className="rounded-xl border-slate-200 text-sm resize-none"
+                    rows={2}
+                />
+            ) : (
+                <Input
+                    id={id}
+                    type={type}
+                    value={settings[id]}
+                    onChange={e => setSettings({ ...settings, [id]: e.target.value })}
+                    placeholder={placeholder}
+                    className="rounded-xl border-slate-200 text-sm h-9"
+                />
+            )}
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
-                <p className="text-muted-foreground">Φόρτωση ρυθμίσεων...</p>
+                <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Ρυθμίσεις</h1>
-                <p className="mt-1 text-muted-foreground">Διαχείριση στοιχείων γραφείου και τραπεζικών λεπτομερειών</p>
+        <div className="space-y-6 max-w-3xl">
+            {/* Page header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Ρυθμίσεις</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Στοιχεία εταιρείας και τραπεζικές πληροφορίες</p>
+                </div>
+                <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`rounded-xl gap-2 h-9 text-sm transition-colors ${saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                >
+                    {saving
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : saved
+                            ? <Check className="h-4 w-4" />
+                            : <Save className="h-4 w-4" />}
+                    {saving ? "Αποθήκευση..." : saved ? "Αποθηκεύτηκε" : "Αποθήκευση"}
+                </Button>
             </div>
 
-            <Card className="p-8 rounded-3xl">
-                <div className="flex items-center gap-3 mb-6 pb-6 border-b">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-primary" />
+            {/* Company info */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-slate-400" />
+                        Στοιχεία Εταιρείας
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-5">
+                    <div className="grid grid-cols-2 gap-5">
+                        {field("company_name", "Επωνυμία *", "π.χ. Τουριστικό Γραφείο ΕΠΕ")}
+                        {field("vat_number", "ΑΦΜ", "π.χ. EL123456789")}
                     </div>
-                    <div>
-                        <h2 className="text-xl font-semibold">Στοιχεία Γραφείου</h2>
-                        <p className="text-sm text-muted-foreground">Πληροφορίες που εμφανίζονται στα τιμολόγια και έγγραφα</p>
-                    </div>
-                </div>
-
-                <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="company_name">Επωνυμία Εταιρείας *</Label>
+                    {field("address", "Διεύθυνση", "Οδός, Πόλη, Τ.Κ.", "text", true)}
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                                <Phone className="h-3 w-3" /> Τηλέφωνο
+                            </Label>
                             <Input
-                                id="company_name"
-                                value={settings.company_name}
-                                onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                                placeholder="π.χ., Τουριστικό Γραφείο ΕΠΕ"
-                                className="rounded-xl h-11"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="vat_number">ΑΦΜ</Label>
-                            <Input
-                                id="vat_number"
-                                value={settings.vat_number}
-                                onChange={(e) => setSettings({ ...settings, vat_number: e.target.value })}
-                                placeholder="π.χ., EL123456789"
-                                className="rounded-xl h-11"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="address">Διεύθυνση</Label>
-                        <Textarea
-                            id="address"
-                            value={settings.address}
-                            onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                            placeholder="Οδός, Πόλη, Τ.Κ., Χώρα"
-                            className="rounded-xl min-h-[80px]"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Τηλέφωνο</Label>
-                            <Input
-                                id="phone"
                                 value={settings.phone}
-                                onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                                onChange={e => setSettings({ ...settings, phone: e.target.value })}
                                 placeholder="+30 123 456 7890"
-                                className="rounded-xl h-11"
+                                className="rounded-xl border-slate-200 text-sm h-9"
                             />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                                <Mail className="h-3 w-3" /> Email
+                            </Label>
                             <Input
-                                id="email"
                                 type="email"
                                 value={settings.email}
-                                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                                onChange={e => setSettings({ ...settings, email: e.target.value })}
                                 placeholder="info@agency.com"
-                                className="rounded-xl h-11"
+                                className="rounded-xl border-slate-200 text-sm h-9"
                             />
                         </div>
                     </div>
-
-                    <div className="pt-6 border-t">
-                        <h3 className="text-lg font-semibold mb-4">Τραπεζικά Στοιχεία</h3>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="bank_name">Όνομα Τράπεζας</Label>
-                                <Input
-                                    id="bank_name"
-                                    value={settings.bank_name}
-                                    onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
-                                    placeholder="π.χ., Εθνική Τράπεζα της Ελλάδος"
-                                    className="rounded-xl h-11"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="iban">IBAN</Label>
-                                    <Input
-                                        id="iban"
-                                        value={settings.iban}
-                                        onChange={(e) => setSettings({ ...settings, iban: e.target.value })}
-                                        placeholder="GR16 0110 1250 0000 0001 2345 678"
-                                        className="rounded-xl h-11"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="swift">SWIFT/BIC</Label>
-                                    <Input
-                                        id="swift"
-                                        value={settings.swift}
-                                        onChange={(e) => setSettings({ ...settings, swift: e.target.value })}
-                                        placeholder="π.χ., ETHNGRAA"
-                                        className="rounded-xl h-11"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <Globe className="h-3 w-3" /> URL Λογότυπου
+                        </Label>
+                        <Input
+                            value={settings.logo_url}
+                            onChange={e => setSettings({ ...settings, logo_url: e.target.value })}
+                            placeholder="https://example.com/logo.png"
+                            className="rounded-xl border-slate-200 text-sm h-9"
+                        />
+                        <p className="text-xs text-slate-400">Ανεβάστε το λογότυπο σε cloud και επικολλήστε το URL</p>
                     </div>
-
-                    <div className="pt-6 border-t">
-                        <h3 className="text-lg font-semibold mb-4">Λογότυπο</h3>
-                        <div className="space-y-2">
-                            <Label htmlFor="logo_url">URL Λογότυπου</Label>
-                            <Input
-                                id="logo_url"
-                                value={settings.logo_url}
-                                onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
-                                placeholder="https://example.com/logo.png"
-                                className="rounded-xl h-11"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Ανεβάστε το λογότυπό σας σε υπηρεσία cloud και επικολλήστε το URL εδώ
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end pt-6">
-                        <Button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="rounded-xl h-11 px-8 gap-2"
-                            size="lg"
-                        >
-                            <Save className="h-4 w-4" />
-                            {saving ? "Αποθήκευση..." : "Αποθήκευση Ρυθμίσεων"}
-                        </Button>
-                    </div>
-                </div>
+                </CardContent>
             </Card>
 
-            {/* EXPENSE CATEGORIES SECTION */}
-            <Card className="p-8 rounded-3xl">
-                <div className="flex items-center gap-3 mb-6 pb-6 border-b">
-                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                        <Tag className="h-6 w-6 text-indigo-500" />
+            {/* Banking info */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-slate-400" />
+                        Τραπεζικά Στοιχεία
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-5">
+                    {field("bank_name", "Τράπεζα", "π.χ. Εθνική Τράπεζα της Ελλάδος")}
+                    <div className="grid grid-cols-2 gap-5">
+                        {field("iban", "IBAN", "GR16 0110 1250 0000 0001 2345 678")}
+                        {field("swift", "SWIFT / BIC", "π.χ. ETHNGRAA")}
                     </div>
-                    <div>
-                        <h2 className="text-xl font-semibold">Κατηγορίες Εξόδων</h2>
-                        <p className="text-sm text-muted-foreground">Διαμορφώστε τις κατηγορίες που εμφανίζονται στις καταχωρήσεις</p>
-                    </div>
-                </div>
+                    {/* Preview */}
+                    {(settings.iban || settings.bank_name) && (
+                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-sm">
+                            <p className="text-xs font-semibold text-blue-700 mb-2">Προεπισκόπηση</p>
+                            <p className="text-slate-700 font-medium">{settings.bank_name || "—"}</p>
+                            <p className="text-slate-500 font-mono text-xs mt-0.5">{settings.iban || "—"}</p>
+                            {settings.swift && <p className="text-slate-400 text-xs mt-0.5">SWIFT: {settings.swift}</p>}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
-                <CategoryManager />
+            {/* Expense categories */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-slate-400" />
+                        Κατηγορίες Εξόδων
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <CategoryManager />
+                </CardContent>
             </Card>
         </div>
     );

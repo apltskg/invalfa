@@ -68,11 +68,11 @@ export default function Customers() {
             setDuplicateWarning(null);
             return;
         }
-        
-        const existing = customers.find(c => 
+
+        const existing = customers.find(c =>
             c.vat_number === vat && c.id !== editingId
         );
-        
+
         setDuplicateWarning(existing || null);
     };
 
@@ -86,13 +86,13 @@ export default function Customers() {
             toast.error("Το όνομα πελάτη είναι υποχρεωτικό");
             return;
         }
-        
+
         // If there's a duplicate, ask for confirmation
         if (duplicateWarning && !editingId) {
             toast.error("Υπάρχει ήδη πελάτης με αυτό το ΑΦΜ. Επιλέξτε 'Ενημέρωση υπάρχοντος' ή αλλάξτε το ΑΦΜ.");
             return;
         }
-        
+
         setSaving(true);
         try {
             if (editingId) {
@@ -143,7 +143,7 @@ export default function Customers() {
 
     async function handleUpdateExisting() {
         if (!duplicateWarning) return;
-        
+
         setSaving(true);
         try {
             const { error } = await supabase
@@ -220,14 +220,14 @@ export default function Customers() {
 
     // Get invoice count for each customer (from invoice_list_items)
     const [invoiceCounts, setInvoiceCounts] = useState<Record<string, number>>({});
-    
+
     useEffect(() => {
         async function fetchCounts() {
             const { data } = await supabase
                 .from('invoice_list_items')
                 .select('client_id')
                 .not('client_id', 'is', null);
-            
+
             if (data) {
                 const counts: Record<string, number> = {};
                 data.forEach((item: any) => {
@@ -249,11 +249,11 @@ export default function Customers() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Πελάτες</h1>
-                    <p className="mt-1 text-muted-foreground">Διαχείριση πελατολογίου</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Πελάτες</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Πελατολόγιο εταιρείας &mdash; {customers.length} σύνολο</p>
                 </div>
 
                 <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -261,8 +261,8 @@ export default function Customers() {
                     if (!open) resetForm();
                 }}>
                     <DialogTrigger asChild>
-                        <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
-                            <Plus className="h-5 w-5" />
+                        <Button className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700">
+                            <Plus className="h-4 w-4" />
                             Προσθήκη Πελάτη
                         </Button>
                     </DialogTrigger>
@@ -383,9 +383,9 @@ export default function Customers() {
                             <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
                                 Ακύρωση
                             </Button>
-                            <Button 
-                                onClick={handleSave} 
-                                disabled={saving || (!!duplicateWarning && !editingId)} 
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving || (!!duplicateWarning && !editingId)}
                                 className="rounded-xl h-11 px-8"
                             >
                                 {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
@@ -395,106 +395,105 @@ export default function Customers() {
                 </Dialog>
             </div>
 
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Αναζήτηση με όνομα, email ή ΑΦΜ..."
-                    className="pl-10 rounded-2xl h-12 bg-muted/50"
+                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
                 />
             </div>
 
             {loading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {[1, 2, 3].map((i) => (
-                        <Card key={i} className="h-48 animate-pulse rounded-3xl bg-muted/50" />
+                        <Card key={i} className="h-36 animate-pulse rounded-2xl bg-slate-100 border-slate-100" />
                     ))}
                 </div>
             ) : filteredCustomers.length === 0 ? (
-                <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
-                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-medium mb-2">Δεν βρέθηκαν πελάτες</h3>
-                    <p className="text-muted-foreground text-center max-w-sm mb-6">
-                        {searchQuery ? "Δοκιμάστε διαφορετικούς όρους αναζήτησης" : "Ξεκινήστε προσθέτοντας τον πρώτο σας πελάτη"}
+                <Card className="flex flex-col items-center justify-center rounded-2xl border-dashed border-slate-200 p-16">
+                    <Users className="h-10 w-10 text-slate-200 mb-3" />
+                    <h3 className="text-base font-semibold text-slate-700 mb-1">Πελάτες δεν βρέθηκαν</h3>
+                    <p className="text-sm text-slate-400 text-center max-w-xs mb-5">
+                        {searchQuery ? "Τροποποιήστε την αναζήτηση" : "Προσθέστε τον πρώτο σας πελάτη"}
                     </p>
                     {!searchQuery && (
-                        <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
-                            Προσθήκη Πρώτου Πελάτη
+                        <Button onClick={() => setDialogOpen(true)} className="rounded-xl text-sm h-9 bg-blue-600 hover:bg-blue-700">
+                            Προσθήκη Πελάτη
                         </Button>
                     )}
                 </Card>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredCustomers.map((customer, index) => (
                         <motion.div
                             key={customer.id}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            transition={{ delay: index * 0.04 }}
                         >
-                            <Card className="p-6 rounded-3xl hover:shadow-lg transition-all duration-300 border-border/50 bg-gradient-to-br from-card to-secondary/20">
-                                <div className="flex justify-between items-start mb-4">
+                            <Card className="p-5 rounded-2xl bg-white border-slate-200 hover:shadow-md hover:border-blue-200 transition-all duration-200">
+                                <div className="flex justify-between items-start mb-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                            <Users className="h-6 w-6 text-primary" />
+                                        <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                            <Users className="h-5 w-5 text-blue-600" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-lg">{customer.name}</h3>
+                                            <h3 className="font-semibold text-sm text-slate-800">{customer.name}</h3>
                                             {customer.vat_number && (
-                                                <p className="text-xs text-muted-foreground font-mono">ΑΦΜ: {customer.vat_number}</p>
+                                                <p className="text-xs text-slate-400 font-mono mt-0.5">ΑΦΜ: {customer.vat_number}</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-0.5">
                                         <Button
                                             size="icon"
                                             variant="ghost"
                                             onClick={() => handleEdit(customer)}
-                                            className="h-8 w-8 rounded-xl"
+                                            className="h-7 w-7 rounded-lg text-slate-400 hover:text-slate-700"
                                         >
-                                            <Edit className="h-4 w-4" />
+                                            <Edit className="h-3.5 w-3.5" />
                                         </Button>
                                         <Button
                                             size="icon"
                                             variant="ghost"
                                             onClick={() => handleDelete(customer.id)}
-                                            className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
+                                            className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600"
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     {customer.contact_person && (
-                                        <p className="text-sm text-muted-foreground">{customer.contact_person}</p>
+                                        <p className="text-xs text-slate-500">{customer.contact_person}</p>
                                     )}
                                     {customer.email && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Mail className="h-4 w-4" />
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                            <Mail className="h-3 w-3 text-slate-300" />
                                             <span className="truncate">{customer.email}</span>
                                         </div>
                                     )}
                                     {customer.phone && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Phone className="h-4 w-4" />
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                            <Phone className="h-3 w-3 text-slate-300" />
                                             <span>{customer.phone}</span>
                                         </div>
                                     )}
                                     {customer.address && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <MapPin className="h-4 w-4" />
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                            <MapPin className="h-3 w-3 text-slate-300" />
                                             <span className="truncate">{customer.address}</span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Invoice count badge */}
                                 {invoiceCounts[customer.id] && (
-                                    <div className="mt-4 pt-3 border-t border-border/50">
-                                        <Badge variant="secondary" className="gap-1">
+                                    <div className="mt-3 pt-3 border-t border-slate-100">
+                                        <Badge variant="secondary" className="gap-1 text-xs rounded-md">
                                             <FileSpreadsheet className="h-3 w-3" />
                                             {invoiceCounts[customer.id]} τιμολόγια
                                         </Badge>
