@@ -426,12 +426,12 @@ export default function InvoiceList() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Λίστα Παραστατικών</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="text-2xl font-bold text-slate-900">Λίστα Παραστατικών</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
             Εισαγωγή και αντιστοίχιση τιμολογίων από τιμολογιέρα
           </p>
         </div>

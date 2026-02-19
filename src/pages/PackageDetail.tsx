@@ -263,23 +263,24 @@ export default function PackageDetail() {
     <div className="space-y-6 animate-in fade-in pb-20">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 hover:bg-muted/50">
+        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-slate-600 hover:bg-slate-100 h-9 text-sm">
           <ArrowLeft className="h-4 w-4" />
-          Back to Packages
+          Βεπ στους Φακέλους
         </Button>
 
         <div className="grid gap-4 md:grid-cols-3">
           {/* Main Info Card */}
-          <Card className="md:col-span-2 rounded-3xl p-6 bg-gradient-to-br from-card to-secondary/30 border-border/50">
+          <Card className="md:col-span-2 rounded-2xl border border-slate-200 bg-white px-6 py-5">
             <div className="flex justify-between items-start">
               <div>
-                <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg capitalize">
-                  {pkg.status}
+                <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg text-xs">
+                  {pkg.status === 'active' ? 'Ενεργό' : 'Ολοκληρωμένο'}
                 </Badge>
-                <h1 className="text-3xl font-bold tracking-tight">{pkg.client_name}</h1>
-                <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-primary/50"></span>
-                  {format(new Date(pkg.start_date), "MMM d")} - {format(new Date(pkg.end_date), "MMM d, yyyy")}
+                <h1 className="text-2xl font-bold text-slate-900">{pkg.client_name}</h1>
+                <p className="text-slate-400 mt-1 text-sm flex items-center gap-2">
+                  {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"}
+                  {" - "}
+                  {pkg.end_date ? format(new Date(pkg.end_date), "dd MMM yyyy") : "?"}
                 </p>
               </div>
             </div>
@@ -288,58 +289,57 @@ export default function PackageDetail() {
           {/* Summary Dashboard */}
 
           {/* Summary Dashboard */}
-          <div className="grid gap-4 md:grid-cols-2 lg:col-span-1">
-            <Card className="rounded-3xl p-6 bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-10">
-                <TrendingUp className="w-24 h-24" />
+          <div className="grid gap-3 md:grid-cols-2 lg:col-span-1">
+            {/* Stat mini-cards */}
+            <Card className="rounded-2xl border border-slate-200 bg-white border-l-4 border-l-emerald-500 overflow-hidden">
+              <div className="p-4">
+                <p className="text-xs text-slate-500">Έσοδα (αξία)</p>
+                <p className="text-2xl font-bold text-emerald-600 tabular-nums mt-0.5">€{totalIncome.toFixed(0)}</p>
               </div>
-              <div className="relative z-10 space-y-4">
+            </Card>
+            <Card className="rounded-2xl border border-slate-200 bg-white border-l-4 border-l-rose-400 overflow-hidden">
+              <div className="p-4">
+                <p className="text-xs text-slate-500">Έξοδα</p>
+                <p className="text-2xl font-bold text-rose-500 tabular-nums mt-0.5">€{totalExpenses.toFixed(0)}</p>
+              </div>
+            </Card>
+            <Card className={`rounded-2xl border bg-white overflow-hidden col-span-2 border-l-4 ${netProfit >= 0 ? 'border-l-blue-500' : 'border-l-rose-500'}`}>
+              <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-primary-foreground/80 text-sm font-medium">Net Profit</p>
-                  <h2 className="text-3xl font-bold tracking-tight">€{netProfit.toFixed(2)}</h2>
+                  <p className="text-xs text-slate-500">Καθαρό Κέρδος</p>
+                  <p className={`text-2xl font-bold tabular-nums mt-0.5 ${netProfit >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                    {netProfit >= 0 ? '+' : ''}€{netProfit.toFixed(2)}
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
-                  <div>
-                    <p className="text-xs text-primary-foreground/70">Income</p>
-                    <p className="font-semibold text-lg">€{totalIncome.toFixed(0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-primary-foreground/70">Expenses</p>
-                    <p className="font-semibold text-lg">€{totalExpenses.toFixed(0)}</p>
-                  </div>
-                </div>
+                <TrendingUp className={`h-8 w-8 ${netProfit >= 0 ? 'text-blue-100' : 'text-rose-100'}`} />
               </div>
             </Card>
 
-            <Card className="rounded-3xl p-6 border-border/50 bg-card">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Payment Status</h3>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold">€{totalPaid.toFixed(2)}</span>
-                    <span className="text-sm text-muted-foreground">collected</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2 my-2 overflow-hidden">
-                    <div
-                      className="bg-green-500 h-full rounded-full transition-all"
-                      style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Invoiced: €{totalIncome.toFixed(2)}</span>
-                    <span>{totalIncome > 0 ? ((totalPaid / totalIncome) * 100).toFixed(0) : 0}%</span>
-                  </div>
+            <Card className="rounded-2xl border border-slate-200 bg-white col-span-2">
+              <div className="p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-slate-600">Είσπραξη</p>
+                  <p className="text-xs text-slate-400">€{totalPaid.toFixed(0)} / €{totalIncome.toFixed(0)}</p>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all"
+                    style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Εισπραγμένα: €{totalPaid.toFixed(2)}</span>
+                  <span>{totalIncome > 0 ? ((totalPaid / totalIncome) * 100).toFixed(0) : 0}%</span>
                 </div>
 
                 {recentPayments.length > 0 && (
-                  <div className="pt-4 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Recent Payments</p>
-                    <div className="space-y-2">
+                  <div className="pt-2 border-t border-slate-100">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Τελευταίες Πληρωμές</p>
+                    <div className="space-y-1">
                       {recentPayments.slice(0, 3).map((p, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{format(new Date(p.date), 'dd MMM yyyy')}</span>
-                          <span className="font-medium text-green-600">+€{p.amount.toFixed(2)}</span>
+                          <span className="text-slate-400">{format(new Date(p.date), 'dd MMM yyyy')}</span>
+                          <span className="font-medium text-emerald-600">+€{p.amount.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>

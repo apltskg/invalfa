@@ -158,100 +158,92 @@ export default function AdminSettings() {
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Διαχείριση Χρηστών</h1>
-                    <p className="text-muted-foreground">Διαχειριστείτε τους χρήστες και τα δικαιώματά τους.</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Διαχείριση Χρηστών</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Χρήστες και δικαιώματα &mdash; {profiles?.length || 0} σύνολο</p>
                 </div>
-                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl">
+                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl h-9 text-sm bg-blue-600 hover:bg-blue-700">
                     <UserPlus className="h-4 w-4" />
                     Προσθήκη Χρήστη
                 </Button>
             </div>
 
-            <Card className="rounded-3xl border-none shadow-sm">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Χρήστες Συστήματος</CardTitle>
-                            <CardDescription>
-                                Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες
-                            </CardDescription>
-                        </div>
-                        <div className="relative w-72">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Αναζήτηση με email ή όνομα..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 rounded-xl"
-                            />
-                        </div>
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-semibold text-slate-700">Χρήστες Συστήματος</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες</p>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {filteredProfiles?.map((profile) => (
-                            <div
-                                key={profile.id}
-                                className="flex items-center justify-between p-4 rounded-2xl border bg-card/50 hover:bg-muted/50 transition-colors"
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Αναζήτηση email ή ονόμα..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 h-9 text-sm rounded-xl border-slate-200"
+                        />
+                    </div>
+                </div>
+                {filteredProfiles?.map((profile) => (
+                    <div
+                        key={profile.id}
+                        className="flex items-center justify-between p-4 rounded-2xl border bg-card/50 hover:bg-muted/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <User className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="font-medium">{profile.full_name || "Χωρίς Όνομα"}</p>
+                                <p className="text-sm text-muted-foreground">{profile.email}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                {profile.role === 'admin' ? (
+                                    <Badge variant="default" className="bg-purple-600 hover:bg-purple-700">Admin</Badge>
+                                ) : (
+                                    <Badge variant="secondary">Staff</Badge>
+                                )}
+                            </div>
+
+                            <Select
+                                defaultValue={profile.role || "staff"}
+                                onValueChange={(value) => handleRoleChange(profile.id, value as "admin" | "staff")}
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                        <User className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{profile.full_name || "Χωρίς Όνομα"}</p>
-                                        <p className="text-sm text-muted-foreground">{profile.email}</p>
-                                    </div>
-                                </div>
+                                <SelectTrigger className="w-[140px] rounded-xl h-9">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="staff">Staff</SelectItem>
+                                    <SelectItem value="admin">
+                                        <div className="flex items-center gap-2">
+                                            <Shield className="h-3 w-3" />
+                                            Admin
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        {profile.role === 'admin' ? (
-                                            <Badge variant="default" className="bg-purple-600 hover:bg-purple-700">Admin</Badge>
-                                        ) : (
-                                            <Badge variant="secondary">Staff</Badge>
-                                        )}
-                                    </div>
-
-                                    <Select
-                                        defaultValue={profile.role || "staff"}
-                                        onValueChange={(value) => handleRoleChange(profile.id, value as "admin" | "staff")}
-                                    >
-                                        <SelectTrigger className="w-[140px] rounded-xl h-9">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="staff">Staff</SelectItem>
-                                            <SelectItem value="admin">
-                                                <div className="flex items-center gap-2">
-                                                    <Shield className="h-3 w-3" />
-                                                    Admin
-                                                </div>
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
-                                        onClick={() => handleDeleteUser(profile.id)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                        {filteredProfiles?.length === 0 && (
-                            <div className="text-center py-8 text-muted-foreground">
-                                Δεν βρέθηκαν χρήστες.
-                            </div>
-                        )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                                onClick={() => handleDeleteUser(profile.id)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
-                </CardContent>
+                ))}
+                {filteredProfiles?.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                        Δεν βρέθηκαν χρήστες.
+                    </div>
+                )}
             </Card>
 
             <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>

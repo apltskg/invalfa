@@ -85,11 +85,11 @@ export default function Suppliers() {
             setDuplicateWarning(null);
             return;
         }
-        
-        const existing = suppliers.find(s => 
+
+        const existing = suppliers.find(s =>
             s.vat_number === vat && s.id !== editingId
         );
-        
+
         setDuplicateWarning(existing || null);
     };
 
@@ -103,12 +103,12 @@ export default function Suppliers() {
             toast.error("Το όνομα προμηθευτή είναι υποχρεωτικό");
             return;
         }
-        
+
         if (duplicateWarning && !editingId) {
             toast.error("Υπάρχει ήδη προμηθευτής με αυτό το ΑΦΜ");
             return;
         }
-        
+
         setSaving(true);
         try {
             const dataToSave = {
@@ -155,7 +155,7 @@ export default function Suppliers() {
 
     async function handleUpdateExisting() {
         if (!duplicateWarning) return;
-        
+
         setSaving(true);
         try {
             const { error } = await supabase
@@ -240,14 +240,14 @@ export default function Suppliers() {
 
     // Get invoice count for each supplier
     const [invoiceCounts, setInvoiceCounts] = useState<Record<string, number>>({});
-    
+
     useEffect(() => {
         async function fetchCounts() {
             const { data } = await supabase
                 .from('invoices')
                 .select('supplier_id')
                 .not('supplier_id', 'is', null);
-            
+
             if (data) {
                 const counts: Record<string, number> = {};
                 data.forEach((item: any) => {
@@ -275,11 +275,11 @@ export default function Suppliers() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Προμηθευτές</h1>
-                    <p className="mt-1 text-muted-foreground">Διαχείριση παρόχων ταξιδιωτικών υπηρεσιών</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Προμηθευτές</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Πάροχοι υπηρεσιών &mdash; {suppliers.length} σύνολο</p>
                 </div>
 
                 <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -287,8 +287,8 @@ export default function Suppliers() {
                     if (!open) resetForm();
                 }}>
                     <DialogTrigger asChild>
-                        <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
-                            <Plus className="h-5 w-5" />
+                        <Button className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700">
+                            <Plus className="h-4 w-4" />
                             Προσθήκη Προμηθευτή
                         </Button>
                     </DialogTrigger>
@@ -417,8 +417,8 @@ export default function Suppliers() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="category">Προεπιλεγμένη Κατηγορία Εξόδων</Label>
-                                <Select 
-                                    value={formData.default_category_id} 
+                                <Select
+                                    value={formData.default_category_id}
                                     onValueChange={(v) => setFormData({ ...formData, default_category_id: v })}
                                 >
                                     <SelectTrigger className="rounded-xl h-11">
@@ -461,9 +461,9 @@ export default function Suppliers() {
                             <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11">
                                 Ακύρωση
                             </Button>
-                            <Button 
-                                onClick={handleSave} 
-                                disabled={saving || (!!duplicateWarning && !editingId)} 
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving || (!!duplicateWarning && !editingId)}
                                 className="rounded-xl h-11 px-8"
                             >
                                 {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
@@ -473,118 +473,101 @@ export default function Suppliers() {
                 </Dialog>
             </div>
 
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Αναζήτηση με όνομα, email ή ΑΦΜ..."
-                    className="pl-10 rounded-2xl h-12 bg-muted/50"
+                    placeholder="Αναζήτηση ονόματος ή ΑΦΜ..."
+                    className="pl-9 h-9 text-sm rounded-xl border-slate-200"
                 />
             </div>
 
             {loading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {[1, 2, 3].map((i) => (
-                        <Card key={i} className="h-48 animate-pulse rounded-3xl bg-muted/50" />
+                        <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
                     ))}
                 </div>
             ) : filteredSuppliers.length === 0 ? (
-                <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
-                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-medium mb-2">Δεν βρέθηκαν προμηθευτές</h3>
-                    <p className="text-muted-foreground text-center max-w-sm mb-6">
-                        {searchQuery ? "Δοκιμάστε διαφορετικούς όρους αναζήτησης" : "Ξεκινήστε προσθέτοντας τον πρώτο σας προμηθευτή"}
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 p-14 text-center">
+                    <Building2 className="h-10 w-10 text-slate-200 mb-3" />
+                    <h3 className="text-sm font-semibold text-slate-700 mb-1">Προμηθευτές δεν βρέθηκαν</h3>
+                    <p className="text-xs text-slate-400 max-w-xs mb-4">
+                        {searchQuery ? "Αλλάξτε την αναζήτηση" : "Προσθέστε τον πρώτο προμηθευτή σας"}
                     </p>
                     {!searchQuery && (
-                        <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
-                            Προσθήκη Πρώτου Προμηθευτή
+                        <Button onClick={() => setDialogOpen(true)} className="rounded-xl h-9 text-sm bg-blue-600 hover:bg-blue-700">
+                            Προσθήκη Προμηθευτή
                         </Button>
                     )}
-                </Card>
+                </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                     {filteredSuppliers.map((supplier, index) => (
-                        <motion.div
+                        <div
                             key={supplier.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            className="flex items-center gap-4 px-5 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors group"
                         >
-                            <Card className="p-6 rounded-3xl hover:shadow-lg transition-all duration-300 border-border/50 bg-gradient-to-br from-card to-secondary/20">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                            <Building2 className="h-6 w-6 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg">{supplier.name}</h3>
-                                            {supplier.vat_number && (
-                                                <p className="text-xs text-muted-foreground font-mono">ΑΦΜ: {supplier.vat_number}</p>
-                                            )}
-                                        </div>
-                                    </div>
+                            {/* Icon */}
+                            <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                            </div>
 
-                                    <div className="flex gap-1">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleEdit(supplier)}
-                                            className="h-8 w-8 rounded-xl"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleDelete(supplier.id)}
-                                            className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    {supplier.contact_person && (
-                                        <p className="text-sm text-muted-foreground">{supplier.contact_person}</p>
+                            {/* Main info */}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{supplier.name}</p>
+                                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                    {supplier.vat_number && (
+                                        <span className="text-xs text-slate-400 font-mono">ΑΦΜ: {supplier.vat_number}</span>
                                     )}
                                     {supplier.email && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Mail className="h-4 w-4" />
-                                            <span className="truncate">{supplier.email}</span>
-                                        </div>
+                                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                                            <Mail className="h-3 w-3" />{supplier.email}
+                                        </span>
                                     )}
                                     {supplier.phone && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Phone className="h-4 w-4" />
-                                            <span>{supplier.phone}</span>
-                                        </div>
-                                    )}
-                                    {supplier.address && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <MapPin className="h-4 w-4" />
-                                            <span className="truncate">{supplier.address}</span>
-                                        </div>
+                                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                                            <Phone className="h-3 w-3" />{supplier.phone}
+                                        </span>
                                     )}
                                 </div>
+                            </div>
 
-                                {/* Category & invoice count */}
-                                <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap gap-2">
-                                    {getCategoryName(supplier.default_category_id) && (
-                                        <Badge variant="secondary">
-                                            {getCategoryName(supplier.default_category_id)}
-                                        </Badge>
-                                    )}
-                                    {invoiceCounts[supplier.id] && (
-                                        <Badge variant="outline" className="gap-1">
-                                            <FileText className="h-3 w-3" />
-                                            {invoiceCounts[supplier.id]} έξοδα
-                                        </Badge>
-                                    )}
-                                </div>
-                            </Card>
-                        </motion.div>
+                            {/* Badges */}
+                            <div className="hidden sm:flex items-center gap-2">
+                                {getCategoryName(supplier.default_category_id) && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                        {getCategoryName(supplier.default_category_id)}
+                                    </span>
+                                )}
+                                {invoiceCounts[supplier.id] && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1">
+                                        <FileText className="h-3 w-3" />{invoiceCounts[supplier.id]} έξοδα
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleEdit(supplier)}
+                                    className="h-8 w-8 rounded-lg hover:bg-slate-100"
+                                >
+                                    <Edit className="h-3.5 w-3.5 text-slate-500" />
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleDelete(supplier.id)}
+                                    className="h-8 w-8 rounded-lg hover:bg-rose-50"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                                </Button>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
