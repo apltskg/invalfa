@@ -28,6 +28,7 @@ import Reports from "./pages/Reports";
 import ClientPortal from "./pages/ClientPortal";
 import InvoiceExchange from "./pages/InvoiceExchange";
 import BusinessIntelligence from "./pages/BusinessIntelligence";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
             <Route path="/client-portal" element={<ClientPortal />} />
 
