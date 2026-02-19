@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     Upload, FileText, TrendingUp, MoreVertical, Eye,
-    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar
+    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar, Tag
 } from "lucide-react";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { format } from "date-fns";
@@ -27,6 +27,16 @@ import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+
+interface IncomeCategory {
+    id: string;
+    name_el: string;
+    color: string | null;
+    icon: string | null;
+}
 
 export default function GeneralIncome() {
     const { startDate, endDate, monthKey } = useMonth();
@@ -39,8 +49,15 @@ export default function GeneralIncome() {
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState("");
+    const [categories, setCategories] = useState<IncomeCategory[]>([]);
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-    useEffect(() => { fetchData(); }, [monthKey]);
+    useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
+
+    async function fetchCategories() {
+        const { data } = await supabase.from("income_categories").select("id,name_el,color,icon").order("sort_order");
+        setCategories((data as IncomeCategory[]) || []);
+    }
 
     async function fetchData() {
         setLoading(true);
@@ -77,7 +94,12 @@ export default function GeneralIncome() {
         setSaving(true);
         try {
             const { error } = await supabase.from("invoices")
-                .update({ merchant: editingInvoice.merchant, amount: editingInvoice.amount, invoice_date: editingInvoice.invoice_date })
+                .update({
+                    merchant: editingInvoice.merchant,
+                    amount: editingInvoice.amount,
+                    invoice_date: editingInvoice.invoice_date,
+                    income_category_id: (editingInvoice as any).income_category_id || null,
+                })
                 .eq("id", editingInvoice.id);
             if (error) throw error;
             toast.success("Ενημερώθηκε επιτυχώς");
@@ -99,9 +121,22 @@ export default function GeneralIncome() {
     };
 
     const totalAmount = invoices.reduce((s, i) => s + (i.amount || 0), 0);
-    const filtered = invoices.filter(i =>
-        !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase())
-    );
+
+    // Per-category breakdown
+    const byCategory = invoices.reduce((acc, inv) => {
+        const catId = (inv as any).income_category_id || "__none";
+        acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
+        return acc;
+    }, {} as Record<string, number>);
+
+    const filtered = invoices.filter(i => {
+        const matchSearch = !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase());
+        const matchCat = !activeCategory || (inv => (inv as any).income_category_id === activeCategory)(i);
+        return matchSearch && matchCat;
+    });
+
+    const getCategoryById = (id: string | null | undefined) =>
+        categories.find(c => c.id === id) || null;
 
     return (
         <div className="space-y-6">
@@ -120,7 +155,7 @@ export default function GeneralIncome() {
                 </Button>
             </div>
 
-            {/* Stat card */}
+            {/* Stats row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-emerald-500">
                     <CardContent className="p-4">
@@ -129,7 +164,51 @@ export default function GeneralIncome() {
                         <p className="text-xs text-slate-400 mt-0.5">{invoices.length} καταχωρήσεις</p>
                     </CardContent>
                 </Card>
+                {categories
+                    .filter(cat => byCategory[cat.id])
+                    .slice(0, 3)
+                    .map(cat => (
+                        <Card
+                            key={cat.id}
+                            className="rounded-xl border-slate-200 bg-white cursor-pointer hover:shadow-sm transition-shadow"
+                            style={{ borderLeftWidth: 4, borderLeftColor: cat.color || "#10b981" }}
+                            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                        >
+                            <CardContent className="p-4">
+                                <p className="text-xs font-medium text-slate-500 truncate">{cat.name_el}</p>
+                                <p className="text-lg font-bold text-slate-700 mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
             </div>
+
+            {/* Category filter chips */}
+            {categories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => setActiveCategory(null)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${!activeCategory
+                                ? "bg-emerald-600 text-white border-emerald-600"
+                                : "border-slate-200 text-slate-500 hover:border-slate-400"
+                            }`}
+                    >
+                        Όλα
+                    </button>
+                    {categories.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                            className={`text-xs px-3 py-1 rounded-full border transition-colors ${activeCategory === cat.id
+                                    ? "text-white border-transparent"
+                                    : "border-slate-200 text-slate-500 hover:border-slate-400"
+                                }`}
+                            style={activeCategory === cat.id ? { backgroundColor: cat.color || "#10b981", borderColor: cat.color || "#10b981" } : {}}
+                        >
+                            {cat.name_el}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Search */}
             <div className="relative max-w-sm">
@@ -145,8 +224,9 @@ export default function GeneralIncome() {
             {/* Table */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
                 {/* Table header */}
-                <div className="grid grid-cols-[1fr_140px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     <span>Πελάτης / Πηγή</span>
+                    <span>Κατηγορία</span>
                     <span>Ημερομηνία</span>
                     <span className="text-right">Ποσό</span>
                     <span />
@@ -167,8 +247,9 @@ export default function GeneralIncome() {
                     <div className="divide-y divide-slate-100">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
+                            const cat = getCategoryById((inv as any).income_category_id);
                             return (
-                                <div key={inv.id} className="grid grid-cols-[1fr_140px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                <div key={inv.id} className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
                                     {/* Name */}
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
@@ -186,6 +267,20 @@ export default function GeneralIncome() {
                                                 </Badge>
                                             )}
                                         </div>
+                                    </div>
+
+                                    {/* Category */}
+                                    <div>
+                                        {cat ? (
+                                            <span
+                                                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                                                style={{ backgroundColor: `${cat.color}18`, color: cat.color || "#10b981" }}
+                                            >
+                                                {cat.name_el}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-300">—</span>
+                                        )}
                                     </div>
 
                                     {/* Date */}
@@ -263,6 +358,27 @@ export default function GeneralIncome() {
                                     onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
                                     className="rounded-xl border-slate-200 text-sm"
                                 />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500">Κατηγορία</Label>
+                                <Select
+                                    value={(editingInvoice as any).income_category_id || "none"}
+                                    onValueChange={v => setEditingInvoice({
+                                        ...editingInvoice, ...({
+                                            income_category_id: v === "none" ? null : v
+                                        } as any)
+                                    })}
+                                >
+                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                        <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                                        {categories.map(cat => (
+                                            <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">

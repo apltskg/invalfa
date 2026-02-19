@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CategoryManager } from "@/components/categories/CategoryManager";
+import { IncomeCategoryManager } from "@/components/categories/IncomeCategoryManager";
 
 interface AgencySettings {
     company_name: string;
@@ -219,6 +220,19 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent className="p-6">
                     <CategoryManager />
+                </CardContent>
+            </Card>
+
+            {/* Income categories */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-emerald-400" />
+                        Κατηγορίες Εσόδων
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <IncomeCategoryManager />
                 </CardContent>
             </Card>
         </div>

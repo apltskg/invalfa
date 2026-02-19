@@ -1,402 +1,489 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
-    BarChart3,
-    Search,
-    Send,
-    Inbox,
-    Plus,
-    Users,
-    ShieldCheck,
-    Brain,
-    Sparkles,
-    Zap,
-    Share2,
-    Upload,
-    FileText,
-    AlertTriangle,
-    CheckCircle2,
-    TrendingUp,
-    TrendingDown,
-    Loader2,
-    MoreVertical,
-    Camera,
-    MessageSquare
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+    Send, Inbox, Mail, Clock, Eye, CheckCircle2,
+    FileText, Search, Plus, Loader2, Users, Share2,
+    AlertCircle, MoreVertical, Download, Building2
 } from "lucide-react";
-import { Toaster, toast } from "sonner";
-import { cn } from "@/lib/utils";
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { el } from "date-fns/locale";
-import { AI_CATEGORIES, generateSpendingInsights, analyzeInvoiceAI, SmartInvoiceData } from "@/lib/ai-invoice-service";
+
+interface HubShare {
+    id: string;
+    invoice_id: string;
+    customer_email: string;
+    customer_name: string | null;
+    message: string | null;
+    status: string;
+    email_sent_at: string | null;
+    viewed_at: string | null;
+    created_at: string | null;
+    invoice?: {
+        invoice_number: string | null;
+        amount: number | null;
+        invoice_date: string | null;
+        merchant: string | null;
+    };
+}
+
+interface Customer {
+    id: string;
+    name: string;
+    email: string | null;
+}
+
+interface Invoice {
+    id: string;
+    invoice_number: string | null;
+    amount: number | null;
+    invoice_date: string | null;
+    merchant: string | null;
+    type: string;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    pending: { label: "Εκκρεμεί", color: "text-amber-600 bg-amber-50 border-amber-200", icon: <Clock className="h-3 w-3" /> },
+    sent: { label: "Εστάλη", color: "text-blue-600 bg-blue-50 border-blue-200", icon: <Send className="h-3 w-3" /> },
+    viewed: { label: "Προβλήθηκε", color: "text-purple-600 bg-purple-50 border-purple-200", icon: <Eye className="h-3 w-3" /> },
+    acknowledged: { label: "Επιβεβαιώθηκε", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: <CheckCircle2 className="h-3 w-3" /> },
+};
 
 export default function InvoiceExchange() {
-    const [activeTab, setActiveTab] = useState("hub");
-    const [isUploading, setIsUploading] = useState(false);
-    const [analyzingFile, setAnalyzingFile] = useState<File | null>(null);
-    const [aiInsights, setAiInsights] = useState<any[]>([]);
-    const [showInviteDialog, setShowInviteDialog] = useState(false);
+    const [tab, setTab] = useState("sent");
+    const [shares, setShares] = useState<HubShare[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [sendDialogOpen, setSendDialogOpen] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+    // Send form state
+    const [form, setForm] = useState({
+        invoice_id: "",
+        customer_id: "",
+        customer_email: "",
+        customer_name: "",
+        message: "",
+    });
 
     useEffect(() => {
-        loadInsights();
+        fetchShares();
+        fetchCustomers();
+        fetchInvoices();
     }, []);
 
-    const loadInsights = async () => {
-        const insights = await generateSpendingInsights("current");
-        setAiInsights(insights);
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setAnalyzingFile(file);
-            setIsUploading(true);
-
-            try {
-                const result = await analyzeInvoiceAI(file);
-                toast.success("Η ανάλυση ολοκληρώθηκε!", {
-                    description: `Κατηγορία: ${result.analysis.categoryName} • Εμπιστοσύνη: ${(result.analysis.confidence * 100).toFixed(0)}%`
-                });
-            } catch (error) {
-                toast.error("Σφάλμα κατά την ανάλυση");
-            } finally {
-                setIsUploading(false);
-                setAnalyzingFile(null);
-            }
+    async function fetchShares() {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("hub_shares")
+                .select("*")
+                .order("created_at", { ascending: false });
+            if (error) throw error;
+            setShares((data as HubShare[]) || []);
+        } catch (e) {
+            console.error(e);
+            toast.error("Αποτυχία φόρτωσης");
+        } finally {
+            setLoading(false);
         }
-    };
+    }
 
-    const handleInvite = () => {
-        setShowInviteDialog(false);
-        toast.success("Η πρόσκληση στάλθηκε!", {
-            description: "Ο συνεργάτης θα λάβει email με οδηγίες εγγραφής."
-        });
+    async function fetchCustomers() {
+        const { data } = await supabase.from("customers").select("id,name,email").order("name");
+        setCustomers((data as Customer[]) || []);
+    }
+
+    async function fetchInvoices() {
+        const { data } = await supabase
+            .from("invoices")
+            .select("id,invoice_number,amount,invoice_date,merchant,type")
+            .eq("type", "income")
+            .is("package_id", null)
+            .order("invoice_date", { ascending: false })
+            .limit(100);
+        setInvoices((data as Invoice[]) || []);
+    }
+
+    function handleCustomerSelect(customerId: string) {
+        const cust = customers.find(c => c.id === customerId);
+        if (cust) {
+            setForm(f => ({
+                ...f,
+                customer_id: customerId,
+                customer_email: cust.email || "",
+                customer_name: cust.name,
+            }));
+        }
+    }
+
+    async function handleSend() {
+        if (!form.invoice_id) { toast.error("Επιλέξτε τιμολόγιο"); return; }
+        if (!form.customer_email) { toast.error("Εισάγετε email παραλήπτη"); return; }
+
+        setSending(true);
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+
+            // 1. Create hub_share record
+            const { data: share, error: shareErr } = await supabase
+                .from("hub_shares")
+                .insert({
+                    invoice_id: form.invoice_id,
+                    customer_id: form.customer_id || null,
+                    customer_email: form.customer_email.trim(),
+                    customer_name: form.customer_name || null,
+                    message: form.message || null,
+                    status: "sent",
+                    email_sent_at: new Date().toISOString(),
+                    created_by: userId || null,
+                })
+                .select()
+                .single();
+
+            if (shareErr) throw shareErr;
+
+            // 2. TODO: Trigger email via Supabase Edge Function
+            // await supabase.functions.invoke("send-invoice-email", {
+            //   body: { shareId: share.id }
+            // });
+
+            toast.success("Το τιμολόγιο εστάλη!", {
+                description: `Ειδοποίηση στο ${form.customer_email}`,
+            });
+
+            setSendDialogOpen(false);
+            setForm({ invoice_id: "", customer_id: "", customer_email: "", customer_name: "", message: "" });
+            fetchShares();
+        } catch (err: any) {
+            toast.error(`Αποτυχία: ${err.message}`);
+        } finally {
+            setSending(false);
+        }
+    }
+
+    const filtered = shares.filter(s => {
+        const q = search.toLowerCase();
+        return !q
+            || (s.customer_name || "").toLowerCase().includes(q)
+            || s.customer_email.toLowerCase().includes(q);
+    });
+
+    const stats = {
+        total: shares.length,
+        sent: shares.filter(s => s.status === "sent").length,
+        viewed: shares.filter(s => s.status === "viewed").length,
+        acknowledged: shares.filter(s => s.status === "acknowledged").length,
     };
 
     return (
-        <div className="space-y-8 pb-24 animate-in fade-in duration-500">
-            {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-600 p-8 text-white shadow-2xl">
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-md">
-                                <Sparkles className="w-3 h-3 mr-1" /> AI-Powered
-                            </Badge>
-                            <Badge className="bg-emerald-500/80 text-white border-0 backdrop-blur-md">
-                                <ShieldCheck className="w-3 h-3 mr-1" /> Secure Network
-                            </Badge>
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">Invoice Hub</h1>
-                        <p className="text-indigo-100 max-w-xl text-lg opacity-90">
-                            Το κέντρο διαχείρισης παραστατικών της νέας εποχής.
-                            Ανταλλάξτε, αναλύστε και πληρώστε τιμολόγια με τη δύναμη της Τεχνητής Νοημοσύνης.
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                            onClick={() => setShowInviteDialog(true)}
-                            className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl h-12 px-6"
-                        >
-                            <Share2 className="w-4 h-4 mr-2" />
-                            Πρόσκληση Συνεργάτη
-                        </Button>
-                        <div className="relative">
-                            <input
-                                type="file"
-                                className="hidden"
-                                id="invoice-upload"
-                                onChange={handleFileUpload}
-                                accept=".pdf,.jpg,.png"
-                                disabled={isUploading}
-                            />
-                            <label htmlFor="invoice-upload">
-                                <Button
-                                    asChild
-                                    className="bg-indigo-500 hover:bg-indigo-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all rounded-xl h-12 px-6 cursor-pointer border border-indigo-400/30"
-                                >
-                                    <span>
-                                        {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                                        {isUploading ? "Ανάλυση..." : "Μεταφόρτωση"}
-                                    </span>
-                                </Button>
-                            </label>
-                        </div>
-                    </div>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Invoice Hub</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        Αποστολή και παρακολούθηση τιμολογίων προς πελάτες
+                    </p>
                 </div>
+                <Button
+                    onClick={() => setSendDialogOpen(true)}
+                    className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700"
+                >
+                    <Send className="h-4 w-4" />
+                    Αποστολή Τιμολογίου
+                </Button>
+            </div>
 
-                {/* Quick Stats in Hero */}
-                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                        <p className="text-indigo-100 text-sm font-medium mb-1">Νέα Εισερχόμενα</p>
-                        <p className="text-3xl font-bold">12</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                        <p className="text-indigo-100 text-sm font-medium mb-1">Προς Έγκριση</p>
-                        <p className="text-3xl font-bold">4</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                        <p className="text-indigo-100 text-sm font-medium mb-1">Ανωμαλίες (AI)</p>
-                        <p className="text-3xl font-bold text-rose-200">2</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                        <p className="text-indigo-100 text-sm font-medium mb-1">Κέρδος Δικτύου</p>
-                        <p className="text-3xl font-bold text-emerald-200">+15%</p>
-                    </div>
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-blue-500">
+                    <CardContent className="p-4">
+                        <p className="text-xs font-medium text-slate-500">Συνολικές Αποστολές</p>
+                        <p className="text-2xl font-bold text-blue-600 mt-0.5">{stats.total}</p>
+                    </CardContent>
+                </Card>
+                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-amber-400">
+                    <CardContent className="p-4">
+                        <p className="text-xs font-medium text-slate-500">Εστάλησαν</p>
+                        <p className="text-2xl font-bold text-amber-500 mt-0.5">{stats.sent}</p>
+                    </CardContent>
+                </Card>
+                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-purple-400">
+                    <CardContent className="p-4">
+                        <p className="text-xs font-medium text-slate-500">Προβλήθηκαν</p>
+                        <p className="text-2xl font-bold text-purple-500 mt-0.5">{stats.viewed}</p>
+                    </CardContent>
+                </Card>
+                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-emerald-500">
+                    <CardContent className="p-4">
+                        <p className="text-xs font-medium text-slate-500">Επιβεβαιώθηκαν</p>
+                        <p className="text-2xl font-bold text-emerald-600 mt-0.5">{stats.acknowledged}</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Info banner */}
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-3">
+                <Share2 className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-700">
+                    <strong>Πώς λειτουργεί το Invoice Hub:</strong> Επιλέγεις ένα τιμολόγιο εσόδου, βάζεις το email του πελάτη και το στέλνεις.
+                    Ο πελάτης λαμβάνει email με ασφαλές link και βλέπει το τιμολόγιο στο δικό του dashboard —
+                    χωρίς να χρειάζεται να εγγραφεί πουθενά.
                 </div>
             </div>
 
-            {/* Main Content Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="bg-white p-1 rounded-2xl border shadow-sm w-full md:w-auto overflow-x-auto flex-nowrap justify-start">
-                    <TabsTrigger value="hub" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
-                        <Inbox className="w-4 h-4 mr-2" />
-                        Smart Inbox
-                    </TabsTrigger>
-                    <TabsTrigger value="insights" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
-                        <Brain className="w-4 h-4 mr-2" />
-                        AI Insights
-                    </TabsTrigger>
-                    <TabsTrigger value="network" className="rounded-xl px-4 py-2 text-sm font-medium data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">
-                        <Users className="w-4 h-4 mr-2" />
-                        Δίκτυο Συνεργατών
-                    </TabsTrigger>
-                </TabsList>
+            {/* Search */}
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                    placeholder="Αναζήτηση παραλήπτη..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                />
+            </div>
 
-                {/* Smart Inbox Tab */}
-                <TabsContent value="hub" className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Inbox List */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                    <Inbox className="w-5 h-5 text-indigo-500" />
-                                    Πρόσφατα Παραστατικά
-                                </h2>
-                                <div className="flex gap-2">
-                                    <Input placeholder="Αναζήτηση..." className="w-64 rounded-xl bg-white" />
-                                    <Button variant="outline" size="icon" className="rounded-xl"><Search className="w-4 h-4" /></Button>
-                                </div>
-                            </div>
+            {/* List */}
+            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+                <div className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    <span>Παραλήπτης</span>
+                    <span>Τιμολόγιο</span>
+                    <span>Ημερομηνία</span>
+                    <span>Κατάσταση</span>
+                    <span />
+                </div>
 
-                            <div className="space-y-3">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <Card key={i} className="group p-4 rounded-2xl hover:shadow-lg transition-all duration-300 border-slate-100 hover:border-indigo-100 cursor-pointer bg-white">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn(
-                                                    "h-12 w-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm group-hover:scale-110 transition-transform",
-                                                    i % 2 === 0 ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600"
-                                                )}>
-                                                    {i % 2 === 0 ? <FileText className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">Digital Solutions Ltd</h3>
-                                                        {i === 1 && <Badge variant="secondary" className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0 rounded-md">AI Alert</Badge>}
-                                                    </div>
-                                                    <p className="text-sm text-slate-500">
-                                                        Τιμολόγιο #{2024000 + i} • {format(new Date(), 'dd MMM yyyy', { locale: el })}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="text-right">
-                                                <p className="font-bold text-slate-900 text-lg">€{(Math.random() * 1000).toFixed(2)}</p>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span className={cn(
-                                                        "h-2 w-2 rounded-full",
-                                                        i === 1 ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
-                                                    )} />
-                                                    <span className="text-xs font-medium text-slate-500">
-                                                        {i === 1 ? 'Έλεγχος' : 'Εγκρίθηκε'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* AI Context Preview */}
-                                        {i === 1 && (
-                                            <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3">
-                                                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                                                <div>
-                                                    <p className="text-sm font-semibold text-rose-700">Ανίχνευση Ανωμαλίας (AI)</p>
-                                                    <p className="text-sm text-rose-600/90">Το ποσό είναι 45% υψηλότερο από το μέσο όρο των τελευταίων 6 μηνών για αυτόν τον προμηθευτή.</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Smart Actions & Sidebar */}
-                        <div className="space-y-6">
-                            {/* Quick Actions Card */}
-                            <Card className="p-6 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-800 text-white border-0 shadow-xl">
-                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                    <Sparkles className="w-5 h-5 text-yellow-400" />
-                                    Quick Actions
-                                </h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
-                                        <Camera className="w-6 h-6" />
-                                        <span className="text-xs">Scan</span>
-                                    </Button>
-                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
-                                        <Upload className="w-6 h-6" />
-                                        <span className="text-xs">Upload</span>
-                                    </Button>
-                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
-                                        <Send className="w-6 h-6" />
-                                        <span className="text-xs">Send</span>
-                                    </Button>
-                                    <Button variant="secondary" className="h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border-0 text-white transition-all">
-                                        <MessageSquare className="w-6 h-6" />
-                                        <span className="text-xs">Ask AI</span>
-                                    </Button>
-                                </div>
-                            </Card>
-
-                            {/* Verified Partners */}
-                            <Card className="p-6 rounded-3xl border-slate-100 shadow-lg bg-white">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-bold text-slate-800">Top Partners</h3>
-                                    <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 p-0 h-auto font-medium">View All</Button>
-                                </div>
-                                <div className="space-y-4">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
-                                                {String.fromCharCode(64 + i)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-1">
-                                                    <p className="font-semibold text-sm text-slate-900">Partner Corp {i}</p>
-                                                    <CheckCircle2 className="w-3 h-3 text-emerald-500 fill-emerald-100" />
-                                                </div>
-                                                <p className="text-xs text-slate-500">Verified • 4.9/5.0</p>
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-indigo-50 text-indigo-600">
-                                                <Send className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        </div>
+                {loading ? (
+                    <div className="flex items-center justify-center p-16">
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
                     </div>
-                </TabsContent>
-
-                {/* AI Insights Tab */}
-                <TabsContent value="insights" className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="p-6 rounded-3xl border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-white">
-                            <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                                <Brain className="w-5 h-5 text-indigo-600" />
-                                Spending Intelligence
-                            </h3>
-                            <div className="space-y-4">
-                                {aiInsights.map((insight, idx) => (
-                                    <div key={idx} className="p-4 bg-white rounded-2xl shadow-sm border border-indigo-50/50 flex gap-4">
-                                        <div className={cn(
-                                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                                            insight.type === 'warning' ? "bg-rose-100 text-rose-600" :
-                                                insight.type === 'success' ? "bg-emerald-100 text-emerald-600" :
-                                                    "bg-blue-100 text-blue-600"
-                                        )}>
-                                            {insight.type === 'warning' ? <TrendingUp className="w-5 h-5" /> :
-                                                insight.type === 'success' ? <TrendingDown className="w-5 h-5" /> :
-                                                    <Sparkles className="w-5 h-5" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-slate-800">{insight.title}</h4>
-                                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">{insight.message}</p>
-                                            <Button variant="link" className="p-0 h-auto mt-2 text-indigo-600 font-medium text-xs">
-                                                {insight.action} →
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-
-                        <div className="space-y-6">
-                            <Card className="p-6 rounded-3xl bg-slate-900 text-white border-0 shadow-lg">
-                                <h3 className="font-bold text-lg mb-2">My Assistant</h3>
-                                <div className="h-64 flex flex-col justify-end">
-                                    <div className="space-y-3 mb-4">
-                                        <div className="bg-white/10 rounded-2xl p-3 rounded-bl-sm self-start max-w-[80%] backdrop-blur-sm">
-                                            <p className="text-sm">Καλημέρα! Παρατήρησα μια αύξηση 15% στα κόστη Marketing αυτόν τον μήνα. Θέλετε ανάλυση;</p>
-                                        </div>
-                                        <div className="bg-indigo-600 rounded-2xl p-3 rounded-br-sm self-end max-w-[80%]">
-                                            <p className="text-sm">Ναι, δείξε μου τα top 3 έξοδα.</p>
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <Input placeholder="Ρωτήστε κάτι..." className="bg-white/10 border-white/20 text-white placeholder:text-white/40 pr-10 rounded-xl" />
-                                        <Button size="icon" variant="ghost" className="absolute right-0 top-0 text-white hover:bg-white/10 rounded-xl">
-                                            <Send className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
-                    </div>
-                </TabsContent>
-
-                {/* Network & Invite Tab */}
-                <TabsContent value="network">
-                    <Card className="p-6 md:p-12 text-center rounded-3xl border-dashed border-2 bg-slate-50/50">
-                        <div className="mx-auto h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center mb-6">
-                            <Users className="w-8 h-8 text-indigo-600" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Μεγαλώστε το Δίκτυό σας</h3>
-                        <p className="text-slate-600 max-w-md mx-auto mb-8">
-                            Προσκαλέστε συνεργάτες για να ανταλλάσσετε παραστατικά αυτόματα, χωρίς emails και καθυστερήσεις.
+                ) : filtered.length === 0 ? (
+                    <div className="p-16 text-center">
+                        <Send className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                        <p className="text-slate-400 text-sm font-medium">
+                            {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν έχουν σταλεί τιμολόγια ακόμη"}
                         </p>
-                        <Button size="lg" onClick={() => setShowInviteDialog(true)} className="rounded-xl px-8 h-12 bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-200">
-                            <Share2 className="w-5 h-5 mr-2" />
-                            Αποστολή Πρόσκλησης
-                        </Button>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-
-            {/* Invite Dialog */}
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-                <DialogContent className="sm:max-w-md rounded-3xl p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl">Πρόσκληση Συνεργάτη</DialogTitle>
-                        <DialogDescription>
-                            Στείλτε πρόσκληση για άμεση σύνδεση στο Invoice Hub.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Email Συνεργάτη</label>
-                            <Input placeholder="partner@company.com" className="rounded-xl" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Μήνυμα (προαιρετικό)</label>
-                            <Input placeholder="Γεια σου, έλα να συνδεθούμε στο Invoice Hub..." className="rounded-xl" />
-                        </div>
+                        <p className="text-slate-300 text-xs mt-1">
+                            Πατήστε «Αποστολή Τιμολογίου» για να ξεκινήσετε
+                        </p>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowInviteDialog(false)} className="rounded-xl">Ακύρωση</Button>
-                        <Button onClick={handleInvite} className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">Αποστολή</Button>
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {filtered.map(share => {
+                            const statusCfg = STATUS_CONFIG[share.status] || STATUS_CONFIG.pending;
+                            return (
+                                <div key={share.id} className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                    {/* Recipient */}
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                                            <Building2 className="h-4 w-4 text-blue-400" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-slate-800 truncate">
+                                                {share.customer_name || share.customer_email}
+                                            </p>
+                                            <p className="text-xs text-slate-400 truncate">{share.customer_email}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Invoice ref */}
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <FileText className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                                        <span className="text-xs text-slate-500 truncate">
+                                            {share.invoice_id.slice(0, 8)}…
+                                        </span>
+                                    </div>
+
+                                    {/* Date */}
+                                    <p className="text-sm text-slate-400">
+                                        {share.created_at
+                                            ? format(new Date(share.created_at), "dd/MM/yyyy")
+                                            : "—"}
+                                    </p>
+
+                                    {/* Status badge */}
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusCfg.color}`}>
+                                        {statusCfg.icon}
+                                        {statusCfg.label}
+                                    </span>
+
+                                    {/* Actions */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 rounded-lg">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                            <DropdownMenuItem className="gap-2 text-sm text-slate-600">
+                                                <Eye className="h-4 w-4" /> Προβολή Link
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="gap-2 text-sm text-slate-600">
+                                                <Mail className="h-4 w-4" /> Επανάληψη Email
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {filtered.length > 0 && (
+                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-xs text-slate-400">{filtered.length} αποστολές</span>
+                    </div>
+                )}
+            </Card>
+
+            {/* === Send Invoice Dialog === */}
+            <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+                <DialogContent className="rounded-2xl max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base">
+                            <Send className="h-4 w-4 text-blue-500" />
+                            Αποστολή Τιμολογίου σε Πελάτη
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Invoice picker */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500">ΤΙΜΟΛΟΓΙΟ *</Label>
+                            <Select value={form.invoice_id} onValueChange={v => setForm(f => ({ ...f, invoice_id: v }))}>
+                                <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                    <SelectValue placeholder="Επιλέξτε τιμολόγιο..." />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-52">
+                                    {invoices.map(inv => (
+                                        <SelectItem key={inv.id} value={inv.id}>
+                                            <div className="flex items-center gap-2">
+                                                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                                                <span className="font-medium">{inv.merchant || "Άγνωστος"}</span>
+                                                <span className="text-slate-400 text-xs">
+                                                    {inv.amount ? `€${inv.amount.toFixed(2)}` : ""}
+                                                    {inv.invoice_date ? ` · ${format(new Date(inv.invoice_date), "dd/MM/yy")}` : ""}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4">
+                            <p className="text-xs font-semibold text-slate-500 mb-3">ΠΑΡΑΛΗΠΤΗΣ</p>
+
+                            {/* From existing customer */}
+                            <div className="space-y-1.5 mb-3">
+                                <Label className="text-xs text-slate-400">Επιλογή από πελατολόγιο</Label>
+                                <Select
+                                    value={form.customer_id}
+                                    onValueChange={handleCustomerSelect}
+                                >
+                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                        <SelectValue placeholder="Αναζήτηση πελάτη..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-48">
+                                        {customers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="h-3.5 w-3.5 text-slate-400" />
+                                                    <span>{c.name}</span>
+                                                    {c.email && <span className="text-xs text-slate-400">{c.email}</span>}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="relative mb-3">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-slate-100" />
+                                </div>
+                                <div className="relative flex justify-center">
+                                    <span className="text-[10px] text-slate-400 bg-white px-2">ή εισάγετε χειροκίνητα</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-slate-400">Όνομα</Label>
+                                    <Input
+                                        value={form.customer_name}
+                                        onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
+                                        placeholder="Ονοματεπώνυμο"
+                                        className="rounded-xl border-slate-200 text-sm h-9"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-slate-400">Email *</Label>
+                                    <Input
+                                        type="email"
+                                        value={form.customer_email}
+                                        onChange={e => setForm(f => ({ ...f, customer_email: e.target.value }))}
+                                        placeholder="customer@example.com"
+                                        className="rounded-xl border-slate-200 text-sm h-9"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Message */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500">ΜΗΝΥΜΑ (ΠΡΟΑΙΡΕΤΙΚΟ)</Label>
+                            <Textarea
+                                value={form.message}
+                                onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                                placeholder="π.χ. Σας αποστέλλουμε το τιμολόγιο για τις υπηρεσίες μας..."
+                                className="rounded-xl border-slate-200 text-sm resize-none"
+                                rows={3}
+                            />
+                        </div>
+
+                        {/* Preview of what will be sent */}
+                        {form.customer_email && (
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
+                                <p className="font-semibold text-slate-700">Προεπισκόπηση αποστολής</p>
+                                <p>📧 Προς: <span className="text-slate-800">{form.customer_email}</span></p>
+                                <p>Ο παραλήπτης θα λάβει email με ασφαλές link για να δει το τιμολόγιο.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setSendDialogOpen(false)} className="rounded-xl text-sm border-slate-200">
+                            Ακύρωση
+                        </Button>
+                        <Button onClick={handleSend} disabled={sending} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700 gap-2">
+                            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            {sending ? "Αποστολή..." : "Αποστολή"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
-
