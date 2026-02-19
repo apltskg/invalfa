@@ -172,18 +172,18 @@ export default function Packages() {
     : packages.filter(p => p.status === activeTab);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Φάκελοι Ταξιδιών</h1>
-          <p className="mt-1 text-muted-foreground">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Φάκελοι Ταξιδιών</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="lg" className="rounded-2xl gap-2 shadow-lg shadow-primary/20">
-              <Plus className="h-5 w-5" />
-              Νέος Φάκελος
+            <Button className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4" />
+              νέος Φάκελος
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-3xl">
@@ -336,7 +336,8 @@ export default function Packages() {
                         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            {format(new Date(pkg.start_date), "dd/MM")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
+                            {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"} -{" "}
+                            {pkg.end_date ? format(new Date(pkg.end_date), "dd/MM/yyyy") : "?"}
                           </span>
                         </div>
                       </div>
@@ -357,24 +358,34 @@ export default function Packages() {
                       </div>
 
                       {/* Progress Bar for Payments */}
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Είσπραξη</span>
-                          <span>{pkg.stats.income > 0 ? Math.round((pkg.stats.collected / pkg.stats.income) * 100) : 0}%</span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                          <div
-                            className="h-full rounded-full bg-green-500 transition-all duration-500"
-                            style={{
-                              width: `${pkg.stats.income > 0 ? (pkg.stats.collected / pkg.stats.income) * 100 : 0}%`
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                          <span>€{pkg.stats.collected.toFixed(0)}</span>
-                          <span>από €{pkg.stats.income.toFixed(0)}</span>
-                        </div>
-                      </div>
+                      {(() => {
+                        const pct = pkg.stats.income > 0
+                          ? Math.round((pkg.stats.collected / pkg.stats.income) * 100)
+                          : 0;
+                        const isPast = pkg.end_date && new Date(pkg.end_date) < new Date();
+                        const barColor =
+                          pct >= 75 ? "bg-emerald-500" :
+                            pct >= 50 ? "bg-amber-400" :
+                              isPast ? "bg-rose-500" : "bg-amber-400";
+                        return (
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Είσπραξη</span>
+                              <span className={pct < 50 ? 'text-amber-600 font-medium' : ''}>{pct}%</span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                              <span>€{pkg.stats.collected.toFixed(0)}</span>
+                              <span>από €{pkg.stats.income.toFixed(0)}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Card>
                 </motion.div>

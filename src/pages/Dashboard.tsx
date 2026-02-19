@@ -177,6 +177,50 @@ export default function Dashboard() {
                 />
             </div>
 
+            {/* P&L Banner */}
+            {!loading && (
+                <div className={cn(
+                    "rounded-2xl border px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3",
+                    profit >= 0
+                        ? "bg-emerald-50 border-emerald-200"
+                        : "bg-rose-50 border-rose-200"
+                )}>
+                    <div className="flex items-center gap-3">
+                        <div className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                            profit >= 0 ? "bg-emerald-100" : "bg-rose-100"
+                        )}>
+                            {profit >= 0
+                                ? <ArrowUpRight className="h-5 w-5 text-emerald-600" />
+                                : <ArrowDownRight className="h-5 w-5 text-rose-600" />}
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Καθαρό Αποτέλεσμα περιόδου</p>
+                            <p className={cn(
+                                "text-3xl font-bold tabular-nums leading-tight",
+                                profit >= 0 ? "text-emerald-700" : "text-rose-700"
+                            )}>
+                                {profit >= 0 ? "+" : ""}€{profit.toFixed(2)}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm">
+                        <div className="text-center">
+                            <p className="text-xs text-slate-400">Μαρζινάλε</p>
+                            <p className={cn("font-bold", profit >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {totalIncome > 0 ? ((profit / totalIncome) * 100).toFixed(1) : "0.0"}%
+                            </p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-xs text-slate-400">Κατάσταση</p>
+                            <p className={cn("font-bold", profit >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {profit >= 0 ? "Υγιές" : "Προσοχή"}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Timeline */}
             <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                 <CardHeader className="px-5 py-4 border-b border-slate-100">

@@ -22,6 +22,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── My Company section ──────────────────────────────────────────────────────
 const companyItems = [
@@ -55,6 +57,17 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { isAdmin } = useAdmin();
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("agency_settings")
+      .select("company_name")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.company_name) setCompanyName(data.company_name);
+      });
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -103,7 +116,11 @@ export function AppSidebar() {
         <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
           <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-700 truncate">ALFA Μονοπρόσωπη Ι.Κ.Ε.</p>
+            {companyName ? (
+              <p className="text-[11px] font-semibold text-slate-700 truncate">{companyName}</p>
+            ) : (
+              <div className="h-2.5 w-28 rounded bg-slate-200 animate-pulse" />
+            )}
             <p className="text-[10px] text-slate-400">Διαχειριστής</p>
           </div>
         </div>
