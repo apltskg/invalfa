@@ -63,6 +63,7 @@ export function BulkUploadModal({
   const [files, setFiles] = useState<BulkFileItem[]>([]);
   const [processing, setProcessing] = useState(false);
   const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedPackage, setSelectedPackage] = useState<string>('');
@@ -71,12 +72,16 @@ export function BulkUploadModal({
   // Fetch categories and packages on open
   useState(() => {
     async function fetchData() {
-      const [catResult, pkgResult] = await Promise.all([
-        supabase.from('expense_categories').select('*').eq('is_operational', true),
-        supabase.from('packages').select('*').order('start_date', { ascending: false }).limit(50),
-      ]);
-      if (catResult.data) setExpenseCategories(catResult.data);
+      const pkgResult = await supabase.from('packages').select('*').order('start_date', { ascending: false }).limit(50);
       if (pkgResult.data) setPackages(pkgResult.data);
+
+      if (defaultType === 'income') {
+        const catResult = await supabase.from('income_categories').select('id,name_el,color,icon').order('sort_order');
+        if (catResult.data) setIncomeCategories(catResult.data);
+      } else {
+        const catResult = await supabase.from('expense_categories').select('*').eq('is_operational', true);
+        if (catResult.data) setExpenseCategories(catResult.data);
+      }
     }
     if (open) fetchData();
   });
@@ -198,7 +203,8 @@ export function BulkUploadModal({
         amount: f.extractedData?.amount || null,
         invoice_date: f.extractedData?.date || null,
         category: (f.extractedData?.category as InvoiceCategory) || 'other',
-        expense_category_id: selectedCategory || null,
+        expense_category_id: defaultType === 'expense' ? (selectedCategory || null) : null,
+        income_category_id: defaultType === 'income' ? (selectedCategory || null) : null,
         package_id: selectedPackage || null,
         extracted_data: f.extractedData as any,
         type: defaultType,
@@ -287,10 +293,10 @@ export function BulkUploadModal({
               <Card
                 {...getRootProps()}
                 className={`p-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${isDragActive
-                    ? 'border-primary bg-primary/5'
-                    : files.length >= MAX_FILES
-                      ? 'border-muted bg-muted/20 cursor-not-allowed'
-                      : 'border-border hover:border-primary/50'
+                  ? 'border-primary bg-primary/5'
+                  : files.length >= MAX_FILES
+                    ? 'border-muted bg-muted/20 cursor-not-allowed'
+                    : 'border-border hover:border-primary/50'
                   }`}
               >
                 <input {...getInputProps()} />
@@ -347,7 +353,7 @@ export function BulkUploadModal({
                         <SelectValue placeholder="Επιλέξτε κατηγορία..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {expenseCategories.map((cat) => (
+                        {(defaultType === 'income' ? incomeCategories : expenseCategories).map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.name_el}
                           </SelectItem>
@@ -432,9 +438,9 @@ export function BulkUploadModal({
                     <div
                       key={item.id}
                       className={`flex items-center gap-3 p-3 rounded-lg ${item.status === 'error' ? 'bg-red-50' :
-                          item.status === 'review' ? 'bg-amber-50' :
-                            item.status === 'done' ? 'bg-green-50' :
-                              'hover:bg-muted/50'
+                        item.status === 'review' ? 'bg-amber-50' :
+                          item.status === 'done' ? 'bg-green-50' :
+                            'hover:bg-muted/50'
                         }`}
                     >
                       {getStatusIcon(item.status)}

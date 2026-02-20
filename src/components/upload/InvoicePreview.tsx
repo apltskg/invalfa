@@ -20,7 +20,8 @@ interface InvoicePreviewProps {
     amount: number | null;
     date: string | null;
     category: InvoiceCategory;
-    expenseCategoryId?: string | null; // Added
+    expenseCategoryId?: string | null;
+    incomeCategoryId?: string | null;
     packageId: string | null;
     customerId?: string | null;
     supplierId?: string | null;
@@ -39,12 +40,14 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
   const [date, setDate] = useState(extractedData?.date || "");
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
   const [expenseCategoryId, setExpenseCategoryId] = useState<string | null>(null);
+  const [incomeCategoryId, setIncomeCategoryId] = useState<string | null>(null);
   const [packageId, setPackageId] = useState<string | null>(propPackageId || defaultPackageId || null);
 
   const [packages, setPackages] = useState<Package[]>([]);
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null);
 
-  const [expenseCategories, setExpenseCategories] = useState<{ id: string, name: string, name_el: string, check_keywords?: string[] }[]>([]); // Dynamic Categories
+  const [expenseCategories, setExpenseCategories] = useState<{ id: string; name: string; name_el: string }[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<{ id: string; name_el: string; color: string | null; icon: string | null }[]>([]);
 
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -116,17 +119,13 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           }
         }
       }
-      // 3. Fetch Expense Categories (only if type is expense)
+      // 3. Fetch categories based on type
       if (type === "expense") {
-        const { data: catData } = await supabase.from('expense_categories').select('*').order('name');
-        if (catData) {
-          setExpenseCategories(catData);
-          // Optional: Try to auto-match category based on extracted data text or merchant
-          if (extractedData?.category && !expenseCategoryId) {
-            // Try to find a dynamic category that matches the extracted enum (e.g. 'airline' -> 'Aeroporika')
-            // For now, simpler: if they have a 'name' that matches
-          }
-        }
+        const { data: catData } = await supabase.from('expense_categories').select('id,name,name_el').order('sort_order');
+        if (catData) setExpenseCategories(catData as any);
+      } else if (type === "income") {
+        const { data: catData } = await supabase.from('income_categories').select('id,name_el,color,icon').order('sort_order');
+        if (catData) setIncomeCategories(catData as any);
       }
     }
     fetchData();
@@ -137,8 +136,9 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       merchant,
       amount: amount ? parseFloat(amount) : null,
       date: date || null,
-      category, // Keep passing the enum for backward compat
-      expenseCategoryId, // New field
+      category,
+      expenseCategoryId: type === "expense" ? expenseCategoryId : null,
+      incomeCategoryId: type === "income" ? incomeCategoryId : null,
       packageId,
       customerId: type === "income" ? selectedEntityId : null,
       supplierId: type === "expense" ? selectedEntityId : null,
@@ -286,13 +286,10 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
           <div className="space-y-2">
             <Label>Κατηγορία</Label>
             {type === 'expense' && expenseCategories.length > 0 ? (
+              // ── Expense: dynamic expense_categories ──
               <Select
                 value={expenseCategoryId || ""}
-                onValueChange={(val) => {
-                  setExpenseCategoryId(val);
-                  // Also set the enum category to 'other' (or mapped) to satisfy DB constraint
-                  setCategory('other');
-                }}
+                onValueChange={(val) => { setExpenseCategoryId(val); setCategory('other'); }}
               >
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="Επιλογή κατηγορίας..." />
@@ -305,7 +302,25 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
                   ))}
                 </SelectContent>
               </Select>
+            ) : type === 'income' && incomeCategories.length > 0 ? (
+              // ── Income: dynamic income_categories ──
+              <Select
+                value={incomeCategoryId || ""}
+                onValueChange={(val) => setIncomeCategoryId(val)}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Επιλογή κατηγορίας εσόδου..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {incomeCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name_el}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
+              // ── Fallback: legacy enum (expense only) ──
               <Select value={category} onValueChange={(val) => setCategory(val as InvoiceCategory)}>
                 <SelectTrigger className="rounded-xl">
                   <SelectValue />

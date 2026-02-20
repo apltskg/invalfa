@@ -135,7 +135,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     amount: number | null;
     date: string | null;
     category: InvoiceCategory;
-    expenseCategoryId?: string | null; // Added type definition
+    expenseCategoryId?: string | null;
+    incomeCategoryId?: string | null;
     packageId: string | null;
     customerId?: string | null;
     supplierId?: string | null;
@@ -152,7 +153,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         amount: data.amount,
         invoice_date: data.date,
         category: data.category,
-        expense_category_id: data.expenseCategoryId, // Map to DB column
+        expense_category_id: data.expenseCategoryId || null,
+        income_category_id: data.incomeCategoryId || null,
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
         type: defaultType,
