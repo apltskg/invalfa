@@ -235,7 +235,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
     /* ── render ─────────────────────────────────────────────────────── */
     return (
-        <div className="flex h-[calc(100vh-80px)] gap-0 -mx-6 -my-6">
+        <div className="flex h-[calc(100vh-56px)] gap-0 -mx-6 -my-6">
 
             {/* ═══ LEFT: LIST PANEL ═══════════════════════════════════ */}
             <div className={cn(
