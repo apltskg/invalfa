@@ -1,806 +1,602 @@
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-import { Plus, Trash2, Languages, Printer, Send, Percent, X } from "lucide-react";
+import {
+  Plus, Trash2, Languages, Printer, Send, Percent, X,
+  Save, ChevronDown, FileText, CreditCard, Building2
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Json } from "@/integrations/supabase/types";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import type { Json } from "@/integrations/supabase/types";
 
-// Company details (fixed)
-// Company details
-const COMPANY_INFO = {
+/* ─── constants ─────────────────────────────────────────── */
+const COMPANY = {
   name: "ALFA MONOPROSOPI I.K.E.",
-  address: "Thesi Filakio, Leptokarya, Pieria, Greece, 60063",
+  nameGr: "ΑΛΦΑ ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε.",
+  address: "Θέση Φυλάκιο, Λεπτοκαρυά, Πιερία, 60063",
   phone: "+30 694 207 2312",
-  email: "info@atravel.gr",
+  email: "business@atravel.gr",
   website: "www.atravel.gr",
-  social: "@atravel.gr",
   vat: "EL801915410",
+  doy: "ΔΟΥ ΚΑΤΕΡΙΝΗΣ",
   iata: "96174713",
-  license: "EU-Travel Agency License",
-  stampName: "ALFA M.I.K.E.",
-  stampDetails: "ΓΡΑΦΕΙΟ ΓΕΝΙΚΟΥ ΤΟΥΡΙΣΜΟΥ\n60063 ΛΕΠΤΟΚΑΡΥΑ ΠΙΕΡΙΑΣ\nΑΦΜ 801915410 ΔΟΥ ΚΑΤΕΡΙΝΗΣ",
   ceo: "Alexandros Papadopoulos",
   logoUrl: "https://atravel.gr/wp-content/uploads/2023/07/Alfa-Logo-Horizontal-Retina.png",
-  iconUrl: "https://atravel.gr/wp-content/uploads/2023/07/cropped-Icon-512.png"
 };
 
-const BANK_ACCOUNTS = [
-  {
-    bank: "Eurobank",
-    accountName: "ALFA MONOPROSOPI I.K.E.",
-    iban: "GR3602607330008902011511103",
-    bic: "ERBKGRAA",
-  },
-  {
-    bank: "ALPHA Bank",
-    accountName: "ALFA",
-    iban: "GR7201407070707002002020365",
-    bic: "CRBAGRAA",
-  },
-  {
-    bank: "International (Wise)",
-    iban: "BE24 9050 7266 5838",
-    swift: "TRWIBEB1XXX",
-    bankAddress: "Wise, Rue du Trône 100, Brussels 1050, Belgium",
-  },
+const BANKS = [
+  { bank: "Eurobank", name: "ALFA ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε.", iban: "GR3602607330000890201151103", bic: "ERBKGRAA" },
+  { bank: "Alpha Bank", name: "ΑLFΑ", iban: "GR7201407070707002002020365", bic: "CRBAGRAA" },
+  { bank: "Wise (Intl/SEPA)", name: "ALFA MONOPROSOPI IKE", iban: "BE24 9050 7266 5838", bic: "TRWIBEB1XXX" },
 ];
 
-const TERMS_CONDITIONS = [
-  "Σημειώστε ότι αυτή η κράτηση δεν έχει επιβεβαιωθεί ακόμα. Θα οριστικοποιηθεί μόνο μετά την πλήρη εξόφληση.",
-  "Λόγω υψηλής ζήτησης, η διαθεσιμότητα δεν μπορεί να εγγυηθεί μέχρι την ολοκλήρωση της πληρωμής.",
-  "Σε περίπτωση ακύρωσης λιγότερο από 3 ημέρες πριν την προγραμματισμένη ημερομηνία, θα παρακρατηθεί τέλος 10%.",
-];
+const TERMS = {
+  el: [
+    "Η κράτηση οριστικοποιείται μόνο μετά την πλήρη εξόφληση.",
+    "Η διαθεσιμότητα δεν μπορεί να εγγυηθεί μέχρι την ολοκλήρωση της πληρωμής.",
+    "Σε ακύρωση εντός 3 ημερών πριν την ημερομηνία, παρακρατείται τέλος 10%.",
+  ],
+  en: [
+    "This booking is confirmed only upon receipt of full payment.",
+    "Availability cannot be guaranteed until payment is completed.",
+    "Cancellations within 3 days of the service date incur a 10% fee.",
+  ],
+};
 
-interface LineItem {
-  id: string;
-  description: string;
-  price: number;
-  taxPercent: number;
-  total: number;
-}
+/* ─── types ─────────────────────────────────────────────── */
+interface LineItem { id: string; description: string; price: number; taxPercent: number; }
+type Lang = "el" | "en";
 
-interface ProformaData {
-  invoiceNumber: string;
-  issueDate: string;
-  clientName: string;
-  clientAddress: string;
-  clientEmail: string;
-  clientVatNumber: string;
-  lineItems: LineItem[];
-  subtotal: number;
-  discountPercent: number;
-  discountAmount: number;
-  taxPercent: number;
-  taxAmount: number;
-  total: number;
-  acceptCash: boolean;
-  acceptBankTransfer: boolean;
-  notes: string;
-}
+const genNum = () => {
+  const y = new Date().getFullYear();
+  return `PRF-${y}-${Math.floor(Math.random() * 9000 + 1000)}`;
+};
 
-type Language = "en" | "el";
-
-const translations = {
+const T = {
   en: {
-    title: "Proforma Invoice",
-    proformaInvoice: "PROFORMA INVOICE",
-    invoiceNumber: "Invoice number",
-    issueDate: "Issue date",
-    invoiceTo: "Invoice To:",
-    payTo: "Pay To:",
-    name: "Name",
-    clientPlaceholder: "Client or Company Name",
-    address: "Address",
-    addressPlaceholder: "Street, City, State, ZIP",
-    email: "Email",
-    emailPlaceholder: "client@example.com",
-    vatNumber: "VAT Number (Optional)",
-    vatPlaceholder: "VAT Number",
-    serviceDescription: "Service Description",
-    servicePlaceholder: "Service description",
-    price: "Price",
-    tax: "Tax (%)",
-    total: "Total",
-    addService: "+ Add Service",
-    termsConditions: "Terms & Conditions:",
-    addNotes: "+ Add Notes",
-    subtotal: "Subtotal:",
-    addDiscount: "Add Discount",
-    taxAmount: "Tax Amount",
-    waysToPay: "Ways to Pay:",
-    cash: "Cash",
-    bankTransfer: "Bank Transfer",
-    sendConfirmation: "Please send the payment confirmation to:",
-    accountName: "Account Name",
-    services: "AIR TICKETS | BUS TRANSFERS | ACCOMMODATIONS - all over the world",
-    contact: "Have a question? Contact us:",
-    thanks: "Thank you for traveling with us, see you soon!",
-    language: "Language",
-    print: "Print",
-    send: "Send",
-    ceo: "CEO",
-    save: "Save",
+    title: "Proforma Invoice", header: "PROFORMA INVOICE",
+    invoiceTo: "Invoice To", payTo: "Pay To",
+    invoiceNo: "Invoice #", date: "Date",
+    description: "Description", price: "Price (€)", tax: "VAT %", total: "Total",
+    addLine: "+ Add Line", discount: "Discount %", notes: "Notes",
+    waysToPay: "Payment Methods", cash: "Cash", bank: "Bank Transfer",
+    subtotal: "Subtotal", taxAmt: "VAT", grandTotal: "Total",
+    terms: "Terms & Conditions", thanks: "Thank you for traveling with us!",
+    services: "AIR TICKETS · BUS TRANSFERS · ACCOMMODATIONS — worldwide",
+    print: "Print", send: "Send", save: "Save", lang: "ΕΛ",
+    clientName: "Client / Company Name", clientAddr: "Address",
+    clientEmail: "Email", clientVat: "VAT No. (optional)",
+    sendConfirm: "Please send payment confirmation to",
   },
   el: {
-    title: "Προτιμολόγιο",
-    proformaInvoice: "ΠΡΟΤΙΜΟΛΟΓΙΟ",
-    invoiceNumber: "Αριθμός τιμολογίου",
-    issueDate: "Ημερομηνία έκδοσης",
-    invoiceTo: "Προς:",
-    payTo: "Πληρωμή σε:",
-    name: "Όνομα",
-    clientPlaceholder: "Όνομα πελάτη ή εταιρείας",
-    address: "Διεύθυνση",
-    addressPlaceholder: "Οδός, Πόλη, Νομός, Τ.Κ.",
-    email: "Email",
-    emailPlaceholder: "client@example.com",
-    vatNumber: "ΑΦΜ (Προαιρετικό)",
-    vatPlaceholder: "ΑΦΜ",
-    serviceDescription: "Περιγραφή Υπηρεσίας",
-    servicePlaceholder: "Περιγραφή υπηρεσίας",
-    price: "Τιμή",
-    tax: "ΦΠΑ (%)",
-    total: "Σύνολο",
-    addService: "+ Προσθήκη Υπηρεσίας",
-    termsConditions: "Όροι & Προϋποθέσεις:",
-    addNotes: "+ Προσθήκη Σημειώσεων",
-    subtotal: "Υποσύνολο:",
-    addDiscount: "Προσθήκη Έκπτωσης",
-    taxAmount: "Ποσό ΦΠΑ",
-    waysToPay: "Τρόποι Πληρωμής:",
-    cash: "Μετρητά",
-    bankTransfer: "Τραπεζική Μεταφορά",
-    sendConfirmation: "Παρακαλώ στείλτε την επιβεβαίωση πληρωμής στο:",
-    accountName: "Όνομα Λογαριασμού",
-    services: "ΑΕΡΟΠΟΡΙΚΑ | ΜΕΤΑΦΟΡΕΣ | ΔΙΑΜΟΝΗ - σε όλο τον κόσμο",
-    contact: "Έχετε απορία; Επικοινωνήστε μαζί μας:",
-    thanks: "Ευχαριστούμε που ταξιδεύετε μαζί μας, τα λέμε σύντομα!",
-    language: "Γλώσσα",
-    print: "Εκτύπωση",
-    send: "Αποστολή",
-    ceo: "Διευθύνων Σύμβουλος",
-    save: "Αποθήκευση",
+    title: "Προτιμολόγιο", header: "ΠΡΟΤΙΜΟΛΟΓΙΟ",
+    invoiceTo: "Προς", payTo: "Πληρωμή σε",
+    invoiceNo: "Αρ. #", date: "Ημερομηνία",
+    description: "Περιγραφή", price: "Τιμή (€)", tax: "ΦΠΑ %", total: "Σύνολο",
+    addLine: "+ Νέα Υπηρεσία", discount: "Έκπτωση %", notes: "Σημειώσεις",
+    waysToPay: "Τρόποι Πληρωμής", cash: "Μετρητά", bank: "Τραπεζική Μεταφορά",
+    subtotal: "Υποσύνολο", taxAmt: "ΦΠΑ", grandTotal: "Σύνολο",
+    terms: "Όροι & Προϋποθέσεις", thanks: "Ευχαριστούμε που ταξιδεύετε μαζί μας!",
+    services: "ΑΕΡΟΠΟΡΙΚΑ · ΜΕΤΑΦΟΡΕΣ · ΔΙΑΜΟΝΗ — σε όλο τον κόσμο",
+    print: "Εκτύπωση", send: "Αποστολή", save: "Αποθήκευση", lang: "EN",
+    clientName: "Πελάτης / Εταιρεία", clientAddr: "Διεύθυνση",
+    clientEmail: "Email", clientVat: "ΑΦΜ (προαιρετικό)",
+    sendConfirm: "Στείλτε την επιβεβαίωση πληρωμής στο",
   },
 };
 
+/* ─── sub-components ─────────────────────────────────────── */
+function EditorField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+/* ─── main ───────────────────────────────────────────────── */
 export default function ProformaInvoice() {
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
-  const [language, setLanguage] = useState<Language>("el");
-  const [showDiscountInput, setShowDiscountInput] = useState(false);
-  const [showNotesInput, setShowNotesInput] = useState(false);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [lang, setLang] = useState<Lang>("el");
+  const [sendOpen, setSendOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
-  const t = translations[language];
+  const t = T[lang];
+  const terms = TERMS[lang];
 
-  const generateInvoiceNumber = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
-    return `INV-${year}-${random}`;
+  /* form state */
+  const [num, setNum] = useState(genNum());
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [clientName, setClientName] = useState("");
+  const [clientAddr, setClientAddr] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientVat, setClientVat] = useState("");
+  const [lines, setLines] = useState<LineItem[]>([
+    { id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13 },
+  ]);
+  const [discount, setDiscount] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [acceptCash, setAcceptCash] = useState(true);
+  const [acceptBank, setAcceptBank] = useState(true);
+
+  /* totals */
+  const subtotal = lines.reduce((s, l) => s + l.price, 0);
+  const discountAmt = (subtotal * discount) / 100;
+  const afterDiscount = subtotal - discountAmt;
+  const taxAmt = lines.reduce((s, l) => s + ((l.price * (1 - discount / 100) * l.taxPercent) / 100), 0);
+  const grandTotal = afterDiscount + taxAmt;
+
+  function lineTotal(l: LineItem) {
+    return l.price + (l.price * l.taxPercent) / 100;
+  }
+
+  /* helpers */
+  const updLine = (id: string, field: keyof LineItem, v: string | number) =>
+    setLines(prev => prev.map(l => l.id === id ? { ...l, [field]: v } : l));
+
+  const addLine = () =>
+    setLines(prev => [...prev, { id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13 }]);
+
+  const removeLine = (id: string) => {
+    if (lines.length > 1) setLines(prev => prev.filter(l => l.id !== id));
   };
 
-  const [data, setData] = useState<ProformaData>({
-    invoiceNumber: generateInvoiceNumber(),
-    issueDate: format(new Date(), "yyyy-MM-dd"),
-    clientName: "",
-    clientAddress: "",
-    clientEmail: "",
-    clientVatNumber: "",
-    lineItems: [
-      { id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13, total: 0 },
-    ],
-    subtotal: 0,
-    discountPercent: 0,
-    discountAmount: 0,
-    taxPercent: 13,
-    taxAmount: 0,
-    total: 0,
-    acceptCash: true,
-    acceptBankTransfer: true,
-    notes: "",
-  });
-
-  // Recalculate totals when line items or discount change
-  useEffect(() => {
-    const subtotal = data.lineItems.reduce((sum, item) => sum + item.price, 0);
-    const discountAmount = (subtotal * data.discountPercent) / 100;
-    const afterDiscount = subtotal - discountAmount;
-    const taxAmount = data.lineItems.reduce(
-      (sum, item) => sum + (item.price * item.taxPercent) / 100,
-      0
-    );
-    const discountedTax = taxAmount * (1 - data.discountPercent / 100);
-    const total = afterDiscount + discountedTax;
-
-    setData((prev) => ({
-      ...prev,
-      subtotal,
-      discountAmount,
-      taxAmount: discountedTax,
-      total,
-      lineItems: prev.lineItems.map((item) => ({
-        ...item,
-        total: item.price + (item.price * item.taxPercent) / 100,
-      })),
-    }));
-  }, [data.lineItems, data.discountPercent]);
-
-  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
-    setData((prev) => ({
-      ...prev,
-      lineItems: prev.lineItems.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
-  };
-
-  const addLineItem = () => {
-    setData((prev) => ({
-      ...prev,
-      lineItems: [
-        ...prev.lineItems,
-        { id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13, total: 0 },
-      ],
-    }));
-  };
-
-  const removeLineItem = (id: string) => {
-    if (data.lineItems.length > 1) {
-      setData((prev) => ({
-        ...prev,
-        lineItems: prev.lineItems.filter((item) => item.id !== id),
-      }));
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   const handleSave = async () => {
-    setIsSaving(true);
+    setSaving(true);
     try {
-      const insertData = {
-        invoice_number: data.invoiceNumber,
-        issue_date: data.issueDate,
-        client_name: data.clientName || null,
-        client_address: data.clientAddress || null,
-        client_email: data.clientEmail || null,
-        client_vat_number: data.clientVatNumber || null,
-        line_items: data.lineItems as unknown as Json,
-        subtotal: data.subtotal,
-        discount_percent: data.discountPercent,
-        discount_amount: data.discountAmount,
-        tax_percent: data.taxPercent,
-        tax_amount: data.taxAmount,
-        total: data.total,
-        accept_cash: data.acceptCash,
-        accept_bank_transfer: data.acceptBankTransfer,
-        notes: data.notes || null,
-      };
-
-      const { error } = await supabase.from("proforma_invoices").insert([insertData]);
-
+      const { error } = await supabase.from("proforma_invoices").insert([{
+        invoice_number: num, issue_date: date,
+        client_name: clientName || null, client_address: clientAddr || null,
+        client_email: clientEmail || null, client_vat_number: clientVat || null,
+        line_items: lines as unknown as Json,
+        subtotal, discount_percent: discount, discount_amount: discountAmt,
+        tax_percent: 13, tax_amount: taxAmt, total: grandTotal,
+        accept_cash: acceptCash, accept_bank_transfer: acceptBank,
+        notes: notes || null,
+      }]);
       if (error) throw error;
-
-      toast({
-        title: "Saved!",
-        description: `Proforma ${data.invoiceNumber} saved successfully.`,
-      });
-
-      // Generate new invoice number for next one
-      setData((prev) => ({
-        ...prev,
-        invoiceNumber: generateInvoiceNumber(),
-        clientName: "",
-        clientAddress: "",
-        clientEmail: "",
-        clientVatNumber: "",
-        lineItems: [{ id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13, total: 0 }],
-        notes: "",
-        discountPercent: 0,
-      }));
-    } catch (error) {
-      console.error("Error saving proforma:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save proforma invoice.",
-        variant: "destructive",
-      });
+      toast({ title: "Αποθηκεύτηκε!", description: `Proforma ${num}` });
+      // reset for next
+      setNum(genNum()); setClientName(""); setClientAddr("");
+      setClientEmail(""); setClientVat("");
+      setLines([{ id: crypto.randomUUID(), description: "", price: 0, taxPercent: 13 }]);
+      setDiscount(0); setNotes(""); setShowDiscount(false); setShowNotes(false);
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Σφάλμα", description: "Αποτυχία αποθήκευσης.", variant: "destructive" });
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
   const handleSend = () => {
-    if (!data.clientEmail) {
-      toast({
-        title: "Missing Email",
-        description: "Please enter a client email address first.",
-        variant: "destructive",
-      });
+    if (!clientEmail) {
+      toast({ title: "Λείπει Email", description: "Εισάγετε email πελάτη.", variant: "destructive" });
       return;
     }
-    setSendDialogOpen(true);
+    setSendOpen(true);
   };
 
   const confirmSend = async () => {
-    setIsSending(true);
+    setSending(true);
     try {
-      const { data: response, error } = await supabase.functions.invoke('send-proforma-email', {
-        body: {
-          invoiceNumber: data.invoiceNumber,
-          issueDate: data.issueDate,
-          clientName: data.clientName,
-          clientAddress: data.clientAddress,
-          clientEmail: data.clientEmail,
-          clientVatNumber: data.clientVatNumber,
-          lineItems: data.lineItems,
-          subtotal: data.subtotal,
-          discountPercent: data.discountPercent,
-          discountAmount: data.discountAmount,
-          taxAmount: data.taxAmount,
-          total: data.total,
-          acceptCash: data.acceptCash,
-          acceptBankTransfer: data.acceptBankTransfer,
-          notes: data.notes,
-          language,
-        },
+      const { data: resp, error } = await supabase.functions.invoke("send-proforma-email", {
+        body: { invoiceNumber: num, issueDate: date, clientName, clientAddress: clientAddr, clientEmail, clientVatNumber: clientVat, lineItems: lines, subtotal, discountPercent: discount, discountAmount: discountAmt, taxAmount: taxAmt, total: grandTotal, acceptCash, acceptBankTransfer: acceptBank, notes, language: lang },
       });
-
       if (error) throw error;
-
-      if (response?.error) {
-        if (response.code === 'MISSING_API_KEY') {
-          toast({
-            title: "Email Service Not Configured",
-            description: "Please add the RESEND_API_KEY to enable email sending.",
-            variant: "destructive",
-          });
-        } else {
-          throw new Error(response.error);
-        }
+      if (resp?.code === "MISSING_API_KEY") {
+        toast({ title: "Email not configured", description: "Add RESEND_API_KEY to Supabase.", variant: "destructive" });
         return;
       }
-
-      toast({
-        title: "Email Sent!",
-        description: `Proforma invoice sent to ${data.clientEmail}`,
-      });
-      setSendDialogOpen(false);
+      toast({ title: "Εστάλη!", description: `Email → ${clientEmail}` });
+      setSendOpen(false);
       await handleSave();
-    } catch (error) {
-      console.error("Error sending email:", error);
-      toast({
-        title: "Failed to Send",
-        description: error instanceof Error ? error.message : "Could not send email.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Αποτυχία", description: "Δεν ήταν δυνατή η αποστολή.", variant: "destructive" });
     } finally {
-      setIsSending(false);
+      setSending(false);
     }
   };
 
+  /* ─── render ─────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with actions */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLanguage(language === "en" ? "el" : "en")}
-              className="gap-2"
-            >
-              <Languages className="h-4 w-4" />
-              {language === "en" ? "EN" : "EL"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              {t.print}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSend} className="gap-2">
-              <Send className="h-4 w-4" />
-              {t.send}
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={isSaving} className="gap-2">
-              {isSaving ? "Saving..." : t.save}
-            </Button>
+    <>
+      {/* Print styles */}
+      <style>{`
+                @media print {
+                    .no-print { display: none !important; }
+                    .print-root { padding: 0 !important; }
+                    body { background: #fff !important; }
+                }
+            `}</style>
+
+      <div className="min-h-screen bg-slate-50 print-root">
+
+        {/* ── Toolbar ── */}
+        <div className="no-print sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText size={18} className="text-blue-600" />
+              <h1 className="text-lg font-bold text-slate-900">{t.title}</h1>
+              <Badge variant="outline" className="text-xs font-mono">{num}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setLang(l => l === "el" ? "en" : "el")} className="rounded-xl gap-1.5">
+                <Languages size={14} /> {t.lang}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint} className="rounded-xl gap-1.5">
+                <Printer size={14} /> {t.print}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSend} className="rounded-xl gap-1.5">
+                <Send size={14} /> {t.send}
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={saving} className="rounded-xl gap-1.5 bg-blue-600 hover:bg-blue-700">
+                <Save size={14} /> {saving ? "..." : t.save}
+              </Button>
+            </div>
           </div>
+        </div>
+
+        {/* ── Split layout: editor left | preview right ── */}
+        <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 no-print">
+
+          {/* ── LEFT: Editor Panel ── */}
+          <div className="space-y-4">
+
+            {/* Invoice meta */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Στοιχεία Εγγράφου</p>
+              <div className="grid grid-cols-2 gap-3">
+                <EditorField label={t.invoiceNo}>
+                  <Input value={num} onChange={e => setNum(e.target.value)}
+                    className="h-9 text-sm rounded-xl font-mono" />
+                </EditorField>
+                <EditorField label={t.date}>
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)}
+                    className="h-9 text-sm rounded-xl" />
+                </EditorField>
+              </div>
+            </div>
+
+            {/* Client info */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <Building2 size={12} /> {t.invoiceTo}
+              </p>
+              <EditorField label={t.clientName}>
+                <Input value={clientName} onChange={e => setClientName(e.target.value)}
+                  placeholder="π.χ. Γιώργος Παπαδόπουλος" className="h-9 text-sm rounded-xl" />
+              </EditorField>
+              <EditorField label={t.clientAddr}>
+                <Textarea value={clientAddr} onChange={e => setClientAddr(e.target.value)}
+                  placeholder="Οδός, Πόλη, Τ.Κ." className="text-sm rounded-xl resize-none" rows={2} />
+              </EditorField>
+              <div className="grid grid-cols-2 gap-3">
+                <EditorField label={t.clientEmail}>
+                  <Input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)}
+                    placeholder="email@example.com" className="h-9 text-sm rounded-xl" />
+                </EditorField>
+                <EditorField label={t.clientVat}>
+                  <Input value={clientVat} onChange={e => setClientVat(e.target.value)}
+                    placeholder="123456789" className="h-9 text-sm rounded-xl" />
+                </EditorField>
+              </div>
+            </div>
+
+            {/* Line items */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <FileText size={12} /> Υπηρεσίες
+              </p>
+              {lines.map((l, i) => (
+                <div key={l.id} className="group space-y-2 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <Input value={l.description}
+                      onChange={e => updLine(l.id, "description", e.target.value)}
+                      placeholder={t.description}
+                      className="h-8 text-sm rounded-xl flex-1" />
+                    <button onClick={() => removeLine(l.id)} disabled={lines.length === 1}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-red-400 hover:bg-red-50 transition-all disabled:hidden">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pl-7">
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">{t.price}</p>
+                      <Input type="number" min="0" step="0.01"
+                        value={l.price || ""}
+                        onChange={e => updLine(l.id, "price", parseFloat(e.target.value) || 0)}
+                        className="h-8 text-sm rounded-xl text-right" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">{t.tax}</p>
+                      <Input type="number" min="0" max="100"
+                        value={l.taxPercent}
+                        onChange={e => updLine(l.id, "taxPercent", parseFloat(e.target.value) || 0)}
+                        className="h-8 text-sm rounded-xl text-right" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">{t.total}</p>
+                      <div className="h-8 flex items-center justify-end px-3 bg-slate-50 rounded-xl text-sm font-semibold text-slate-700">
+                        €{lineTotal(l).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button onClick={addLine}
+                className="w-full py-2 border-dashed border border-slate-200 rounded-xl text-xs font-semibold text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/50 transition-all">
+                {t.addLine}
+              </button>
+            </div>
+
+            {/* Options */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Επιλογές</p>
+
+              {/* Discount */}
+              {showDiscount ? (
+                <EditorField label={t.discount}>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" min="0" max="100" value={discount}
+                      onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
+                      className="h-9 text-sm rounded-xl flex-1" />
+                    <span className="text-sm text-slate-500">%</span>
+                    <button onClick={() => { setDiscount(0); setShowDiscount(false); }}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"><X size={14} /></button>
+                  </div>
+                </EditorField>
+              ) : (
+                <button onClick={() => setShowDiscount(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700">
+                  <Percent size={13} /> {t.discount}
+                </button>
+              )}
+
+              {/* Notes */}
+              {showNotes ? (
+                <EditorField label={t.notes}>
+                  <Textarea value={notes} onChange={e => setNotes(e.target.value)}
+                    placeholder="..." className="text-sm rounded-xl resize-none" rows={3} />
+                </EditorField>
+              ) : (
+                <button onClick={() => setShowNotes(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600">
+                  + {t.notes}
+                </button>
+              )}
+
+              {/* Payment types */}
+              <div className="flex gap-4 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={acceptCash}
+                    onCheckedChange={v => setAcceptCash(v as boolean)}
+                    className="data-[state=checked]:bg-blue-600" />
+                  <span className="text-sm text-slate-600">{t.cash}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={acceptBank}
+                    onCheckedChange={v => setAcceptBank(v as boolean)}
+                    className="data-[state=checked]:bg-blue-600" />
+                  <span className="text-sm text-slate-600">{t.bank}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT: Live Preview ── */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-300 border-b border-slate-100 no-print">
+              Προεπισκόπηση · Live Preview
+            </div>
+            <InvoicePreview {...{ lang, t, terms, num, date, clientName, clientAddr, clientEmail, clientVat, lines, discount, discountAmt, taxAmt, grandTotal, subtotal, notes, acceptCash, acceptBank }} />
+          </div>
+        </div>
+
+        {/* ── Print-only full-page invoice (hidden on screen) ── */}
+        <div className="hidden print:block">
+          <InvoicePreview {...{ lang, t, terms, num, date, clientName, clientAddr, clientEmail, clientVat, lines, discount, discountAmt, taxAmt, grandTotal, subtotal, notes, acceptCash, acceptBank }} />
         </div>
       </div>
 
-      {/* Invoice Content */}
-      <div className="max-w-5xl mx-auto p-8 print:p-0">
-        <Card ref={printRef} className="p-12 print:shadow-none print:border-none shadow-sm border-gray-100 rounded-3xl bg-white/80 backdrop-blur-sm">
-          {/* Header Section */}
-          <div className="flex justify-between items-start mb-12">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <img
-                src={COMPANY_INFO.logoUrl}
-                alt="Alfa Travel Logo"
-                className="h-16 object-contain"
-              />
-            </div>
-
-            {/* Invoice Info */}
-            <div className="text-right">
-              <h2 className="text-3xl font-light tracking-tight text-gray-900 mb-6 uppercase">
-                {t.proformaInvoice}
-              </h2>
-              <div className="space-y-2 text-sm text-gray-500 font-medium">
-                <div className="flex justify-end gap-8 border-b border-gray-100 pb-2">
-                  <span className="text-gray-400 uppercase tracking-wider text-xs">{t.invoiceNumber}</span>
-                  <span className="text-gray-900">{data.invoiceNumber}</span>
-                </div>
-                <div className="flex justify-end gap-8 border-b border-gray-100 pb-2">
-                  <span className="text-gray-400 uppercase tracking-wider text-xs">{t.issueDate}</span>
-                  <span className="text-gray-900">
-                    {format(new Date(data.issueDate), "dd MMMM yyyy")}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Client & Company Info */}
-          <div className="grid grid-cols-2 gap-16 mb-16">
-            {/* Invoice To */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.invoiceTo}</h3>
-              <div className="space-y-3">
-                <Input
-                  value={data.clientName}
-                  onChange={(e) => setData({ ...data, clientName: e.target.value })}
-                  placeholder={t.clientPlaceholder}
-                  className="border-none shadow-none text-2xl font-semibold px-0 h-auto placeholder:text-gray-200 focus-visible:ring-0 rounded-none bg-transparent"
-                />
-                <Textarea
-                  value={data.clientAddress}
-                  onChange={(e) => setData({ ...data, clientAddress: e.target.value })}
-                  placeholder={t.addressPlaceholder}
-                  className="min-h-[60px] border-none shadow-none text-gray-500 px-0 resize-none focus-visible:ring-0 rounded-none bg-transparent p-0"
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-300 uppercase w-12">Email</span>
-                  <Input
-                    type="email"
-                    value={data.clientEmail}
-                    onChange={(e) => setData({ ...data, clientEmail: e.target.value })}
-                    placeholder={t.emailPlaceholder}
-                    className="border-none shadow-none text-gray-600 px-0 h-8 focus-visible:ring-0 rounded-none bg-transparent"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-300 uppercase w-12 text-nowrap">{t.vatNumber}</span>
-                  <Input
-                    value={data.clientVatNumber}
-                    onChange={(e) => setData({ ...data, clientVatNumber: e.target.value })}
-                    placeholder={t.vatPlaceholder}
-                    className="border-none shadow-none text-gray-600 px-0 h-8 focus-visible:ring-0 rounded-none bg-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Pay To */}
-            <div className="text-right">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.payTo}</h3>
-              <div className="space-y-1 text-sm text-gray-600 leading-relaxed">
-                <p className="font-semibold text-gray-900 text-lg mb-2">{COMPANY_INFO.name}</p>
-                <p>{COMPANY_INFO.address}</p>
-                <p>{COMPANY_INFO.phone}</p>
-                <p className="text-primary">{COMPANY_INFO.email}</p>
-                <p className="font-mono text-xs mt-2 text-gray-400">VAT: {COMPANY_INFO.vat}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items */}
-          <div className="mb-12">
-            <div className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-6 mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">
-              <span>{t.serviceDescription}</span>
-              <span className="text-right">{t.price}</span>
-              <span className="text-right">{t.tax}</span>
-              <span className="text-right">{t.total}</span>
-              <span></span>
-            </div>
-
-            {data.lineItems.map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-[1fr_120px_80px_100px_40px] gap-6 mb-2 items-center group"
-              >
-                <Input
-                  value={item.description}
-                  onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
-                  placeholder={t.servicePlaceholder}
-                  className="font-medium bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2"
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price || ""}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "price", parseFloat(e.target.value) || 0)
-                  }
-                  className="text-right bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2"
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={item.taxPercent}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "taxPercent", parseFloat(e.target.value) || 0)
-                  }
-                  className="text-right bg-transparent border-transparent focus-visible:border-primary/20 rounded-lg px-2 text-gray-500"
-                />
-                <div className="text-right font-semibold text-gray-900 px-2">
-                  €{item.total.toFixed(2)}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeLineItem(item.id)}
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-destructive hover:bg-red-50"
-                  disabled={data.lineItems.length === 1}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-
-            <Button variant="ghost" size="sm" onClick={addLineItem} className="mt-4 text-primary hover:text-primary hover:bg-primary/5 text-xs font-medium uppercase tracking-wider">
-              {t.addService}
-            </Button>
-          </div>
-
-          {/* Terms & Totals Row */}
-          <div className="grid grid-cols-2 gap-16 mb-12">
-            {/* Terms & Conditions */}
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">{t.termsConditions}</h4>
-              <ul className="space-y-3 text-sm text-gray-500 list-disc list-outside pl-4 marker:text-gray-300">
-                {TERMS_CONDITIONS.map((term, i) => (
-                  <li key={i} className="leading-relaxed">{term}</li>
-                ))}
-              </ul>
-
-              {showNotesInput ? (
-                <div className="mt-6 bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
-                  <h5 className="text-xs font-semibold uppercase tracking-widest text-yellow-600/70 mb-2">Notes</h5>
-                  <Textarea
-                    value={data.notes}
-                    onChange={(e) => setData({ ...data, notes: e.target.value })}
-                    placeholder="Additional notes..."
-                    className="min-h-[80px] border-none bg-transparent shadow-none resize-none p-0 focus-visible:ring-0 text-gray-700"
-                  />
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowNotesInput(true)}
-                  className="mt-6 text-gray-400 hover:text-gray-600 text-xs uppercase tracking-wider pl-0"
-                >
-                  {t.addNotes}
-                </Button>
-              )}
-            </div>
-
-            {/* Totals */}
-            <div className="space-y-4 bg-gray-50/50 p-8 rounded-3xl">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>{t.subtotal}</span>
-                <span className="font-medium">€{data.subtotal.toFixed(2)}</span>
-              </div>
-
-              {showDiscountInput ? (
-                <div className="flex items-center gap-2 text-sm text-emerald-600">
-                  <span>Discount:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={data.discountPercent || ""}
-                    onChange={(e) =>
-                      setData({ ...data, discountPercent: parseFloat(e.target.value) || 0 })
-                    }
-                    className="w-16 text-right h-6 px-1 py-0 text-sm border-emerald-200 bg-white"
-                  />
-                  <span>%</span>
-                  <span className="ml-auto font-medium">
-                    -€{data.discountAmount.toFixed(2)}
-                  </span>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDiscountInput(true)}
-                  className="h-6 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-xs"
-                >
-                  <Percent className="h-3 w-3 mr-1" />
-                  {t.addDiscount}
-                </Button>
-              )}
-
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>{t.taxAmount} ({data.lineItems[0]?.taxPercent || 13}%):</span>
-                <span>€{data.taxAmount.toFixed(2)}</span>
-              </div>
-
-              <div className="border-t border-gray-200 my-4" />
-
-              <div className="flex justify-between text-2xl font-light text-primary">
-                <span>{t.total}</span>
-                <span className="font-semibold">€{data.total.toFixed(2)}</span>
-              </div>
-
-              {/* Stamp & Signature */}
-              <div className="mt-12 pt-8 flex justify-between items-end border-t border-dashed border-gray-300 relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-50 px-2 text-[10px] text-gray-400 uppercase tracking-widest">Authorized Signature</div>
-                <div className="text-xs text-gray-400 whitespace-pre-line leading-relaxed">
-                  {COMPANY_INFO.stampDetails}
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-script text-primary/80 mb-2 rotate-[-5deg]">AP</div>
-                  <p className="text-sm font-medium text-gray-900">{COMPANY_INFO.ceo}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100 my-10" />
-
-          {/* Payment Methods */}
-          <div className="mb-8">
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-6">{t.waysToPay}</h4>
-            <div className="flex gap-8 mb-8">
-              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                <Checkbox
-                  id="cash"
-                  checked={data.acceptCash}
-                  onCheckedChange={(checked) =>
-                    setData({ ...data, acceptCash: checked as boolean })
-                  }
-                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                />
-                <Label htmlFor="cash" className="font-medium text-gray-700 cursor-pointer">{t.cash}</Label>
-              </div>
-              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                <Checkbox
-                  id="bank"
-                  checked={data.acceptBankTransfer}
-                  onCheckedChange={(checked) =>
-                    setData({ ...data, acceptBankTransfer: checked as boolean })
-                  }
-                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                />
-                <Label htmlFor="bank" className="font-medium text-gray-700 cursor-pointer">{t.bankTransfer}</Label>
-              </div>
-            </div>
-
-            {data.acceptBankTransfer && (
-              <div className="grid md:grid-cols-3 gap-6">
-                {BANK_ACCOUNTS.map((account, i) => (
-                  <div key={i} className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-primary/20 transition-colors">
-                    <h6 className="font-bold text-gray-900 mb-3">{account.bank}</h6>
-                    <div className="space-y-1.5 text-xs text-gray-600 font-mono">
-                      {account.accountName && (
-                        <p className="truncate"><span className="text-gray-400 select-none">NAME:</span> {account.accountName}</p>
-                      )}
-                      <p className="truncate"><span className="text-gray-400 select-none">IBAN:</span> {account.iban}</p>
-                      {account.bic && <p><span className="text-gray-400 select-none">BIC:</span> {account.bic}</p>}
-                      {account.swift && <p><span className="text-gray-400 select-none">SWIFT:</span> {account.swift}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {data.acceptBankTransfer && (
-              <p className="text-xs text-gray-400 mt-6 text-center italic">
-                {t.sendConfirmation} <span className="text-primary not-italic">{COMPANY_INFO.email}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="text-center space-y-6 pt-12 border-t border-gray-100 mt-12 pb-4">
-            <div className="text-[10px] items-center justify-center gap-4 text-gray-400 uppercase tracking-[0.2em] hidden print:flex">
-              <span>TravelDocs</span>
-            </div>
-
-            <p className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">
-              {t.services}
-            </p>
-            <div className="text-xs text-gray-500 leading-relaxed font-light">
-              <p>
-                {COMPANY_INFO.phone} &nbsp;•&nbsp; {COMPANY_INFO.email} &nbsp;•&nbsp; {COMPANY_INFO.website}
-              </p>
-              <p className="mt-1 text-gray-400">
-                IATA TIDS: {COMPANY_INFO.iata} &nbsp;|&nbsp; {COMPANY_INFO.license}
-              </p>
-            </div>
-            <p className="text-2xl font-script text-primary/40 pt-4 transform -rotate-2 select-none">
-              Thank you!
-            </p>
-          </div>
-        </Card>
-      </div>
-
       {/* Send Dialog */}
-      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent>
+      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Send Proforma Invoice</DialogTitle>
+            <DialogTitle>Αποστολή Προτιμολογίου</DialogTitle>
             <DialogDescription>
-              Send this proforma invoice to {data.clientEmail}?
+              Αποστολή στο <strong>{clientEmail}</strong>;
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setSendDialogOpen(false)} disabled={isSending}>
-              Cancel
-            </Button>
-            <Button onClick={confirmSend} disabled={isSending}>
-              <Send className="h-4 w-4 mr-2" />
-              {isSending ? "Sending..." : "Send Email"}
+            <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Άκυρο</Button>
+            <Button onClick={confirmSend} disabled={sending} className="gap-2">
+              <Send size={14} /> {sending ? "Αποστολή..." : "Αποστολή Email"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print\\:shadow-none,
-          .print\\:shadow-none * {
-            visibility: visible;
-          }
-          .print\\:shadow-none {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .sticky {
-            display: none !important;
-          }
-        }
-      `}</style>
+/* ─── Invoice Preview Component ─────────────────────────── */
+function InvoicePreview({
+  lang, t, terms, num, date, clientName, clientAddr, clientEmail, clientVat,
+  lines, discount, discountAmt, taxAmt, grandTotal, subtotal, notes, acceptCash, acceptBank
+}: {
+  lang: Lang; t: typeof T["el"]; terms: string[];
+  num: string; date: string; clientName: string; clientAddr: string;
+  clientEmail: string; clientVat: string;
+  lines: LineItem[]; discount: number; discountAmt: number;
+  taxAmt: number; grandTotal: number; subtotal: number;
+  notes: string; acceptCash: boolean; acceptBank: boolean;
+}) {
+  function lineTotal(l: LineItem) { return l.price + (l.price * l.taxPercent) / 100; }
+
+  return (
+    <div className="p-10 font-sans text-gray-800 min-h-[900px] print:p-8">
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-10">
+        <img src={COMPANY.logoUrl} alt="ALFA logo" className="h-14 object-contain" />
+        <div className="text-right">
+          <h2 className="text-3xl font-light tracking-tight text-gray-900 uppercase mb-4">{t.header}</h2>
+          <div className="text-sm text-gray-500 space-y-1">
+            <div className="flex justify-end gap-8">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">{t.invoiceNo}</span>
+              <span className="text-gray-900 font-mono font-semibold">{num || "PRF-—"}</span>
+            </div>
+            <div className="flex justify-end gap-8">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">{t.date}</span>
+              <span className="text-gray-900">{date ? format(new Date(date + "T12:00:00"), "dd MMM yyyy") : "—"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Client & Company */}
+      <div className="grid grid-cols-2 gap-12 mb-10">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{t.invoiceTo}</p>
+          <p className="text-xl font-semibold text-gray-900 mb-1">{clientName || <span className="text-gray-200">Ονοματεπώνυμο</span>}</p>
+          {clientAddr && <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed">{clientAddr}</p>}
+          {clientEmail && <p className="text-sm text-gray-400 mt-1">{clientEmail}</p>}
+          {clientVat && <p className="text-xs font-mono text-gray-400 mt-1">ΑΦΜ: {clientVat}</p>}
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{t.payTo}</p>
+          <p className="text-lg font-semibold text-gray-900 mb-1">{COMPANY.name}</p>
+          <p className="text-sm text-gray-500">{COMPANY.address}</p>
+          <p className="text-sm text-gray-500">{COMPANY.phone}</p>
+          <p className="text-sm text-blue-500">{COMPANY.email}</p>
+          <p className="text-xs font-mono text-gray-400 mt-1">VAT: {COMPANY.vat} · {COMPANY.doy}</p>
+        </div>
+      </div>
+
+      {/* Line items table */}
+      <div className="mb-10">
+        <div className="grid grid-cols-[1fr_90px_60px_90px] gap-4 pb-2 border-b-2 border-gray-900 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+          <span>{t.description}</span>
+          <span className="text-right">{t.price}</span>
+          <span className="text-right">{t.tax}</span>
+          <span className="text-right">{t.total}</span>
+        </div>
+        {lines.map((l, i) => (
+          <div key={l.id} className="grid grid-cols-[1fr_90px_60px_90px] gap-4 py-3 border-b border-gray-100 text-sm">
+            <span className="text-gray-700">{l.description || <span className="text-gray-300 italic">—</span>}</span>
+            <span className="text-right text-gray-600">€{l.price.toFixed(2)}</span>
+            <span className="text-right text-gray-400">{l.taxPercent}%</span>
+            <span className="text-right font-semibold text-gray-900">€{lineTotal(l).toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Terms & Totals */}
+      <div className="grid grid-cols-2 gap-12 mb-10">
+        {/* Terms */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{t.terms}</p>
+          <ul className="space-y-2 text-xs text-gray-500 list-disc list-outside pl-4 marker:text-gray-300 leading-relaxed">
+            {terms.map((term, i) => <li key={i}>{term}</li>)}
+          </ul>
+          {notes && (
+            <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Notes</p>
+              <p className="text-xs text-gray-600 leading-relaxed">{notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Totals */}
+        <div className="bg-gray-50 rounded-2xl p-6 space-y-3">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>{t.subtotal}</span>
+            <span>€{subtotal.toFixed(2)}</span>
+          </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-600">
+              <span>Έκπτωση {discount}%</span>
+              <span>-€{discountAmt.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>{t.taxAmt}</span>
+            <span>€{taxAmt.toFixed(2)}</span>
+          </div>
+          <div className="border-t border-gray-200 pt-3 flex justify-between items-baseline">
+            <span className="text-lg font-light text-gray-900">{t.grandTotal}</span>
+            <span className="text-2xl font-bold text-blue-700">€{grandTotal.toFixed(2)}</span>
+          </div>
+
+          {/* Signature */}
+          <div className="pt-6 mt-2 border-t border-dashed border-gray-300 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 leading-relaxed">
+              <p className="font-bold">{COMPANY.nameGr}</p>
+              <p>{COMPANY.doy}</p>
+              <p>ΑΦΜ {COMPANY.vat}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-blue-700/50 italic tracking-tight rotate-[-4deg] inline-block mb-1">AP</p>
+              <p className="text-xs font-medium text-gray-700">{COMPANY.ceo}</p>
+              <p className="text-[10px] text-gray-400">CEO</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment methods */}
+      {(acceptCash || acceptBank) && (
+        <div className="mb-8">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">{t.waysToPay}</p>
+          <div className="flex gap-4 mb-5">
+            {acceptCash && <span className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700">💵 {t.cash}</span>}
+            {acceptBank && <span className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700">🏦 {t.bank}</span>}
+          </div>
+          {acceptBank && (
+            <div className="grid grid-cols-3 gap-4">
+              {BANKS.map((b, i) => (
+                <div key={i} className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-xs font-mono space-y-1">
+                  <p className="font-bold text-gray-800 font-sans text-[11px] mb-2">{b.bank}</p>
+                  {b.name && <p><span className="text-gray-400">NAME:</span> {b.name}</p>}
+                  <p><span className="text-gray-400">IBAN:</span> {b.iban}</p>
+                  <p><span className="text-gray-400">BIC:</span> {b.bic}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {acceptBank && (
+            <p className="text-xs text-gray-400 mt-4 text-center italic">
+              {t.sendConfirm}: <span className="text-blue-500 not-italic">{COMPANY.email}</span>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="border-t border-gray-100 pt-6 text-center space-y-2">
+        <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">{t.services}</p>
+        <p className="text-xs text-gray-400">{COMPANY.phone} · {COMPANY.email} · {COMPANY.website}</p>
+        <p className="text-xs text-gray-300">IATA TIDS: {COMPANY.iata}</p>
+        <p className="text-base text-gray-300 italic mt-2">{t.thanks}</p>
+      </div>
     </div>
   );
 }

@@ -29,6 +29,8 @@ import ClientPortal from "./pages/ClientPortal";
 import InvoiceExchange from "./pages/InvoiceExchange";
 import BusinessIntelligence from "./pages/BusinessIntelligence";
 import Landing from "./pages/Landing";
+import InvoiceRequest from "./pages/InvoiceRequest";
+import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,7 @@ const App = () => (
             <Route path="/landing" element={<Landing />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
             <Route path="/client-portal" element={<ClientPortal />} />
+            <Route path="/invoice-request" element={<InvoiceRequest />} />
 
             {/* Protected routes */}
             <Route
@@ -72,6 +75,7 @@ const App = () => (
                       <Route path="reports" element={<Reports />} />
                       <Route path="invoice-hub" element={<InvoiceExchange />} />
                       <Route path="business-intelligence" element={<BusinessIntelligence />} />
+                      <Route path="invoice-requests" element={<InvoiceRequestsInbox />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
