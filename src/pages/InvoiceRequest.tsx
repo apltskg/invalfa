@@ -1,467 +1,330 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import {
-    FileText, Building2, Hash, CreditCard, MessageSquare,
-    Globe, CheckCircle2, Loader2, ChevronDown, ArrowRight,
-    Receipt, Plane
-} from "lucide-react";
+import { Loader2, CheckCircle, Upload, X, FileText } from "lucide-react";
 
-/* ─── types ─────────────────────────────────────────────────── */
-type Lang = "el" | "en";
-
-interface FormData {
-    full_name: string;
-    company_name: string;
-    vat_number: string;
-    tax_office: string;
-    address: string;
-    email: string;
-    phone: string;
-    bank_transaction_ref: string;
-    amount: string;
-    service_description: string;
-    notes: string;
-}
-
-const EMPTY: FormData = {
-    full_name: "", company_name: "", vat_number: "", tax_office: "",
-    address: "", email: "", phone: "",
-    bank_transaction_ref: "", amount: "", service_description: "", notes: "",
-};
-
-/* ─── i18n ────────────────────────────────────────────────────── */
+/* ─── i18n ─────────────────────────────────────────────── */
 const T = {
     el: {
-        hero: "Αίτηση Παραστατικού",
-        sub: "Συμπληρώστε τα στοιχεία σας και θα σας αποστείλουμε το παραστατικό.",
-        company: "ALFA ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε.",
-        tagline: "Γραφείο Γενικού Τουρισμού",
-        sec_requester: "Στοιχεία Αιτούντος",
-        sec_payment: "Στοιχεία Πληρωμής",
-        sec_notes: "Επιπλέον Σχόλια",
-        full_name: "Ονοματεπώνυμο / Υπεύθυνος *",
-        company_name: "Επωνυμία Εταιρείας",
-        vat_number: "ΑΦΜ *",
-        tax_office: "ΔΟΥ",
-        address: "Διεύθυνση Έδρας",
+        heading: "Αίτηση Παραστατικού",
+        sub: "Συμπληρώστε τα παρακάτω στοιχεία και θα σας αποστείλουμε το τιμολόγιο.",
+        full_name: "Ονοματεπώνυμο *",
+        company: "Επωνυμία Εταιρείας",
+        vat: "ΑΦΜ *",
+        doy: "ΔΟΥ",
+        address: "Διεύθυνση",
         email: "Email *",
         phone: "Τηλέφωνο",
-        bank_transaction_ref: "Κωδικός Τραπεζικής Συναλλαγής",
+        txn_date: "Ημερομηνία Συναλλαγής",
+        txn_ref: "Αρ. Συναλλαγής / Αναφορά",
         amount: "Ποσό (€)",
-        service_description: "Περιγραφή Υπηρεσίας / Παροχής *",
-        notes: "Σχόλια ή ιδιαίτερες οδηγίες",
-        submit: "Αποστολή Αίτησης",
+        service: "Περιγραφή Υπηρεσίας *",
+        receipt: "Απόδειξη Πληρωμής",
+        receiptHint: "Αναβάστε εικόνα ή PDF (μέγ. 5MB)",
+        notes: "Σχόλια / Παρατηρήσεις",
+        submit: "Αποστολή Αιτήματος",
         submitting: "Αποστολή...",
-        success_title: "Η αίτησή σας στάλθηκε!",
-        success_body: "Θα επικοινωνήσουμε μαζί σας στο συντομότερο δυνατό.",
-        new_request: "Νέα Αίτηση",
-        ph_name: "π.χ. Γιώργος Παπαδόπουλος",
-        ph_company: "π.χ. ΑΒΓ ΕΠΕ",
-        ph_vat: "π.χ. 123456789",
-        ph_doy: "π.χ. ΔΟΥ Κατερίνης",
-        ph_address: "π.χ. Λεπτοκαρυά, Πιερία, 60063",
-        ph_email: "email@example.com",
-        ph_phone: "+30 6xx xxx xxxx",
-        ph_ref: "π.χ. REF-20260201",
-        ph_amount: "π.χ. 250.00",
-        ph_service: "π.χ. Τουριστικό Πακέτο — Αθήνα 3 ημέρες",
-        ph_notes: "Τυχόν ιδιαίτερες οδηγίες...",
-        required: "* Υποχρεωτικό πεδίο",
+        successTitle: "Αίτηση εστάλη!",
+        successText: "Θα επικοινωνήσουμε μαζί σας σύντομα.",
+        another: "Νέο Αίτημα",
+        required: "Συμπληρώστε τα υποχρεωτικά πεδία.",
+        lang: "EN",
     },
     en: {
-        hero: "Invoice Request",
-        sub: "Fill in your details and we will issue your invoice promptly.",
-        company: "ALFA MONOPROSOPI I.K.E.",
-        tagline: "General Tourism Office",
-        sec_requester: "Requester Details",
-        sec_payment: "Payment Details",
-        sec_notes: "Additional Notes",
-        full_name: "Full Name / Contact Person *",
-        company_name: "Company Name",
-        vat_number: "VAT Number *",
-        tax_office: "Tax Office (DOY)",
-        address: "Registered Address",
+        heading: "Invoice Request",
+        sub: "Fill in your details below and we'll issue an invoice for you.",
+        full_name: "Full Name *",
+        company: "Company Name",
+        vat: "VAT Number *",
+        doy: "Tax Office",
+        address: "Address",
         email: "Email *",
         phone: "Phone",
-        bank_transaction_ref: "Bank Transaction Reference",
+        txn_date: "Transaction Date",
+        txn_ref: "Transaction Reference / ID",
         amount: "Amount (€)",
-        service_description: "Service / Description *",
-        notes: "Comments or special instructions",
+        service: "Service Description *",
+        receipt: "Proof of Payment",
+        receiptHint: "Upload image or PDF (max 5MB)",
+        notes: "Notes",
         submit: "Submit Request",
         submitting: "Submitting...",
-        success_title: "Your request was sent!",
-        success_body: "We will get back to you as soon as possible.",
-        new_request: "New Request",
-        ph_name: "e.g. George Papadopoulos",
-        ph_company: "e.g. ABC Ltd.",
-        ph_vat: "e.g. EL123456789",
-        ph_doy: "e.g. DOY Katerini",
-        ph_address: "e.g. Leptokaria, Pieria, 60063",
-        ph_email: "email@example.com",
-        ph_phone: "+30 6xx xxx xxxx",
-        ph_ref: "e.g. REF-20260201",
-        ph_amount: "e.g. 250.00",
-        ph_service: "e.g. Travel Package — Athens 3 days",
-        ph_notes: "Any special instructions...",
-        required: "* Required field",
+        successTitle: "Request sent!",
+        successText: "We'll get back to you shortly.",
+        another: "New Request",
+        required: "Please fill in all required fields.",
+        lang: "ΕΛ",
     },
 };
 
-/* ─── sub-components ─────────────────────────────────────────── */
+type Lang = "el" | "en";
+
+/* ─── Form field ────────────────────────────────────────── */
 function Field({
-    label, id, placeholder, value, onChange, type = "text", multiline = false, icon,
-}: {
-    label: string; id: string; placeholder?: string;
-    value: string; onChange: (v: string) => void;
-    type?: string; multiline?: boolean; icon?: React.ReactNode;
-}) {
+    label, children, half = false,
+}: { label: string; children: React.ReactNode; half?: boolean }) {
     return (
-        <div className="ir-field">
-            <label htmlFor={id} className="ir-label">
-                {icon && <span className="ir-label-icon">{icon}</span>}
-                {label}
-            </label>
-            {multiline ? (
-                <textarea
-                    id={id} value={value} placeholder={placeholder}
-                    onChange={e => onChange(e.target.value)}
-                    className="ir-input ir-textarea"
-                />
-            ) : (
-                <input
-                    id={id} type={type} value={value} placeholder={placeholder}
-                    onChange={e => onChange(e.target.value)}
-                    className="ir-input"
-                />
-            )}
+        <div className={half ? "col-span-1" : "col-span-2"}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            {children}
         </div>
     );
 }
 
-/* ─── main component ──────────────────────────────────────────── */
+const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
+
+/* ─── Main ──────────────────────────────────────────────── */
 export default function InvoiceRequest() {
     const [lang, setLang] = useState<Lang>("el");
-    const [form, setForm] = useState<FormData>(EMPTY);
     const [loading, setLoading] = useState(false);
     const [done, setDone] = useState(false);
+    const [error, setError] = useState("");
+    const [file, setFile] = useState<File | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const t = T[lang];
-    const upd = (k: keyof FormData) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
-    async function handleSubmit(e: React.FormEvent) {
+    const [form, setForm] = useState({
+        full_name: "", company_name: "", vat_number: "", tax_office: "",
+        address: "", email: "", phone: "",
+        transaction_date: "", bank_transaction_ref: "",
+        amount: "", service_description: "", notes: "",
+    });
+
+    const upd = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setForm(f => ({ ...f, [k]: e.target.value }));
+
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0];
+        if (f && f.size <= 5 * 1024 * 1024) setFile(f);
+        else if (f) alert("Max file size is 5MB.");
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.full_name || !form.vat_number || !form.email || !form.service_description) {
-            toast.error(lang === "el" ? "Συμπληρώστε τα υποχρεωτικά πεδία." : "Please fill in the required fields.");
+            setError(t.required);
             return;
         }
+        setError("");
         setLoading(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { error } = await (supabase as any).from("invoice_requests").insert([{
-                ...form,
-                amount: form.amount ? parseFloat(form.amount) : null,
-                status: "pending",
+            let receipt_url: string | null = null;
+
+            // Upload receipt if present
+            if (file) {
+                const ext = file.name.split(".").pop();
+                const path = `receipts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error: upErr } = await (supabase as any).storage
+                    .from("invoice-receipts")
+                    .upload(path, file, { cacheControl: "3600", upsert: false });
+                if (!upErr) {
+                    const { data: urlData } = (supabase as any).storage
+                        .from("invoice-receipts")
+                        .getPublicUrl(path);
+                    receipt_url = urlData?.publicUrl ?? null;
+                }
+            }
+
+            const { error: dbErr } = await (supabase as any).from("invoice_requests").insert([{
                 lang,
+                full_name: form.full_name,
+                company_name: form.company_name || null,
+                vat_number: form.vat_number,
+                tax_office: form.tax_office || null,
+                address: form.address || null,
+                email: form.email,
+                phone: form.phone || null,
+                transaction_date: form.transaction_date || null,
+                bank_transaction_ref: form.bank_transaction_ref || null,
+                amount: form.amount ? parseFloat(form.amount) : null,
+                service_description: form.service_description,
+                notes: form.notes || null,
+                receipt_url,
+                status: "pending",
             }]);
-            if (error) throw error;
+            if (dbErr) throw dbErr;
             setDone(true);
-        } catch (err: any) {
+        } catch (err) {
             console.error(err);
-            toast.error(lang === "el" ? "Σφάλμα αποστολής. Δοκιμάστε ξανά." : "Submission failed. Please try again.");
+            setError("Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const reset = () => {
+        setDone(false);
+        setFile(null);
+        setForm({
+            full_name: "", company_name: "", vat_number: "", tax_office: "",
+            address: "", email: "", phone: "",
+            transaction_date: "", bank_transaction_ref: "",
+            amount: "", service_description: "", notes: "",
+        });
+    };
+
+    /* ── Success screen ── */
+    if (done) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center max-w-sm w-full">
+                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">{t.successTitle}</h2>
+                    <p className="text-sm text-gray-500 mb-6">{t.successText}</p>
+                    <button onClick={reset}
+                        className="w-full py-2 px-4 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                        {t.another}
+                    </button>
+                </div>
+            </div>
+        );
     }
 
+    /* ── Form ── */
     return (
-        <>
-            <style>{IR_CSS}</style>
+        <div className="min-h-screen bg-gray-50 py-10 px-4">
+            <div className="max-w-2xl mx-auto">
 
-            <div className="ir-root">
-                {/* ── header ── */}
-                <header className="ir-header">
-                    <div className="ir-header-inner">
-                        <div className="ir-brand">
-                            <div className="ir-brand-icon"><Plane className="ir-plane" /></div>
-                            <div>
-                                <p className="ir-brand-name">{t.company}</p>
-                                <p className="ir-brand-tag">{t.tagline}</p>
-                            </div>
-                        </div>
-                        <button
-                            className="ir-lang-btn"
-                            onClick={() => setLang(l => l === "el" ? "en" : "el")}
-                        >
-                            <Globe size={14} />
-                            {lang === "el" ? "EN" : "ΕΛ"}
-                            <ChevronDown size={12} />
-                        </button>
+                {/* Header */}
+                <div className="flex items-start justify-between mb-8">
+                    <div>
+                        <img
+                            src="https://atravel.gr/wp-content/uploads/2023/07/Alfa-Logo-Horizontal-Retina.png"
+                            alt="ALFA Travel"
+                            className="h-10 object-contain mb-4"
+                        />
+                        <h1 className="text-2xl font-semibold text-gray-900">{t.heading}</h1>
+                        <p className="text-sm text-gray-500 mt-1">{t.sub}</p>
                     </div>
-                </header>
+                    <button
+                        onClick={() => setLang(l => l === "el" ? "en" : "el")}
+                        className="text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition mt-1"
+                    >
+                        {t.lang}
+                    </button>
+                </div>
 
-                <main className="ir-main">
-                    {/* ── hero ── */}
-                    <div className="ir-hero">
-                        <div className="ir-hero-badge"><Receipt size={14} /> Invoice</div>
-                        <h1 className="ir-hero-title">{t.hero}</h1>
-                        <p className="ir-hero-sub">{t.sub}</p>
+                {/* Card */}
+                <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+
+                    {/* Personal / Company */}
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+                            {lang === "el" ? "Στοιχεία" : "Details"}
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label={t.full_name}>
+                                <input className={inputCls} value={form.full_name} onChange={upd("full_name")}
+                                    placeholder={lang === "el" ? "π.χ. Μαρία Παπαδοπούλου" : "e.g. Maria Papadopoulou"} />
+                            </Field>
+                            <Field label={t.company}>
+                                <input className={inputCls} value={form.company_name} onChange={upd("company_name")}
+                                    placeholder={lang === "el" ? "Προαιρετικό" : "Optional"} />
+                            </Field>
+                            <Field label={t.vat} half>
+                                <input className={inputCls} value={form.vat_number} onChange={upd("vat_number")}
+                                    placeholder="π.χ. 123456789" />
+                            </Field>
+                            <Field label={t.doy} half>
+                                <input className={inputCls} value={form.tax_office} onChange={upd("tax_office")}
+                                    placeholder={lang === "el" ? "π.χ. ΔΟΥ Κατερίνης" : "e.g. Athens A'"} />
+                            </Field>
+                            <Field label={t.address}>
+                                <input className={inputCls} value={form.address} onChange={upd("address")}
+                                    placeholder={lang === "el" ? "Οδός, Πόλη, Τ.Κ." : "Street, City, ZIP"} />
+                            </Field>
+                            <Field label={t.email} half>
+                                <input type="email" className={inputCls} value={form.email} onChange={upd("email")}
+                                    placeholder="email@example.com" />
+                            </Field>
+                            <Field label={t.phone} half>
+                                <input className={inputCls} value={form.phone} onChange={upd("phone")}
+                                    placeholder="+30 694..." />
+                            </Field>
+                        </div>
                     </div>
 
-                    {done ? (
-                        /* ── success state ── */
-                        <div className="ir-card ir-success">
-                            <div className="ir-success-icon"><CheckCircle2 size={48} /></div>
-                            <h2 className="ir-success-title">{t.success_title}</h2>
-                            <p className="ir-success-body">{t.success_body}</p>
-                            <button className="ir-btn-outline" onClick={() => { setDone(false); setForm(EMPTY); }}>
-                                {t.new_request}
-                            </button>
+                    <div className="border-t border-gray-100" />
+
+                    {/* Payment */}
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+                            {lang === "el" ? "Πληρωμή" : "Payment"}
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label={t.txn_date} half>
+                                <input type="date" className={inputCls} value={form.transaction_date}
+                                    onChange={upd("transaction_date")} />
+                            </Field>
+                            <Field label={t.amount} half>
+                                <input type="number" min="0" step="0.01" className={inputCls}
+                                    value={form.amount} onChange={upd("amount")} placeholder="0.00" />
+                            </Field>
+                            <Field label={t.txn_ref}>
+                                <input className={inputCls} value={form.bank_transaction_ref}
+                                    onChange={upd("bank_transaction_ref")}
+                                    placeholder={lang === "el" ? "π.χ. αρ. εντολής ή αναφορά τράπεζας" : "e.g. bank reference or order ID"} />
+                            </Field>
+
+                            {/* File upload */}
+                            <Field label={t.receipt}>
+                                <input ref={fileRef} type="file" accept="image/*,.pdf"
+                                    onChange={handleFile} className="hidden" />
+                                {file ? (
+                                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                        <FileText size={14} className="text-blue-500 shrink-0" />
+                                        <span className="flex-1 truncate">{file.name}</span>
+                                        <button type="button" onClick={() => setFile(null)}
+                                            className="text-gray-400 hover:text-red-500 shrink-0">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button type="button" onClick={() => fileRef.current?.click()}
+                                        className="w-full flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-500 transition">
+                                        <Upload size={14} /> {t.receiptHint}
+                                    </button>
+                                )}
+                            </Field>
                         </div>
-                    ) : (
-                        <form className="ir-card" onSubmit={handleSubmit} noValidate>
+                    </div>
 
-                            {/* ── Section 1: Requester ── */}
-                            <div className="ir-section">
-                                <div className="ir-section-header">
-                                    <Building2 size={15} />
-                                    <span>{t.sec_requester}</span>
-                                </div>
-                                <div className="ir-grid-2">
-                                    <Field id="full_name" label={t.full_name} placeholder={t.ph_name}
-                                        value={form.full_name} onChange={upd("full_name")}
-                                        icon={<FileText size={12} />} />
-                                    <Field id="company_name" label={t.company_name} placeholder={t.ph_company}
-                                        value={form.company_name} onChange={upd("company_name")}
-                                        icon={<Building2 size={12} />} />
-                                </div>
-                                <div className="ir-grid-2">
-                                    <Field id="vat_number" label={t.vat_number} placeholder={t.ph_vat}
-                                        value={form.vat_number} onChange={upd("vat_number")}
-                                        icon={<Hash size={12} />} />
-                                    <Field id="tax_office" label={t.tax_office} placeholder={t.ph_doy}
-                                        value={form.tax_office} onChange={upd("tax_office")} />
-                                </div>
-                                <Field id="address" label={t.address} placeholder={t.ph_address}
-                                    value={form.address} onChange={upd("address")} />
-                                <div className="ir-grid-2">
-                                    <Field id="email" label={t.email} placeholder={t.ph_email}
-                                        type="email" value={form.email} onChange={upd("email")} />
-                                    <Field id="phone" label={t.phone} placeholder={t.ph_phone}
-                                        type="tel" value={form.phone} onChange={upd("phone")} />
-                                </div>
-                            </div>
+                    <div className="border-t border-gray-100" />
 
-                            {/* ── Section 2: Payment ── */}
-                            <div className="ir-section">
-                                <div className="ir-section-header">
-                                    <CreditCard size={15} />
-                                    <span>{t.sec_payment}</span>
-                                </div>
-                                <div className="ir-grid-2">
-                                    <Field id="bank_transaction_ref" label={t.bank_transaction_ref}
-                                        placeholder={t.ph_ref}
-                                        value={form.bank_transaction_ref} onChange={upd("bank_transaction_ref")}
-                                        icon={<CreditCard size={12} />} />
-                                    <Field id="amount" label={t.amount} placeholder={t.ph_amount}
-                                        type="number" value={form.amount} onChange={upd("amount")} />
-                                </div>
-                                <Field id="service_description" label={t.service_description}
-                                    placeholder={t.ph_service}
+                    {/* Service */}
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+                            {lang === "el" ? "Υπηρεσία" : "Service"}
+                        </p>
+                        <div className="space-y-4">
+                            <Field label={t.service}>
+                                <textarea className={inputCls + " resize-none"} rows={3}
                                     value={form.service_description} onChange={upd("service_description")}
-                                    multiline icon={<FileText size={12} />} />
-                            </div>
+                                    placeholder={lang === "el" ? "π.χ. Αεροπορικά εισιτήρια Αθήνα–Λονδίνο, 2 άτομα" : "e.g. Air tickets Athens–London, 2 passengers"} />
+                            </Field>
+                            <Field label={t.notes}>
+                                <textarea className={inputCls + " resize-none"} rows={2}
+                                    value={form.notes} onChange={upd("notes")}
+                                    placeholder={lang === "el" ? "Προαιρετικές παρατηρήσεις..." : "Optional notes..."} />
+                            </Field>
+                        </div>
+                    </div>
 
-                            {/* ── Section 3: Notes ── */}
-                            <div className="ir-section ir-section-last">
-                                <div className="ir-section-header">
-                                    <MessageSquare size={15} />
-                                    <span>{t.sec_notes}</span>
-                                </div>
-                                <Field id="notes" label={t.notes} placeholder={t.ph_notes}
-                                    value={form.notes} onChange={upd("notes")} multiline />
-                            </div>
-
-                            <div className="ir-footer">
-                                <p className="ir-required">{t.required}</p>
-                                <button type="submit" disabled={loading} className="ir-submit">
-                                    {loading
-                                        ? <><Loader2 size={16} className="ir-spin" /> {t.submitting}</>
-                                        : <>{t.submit} <ArrowRight size={16} /></>}
-                                </button>
-                            </div>
-                        </form>
+                    {error && (
+                        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-2">{error}</p>
                     )}
-                </main>
 
-                <footer className="ir-page-footer">
-                    <p>© {new Date().getFullYear()} ALFA ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε. &nbsp;·&nbsp; business@atravel.gr &nbsp;·&nbsp; +30 694 207 2312</p>
-                </footer>
+                    <button type="submit" disabled={loading}
+                        className="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition flex items-center justify-center gap-2">
+                        {loading && <Loader2 size={15} className="animate-spin" />}
+                        {loading ? t.submitting : t.submit}
+                    </button>
+                </form>
+
+                <p className="text-center text-xs text-gray-400 mt-6">
+                    ALFA Travel · business@atravel.gr · +30 694 207 2312
+                </p>
             </div>
-        </>
+        </div>
     );
 }
-
-/* ─── scoped CSS (works both standalone and embedded) ─────────── */
-const IR_CSS = `
-.ir-root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-  color: #f1f5f9;
-  display: flex;
-  flex-direction: column;
-}
-
-/* header */
-.ir-header {
-  backdrop-filter: blur(12px);
-  background: rgba(15,23,42,0.7);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  position: sticky; top: 0; z-index: 50;
-}
-.ir-header-inner {
-  max-width: 680px; margin: 0 auto;
-  padding: 14px 24px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.ir-brand { display: flex; align-items: center; gap: 12px; }
-.ir-brand-icon {
-  width: 38px; height: 38px; border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 20px rgba(99,102,241,0.4);
-}
-.ir-plane { color: #fff; width:18px; height:18px; }
-.ir-brand-name { font-size: 13px; font-weight: 700; color: #f1f5f9; }
-.ir-brand-tag { font-size: 11px; color: #64748b; margin-top: 1px; }
-.ir-lang-btn {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 600; color: #94a3b8;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px; padding: 6px 12px; cursor: pointer;
-  transition: all .2s;
-}
-.ir-lang-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
-
-/* main */
-.ir-main { flex: 1; max-width: 680px; margin: 0 auto; width: 100%; padding: 40px 24px 60px; }
-
-/* hero */
-.ir-hero { text-align: center; margin-bottom: 32px; }
-.ir-hero-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: #818cf8; background: rgba(99,102,241,.12);
-  border: 1px solid rgba(99,102,241,.25); border-radius: 999px;
-  padding: 5px 14px; margin-bottom: 16px;
-}
-.ir-hero-title {
-  font-size: clamp(26px, 5vw, 38px); font-weight: 800;
-  background: linear-gradient(135deg, #f1f5f9 30%, #818cf8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; margin: 0 0 12px;
-}
-.ir-hero-sub { font-size: 15px; color: #64748b; max-width: 480px; margin: 0 auto; line-height: 1.6; }
-
-/* card */
-.ir-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 24px;
-  backdrop-filter: blur(20px);
-  overflow: hidden;
-}
-
-/* success */
-.ir-success {
-  padding: 60px 40px;
-  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px;
-}
-.ir-success-icon { color: #34d399; }
-.ir-success-title { font-size: 24px; font-weight: 700; color: #f1f5f9; margin: 0; }
-.ir-success-body { color: #64748b; font-size: 15px; margin: 0; }
-.ir-btn-outline {
-  margin-top: 8px; padding: 10px 24px;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px; background: transparent; color: #94a3b8;
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  transition: all .2s;
-}
-.ir-btn-outline:hover { background: rgba(255,255,255,0.06); color: #f1f5f9; }
-
-/* sections */
-.ir-section {
-  padding: 28px 32px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.ir-section-last { border-bottom: none; }
-.ir-section-header {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-  color: #6366f1; margin-bottom: 20px;
-}
-
-/* grid */
-.ir-grid-2 {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
-}
-@media (max-width: 520px) {
-  .ir-grid-2 { grid-template-columns: 1fr; }
-  .ir-section { padding: 22px 20px; }
-  .ir-footer { padding: 20px; }
-}
-
-/* field */
-.ir-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 0; }
-.ir-label {
-  display: flex; align-items: center; gap-: 5px;
-  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: #64748b;
-}
-.ir-label-icon { color: #6366f1; margin-right: 4px; }
-.ir-input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 14px; color: #f1f5f9;
-  outline: none; width: 100%; box-sizing: border-box;
-  transition: border-color .2s, box-shadow .2s;
-  font-family: inherit;
-}
-.ir-input::placeholder { color: #334155; }
-.ir-input:focus {
-  border-color: rgba(99,102,241,.6);
-  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
-}
-.ir-textarea { resize: vertical; min-height: 80px; }
-
-/* footer bar */
-.ir-footer {
-  padding: 20px 32px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  flex-wrap: wrap;
-}
-.ir-required { font-size: 12px; color: #475569; }
-.ir-submit {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff; border: none; border-radius: 12px;
-  padding: 12px 28px; font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: all .2s;
-  box-shadow: 0 4px 20px rgba(99,102,241,.35);
-}
-.ir-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(99,102,241,.5); }
-.ir-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-.ir-spin { animation: ir-spin .9s linear infinite; }
-@keyframes ir-spin { to { transform: rotate(360deg); } }
-
-/* page footer */
-.ir-page-footer {
-  text-align: center; padding: 24px;
-  font-size: 12px; color: #334155;
-  border-top: 1px solid rgba(255,255,255,0.04);
-}
-`;

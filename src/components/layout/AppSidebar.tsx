@@ -48,6 +48,7 @@ const analyticsItems = [
 // ── Platform Suite (multi-tenant) ───────────────────────────────────────────
 const platformItems = [
   { title: "Invoice Hub", icon: ArrowLeftRight, url: "/invoice-hub" },
+  { title: "Αιτήματα Τιμολογίων", icon: ClipboardList, url: "/invoice-requests" },
   { title: "Proforma", icon: FileText, url: "/proforma" },
   { title: "Διαχ. Proforma", icon: List, url: "/proformas" },
 ];

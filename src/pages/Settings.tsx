@@ -139,16 +139,16 @@ function EditField({
 
 /* ─── Section header ─── */
 function SectionHeader({
-    icon, title, plain, message,
+    icon, title, plain, msgEl, msgEn,
 }: {
-    icon: React.ReactNode; title: string; plain: string; message: string;
+    icon: React.ReactNode; title: string; plain: string; msgEl: string; msgEn: string;
 }) {
     return (
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 {icon}{title}
             </p>
-            <CopyPair plain={plain} message={message} />
+            <CopyPair plain={plain} msgEl={msgEl} msgEn={msgEn} />
         </div>
     );
 }
