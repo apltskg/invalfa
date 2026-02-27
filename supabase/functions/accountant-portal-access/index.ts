@@ -7,10 +7,12 @@ const corsHeaders = {
 
 interface PortalRequest {
   token: string;
-  action?: 'validate' | 'get_data' | 'post_comment';
+  action?: 'validate' | 'get_data' | 'post_comment' | 'get_file_url';
   invoiceId?: string;
   commentText?: string;
   isDoubt?: boolean;
+  bucket?: string;
+  filePath?: string;
 }
 
 // UUID validation regex
@@ -253,6 +255,44 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── GET FILE URL (signed download for portal) ──
+    if (action === 'get_file_url') {
+      const { bucket, filePath } = body;
+
+      if (!bucket || !filePath || typeof bucket !== 'string' || typeof filePath !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Missing bucket or filePath', code: 'INVALID_PARAMS' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Only allow specific buckets
+      const allowedBuckets = ['invoices', 'invoice-lists', 'bank-statements'];
+      if (!allowedBuckets.includes(bucket)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid bucket', code: 'INVALID_BUCKET' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 3600);
+
+      if (signedError) {
+        console.error('Signed URL error:', signedError.message);
+        return new Response(
+          JSON.stringify({ error: 'Unable to generate download link', code: 'SIGNED_URL_ERROR' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ url: signedData.signedUrl }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

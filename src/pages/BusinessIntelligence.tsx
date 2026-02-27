@@ -162,14 +162,14 @@ export default function BusinessIntelligence() {
     return (
         <div className="space-y-6 pb-20">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Business Intelligence</h1>
-                <p className="text-muted-foreground mt-1">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Insights</h1>
+                <p className="text-sm text-slate-500 mt-0.5">
                     Αναλυτικά στοιχεία προμηθευτών, πελατών και προβλέψεις
                 </p>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="rounded-xl">
+                <TabsList className="rounded-xl bg-slate-100 p-1">
                     <TabsTrigger value="suppliers" className="rounded-lg gap-2">
                         <Truck className="h-4 w-4" />
                         Προμηθευτές
