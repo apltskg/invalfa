@@ -89,12 +89,13 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
     );
 }
 
-/* ─── Pair: plain + message-ready ─── */
-function CopyPair({ plain, message }: { plain: string; message: string }) {
+/* ─── Pair: plain + EL message + EN message ─── */
+function CopyPair({ plain, msgEl, msgEn }: { plain: string; msgEl: string; msgEn: string }) {
     return (
         <div className="flex items-center gap-1.5">
             <CopyBtn text={plain} label="Αντιγραφή" />
-            <CopyBtn text={message} label="Ως μήνυμα 💬" />
+            <CopyBtn text={msgEl} label="ΕΛ" />
+            <CopyBtn text={msgEn} label="EN" />
         </div>
     );
 }
@@ -238,62 +239,136 @@ export default function Settings() {
 
     const copyAllBanks = [copyEurobank, "", copyAlpha, "", copyWise].join("\n");
 
+    // helper: strip EL prefix for Greek VAT display
+    const vatGr = settings.vat_number.replace(/^EL/i, "");
+
     // ── Message-ready copy blocks ──
-    const msgCompany = [
-        `Ορίστε τα στοιχεία μας:\n`,
-        `🏢 Επωνυμία: ${settings.company_name_gr} (${settings.company_name})`,
-        `📋 Δραστηριότητα: ${settings.activity_gr}`,
-        `🔢 ΑΦΜ: ${settings.vat_number}  |  ${settings.doy}`,
-        `📍 Διεύθυνση: ${settings.address_gr}`,
-        `📞 Τηλ: ${settings.phone}`,
-        `✉️ Email: ${settings.email}`,
-    ].join("\n");
-
-    const msgEurobank = [
-        `Ορίστε τα στοιχεία μας για Eurobank:\n`,
-        `🏦 Τράπεζα: Eurobank`,
-        `👤 Δικαιούχος: ${settings.eurobank_beneficiary}`,
-        `💳 IBAN: ${settings.eurobank_iban}`,
-        `🔑 BIC: ${settings.eurobank_bic}`,
-    ].join("\n");
-
-    const msgAlpha = [
-        `Ορίστε τα στοιχεία μας για Alpha Bank:\n`,
-        `🏦 Τράπεζα: Alpha Bank`,
-        `👤 Δικαιούχος: ${settings.alpha_beneficiary}`,
-        `💳 IBAN: ${settings.alpha_iban}`,
-        `🔑 BIC: ${settings.alpha_bic}`,
-    ].join("\n");
-
-    const msgWise = [
-        `Ορίστε τα στοιχεία μας για διεθνείς μεταφορές (Wise / SEPA):\n`,
-        `🏦 Bank: Wise`,
-        `👤 Beneficiary: ${settings.wise_beneficiary}`,
-        `💳 IBAN: ${settings.wise_iban}`,
-        `🔑 Swift/BIC: ${settings.wise_swift}`,
-        `📍 Bank address: ${settings.wise_bank_address}`,
-    ].join("\n");
-
-    const msgAllBanks = [
-        `Ορίστε τα τραπεζικά μας στοιχεία:\n`,
-        `🏦 Eurobank`,
-        `👤 ${settings.eurobank_beneficiary}`,
-        `💳 IBAN: ${settings.eurobank_iban}`,
-        `🔑 BIC: ${settings.eurobank_bic}`,
+    // Greek versions — no emojis, no "EL" before ΑΦΜ
+    const msgElCompany = [
+        `Ορίστε τα στοιχεία μας:`,
         ``,
-        `🏦 Alpha Bank`,
-        `👤 ${settings.alpha_beneficiary}`,
-        `💳 IBAN: ${settings.alpha_iban}`,
-        `🔑 BIC: ${settings.alpha_bic}`,
+        `Επωνυμία: ${settings.company_name_gr}`,
+        `Δραστηριότητα: ${settings.activity_gr}`,
+        `ΑΦΜ: ${vatGr}`,
+        `ΔΟΥ: ${settings.doy}`,
+        `Διεύθυνση: ${settings.address_gr}`,
+        `Τηλ: ${settings.phone}`,
+        `Email: ${settings.email}`,
+    ].join("\n");
+
+    // English versions — no emojis, keep EL prefix on VAT
+    const msgEnCompany = [
+        `Here are our company details:`,
         ``,
-        `🌍 Wise (International / SEPA)`,
-        `👤 ${settings.wise_beneficiary}`,
-        `💳 IBAN: ${settings.wise_iban}`,
-        `🔑 BIC: ${settings.wise_swift}`,
-        `📍 ${settings.wise_bank_address}`,
+        `Company: ${settings.company_name}`,
+        `Activity: ${settings.activity}`,
+        `VAT: ${settings.vat_number}`,
+        `Tax Office: ${settings.doy}`,
+        `Address: ${settings.address}`,
+        `Tel: ${settings.phone}`,
+        `Email: ${settings.email}`,
+    ].join("\n");
+
+    const msgElEurobank = [
+        `Ορίστε τα στοιχεία μας για Eurobank:`,
+        ``,
+        `Τράπεζα: Eurobank`,
+        `Δικαιούχος: ${settings.eurobank_beneficiary}`,
+        `IBAN: ${settings.eurobank_iban}`,
+        `BIC: ${settings.eurobank_bic}`,
+    ].join("\n");
+
+    const msgEnEurobank = [
+        `Here are our Eurobank details:`,
+        ``,
+        `Bank: Eurobank`,
+        `Beneficiary: ${settings.eurobank_beneficiary}`,
+        `IBAN: ${settings.eurobank_iban}`,
+        `BIC: ${settings.eurobank_bic}`,
+    ].join("\n");
+
+    const msgElAlpha = [
+        `Ορίστε τα στοιχεία μας για Alpha Bank:`,
+        ``,
+        `Τράπεζα: Alpha Bank`,
+        `Δικαιούχος: ${settings.alpha_beneficiary}`,
+        `IBAN: ${settings.alpha_iban}`,
+        `BIC: ${settings.alpha_bic}`,
+    ].join("\n");
+
+    const msgEnAlpha = [
+        `Here are our Alpha Bank details:`,
+        ``,
+        `Bank: Alpha Bank`,
+        `Beneficiary: ${settings.alpha_beneficiary}`,
+        `IBAN: ${settings.alpha_iban}`,
+        `BIC: ${settings.alpha_bic}`,
+    ].join("\n");
+
+    const msgElWise = [
+        `Ορίστε τα στοιχεία μας για διεθνείς μεταφορές (Wise / SEPA):`,
+        ``,
+        `Τράπεζα: Wise`,
+        `Δικαιούχος: ${settings.wise_beneficiary}`,
+        `IBAN: ${settings.wise_iban}`,
+        `BIC/Swift: ${settings.wise_swift}`,
+        `Διεύθυνση τράπεζας: ${settings.wise_bank_address}`,
+    ].join("\n");
+
+    const msgEnWise = [
+        `Here are our international bank details (Wise / SEPA):`,
+        ``,
+        `Bank: Wise`,
+        `Beneficiary: ${settings.wise_beneficiary}`,
+        `IBAN: ${settings.wise_iban}`,
+        `BIC/Swift: ${settings.wise_swift}`,
+        `Bank address: ${settings.wise_bank_address}`,
+    ].join("\n");
+
+    const msgElAllBanks = [
+        `Ορίστε τα τραπεζικά μας στοιχεία:`,
+        ``,
+        `Eurobank`,
+        `Δικαιούχος: ${settings.eurobank_beneficiary}`,
+        `IBAN: ${settings.eurobank_iban}`,
+        `BIC: ${settings.eurobank_bic}`,
+        ``,
+        `Alpha Bank`,
+        `Δικαιούχος: ${settings.alpha_beneficiary}`,
+        `IBAN: ${settings.alpha_iban}`,
+        `BIC: ${settings.alpha_bic}`,
+        ``,
+        `Wise (International / SEPA)`,
+        `Δικαιούχος: ${settings.wise_beneficiary}`,
+        `IBAN: ${settings.wise_iban}`,
+        `BIC/Swift: ${settings.wise_swift}`,
+        `Διεύθυνση τράπεζας: ${settings.wise_bank_address}`,
         ``,
         `Παρακαλώ αναφέρετε τον σκοπό της πληρωμής κατά τη μεταφορά.`,
-        `Ευχαριστούμε! 🙏`,
+        `Ευχαριστούμε.`,
+    ].join("\n");
+
+    const msgEnAllBanks = [
+        `Here are our bank details:`,
+        ``,
+        `Eurobank`,
+        `Beneficiary: ${settings.eurobank_beneficiary}`,
+        `IBAN: ${settings.eurobank_iban}`,
+        `BIC: ${settings.eurobank_bic}`,
+        ``,
+        `Alpha Bank`,
+        `Beneficiary: ${settings.alpha_beneficiary}`,
+        `IBAN: ${settings.alpha_iban}`,
+        `BIC: ${settings.alpha_bic}`,
+        ``,
+        `Wise (International / SEPA)`,
+        `Beneficiary: ${settings.wise_beneficiary}`,
+        `IBAN: ${settings.wise_iban}`,
+        `BIC/Swift: ${settings.wise_swift}`,
+        `Bank address: ${settings.wise_bank_address}`,
+        ``,
+        `Please include the payment purpose in the transfer details.`,
+        `Thank you.`,
     ].join("\n");
 
     if (loading) {
@@ -353,7 +428,8 @@ export default function Settings() {
                     icon={<Building2 className="h-4 w-4 text-slate-400" />}
                     title="Στοιχεία Εταιρείας / Company Details"
                     plain={copyCompany}
-                    message={msgCompany}
+                    msgEl={msgElCompany}
+                    msgEn={msgEnCompany}
                 />
                 <CardContent className="p-6">
                     {editMode ? (
@@ -406,7 +482,7 @@ export default function Settings() {
                         <CreditCard className="h-4 w-4 text-slate-400" />
                         Τραπεζικά Στοιχεία / Bank Accounts
                     </p>
-                    <CopyPair plain={copyAllBanks} message={msgAllBanks} />
+                    <CopyPair plain={copyAllBanks} msgEl={msgElAllBanks} msgEn={msgEnAllBanks} />
                 </div>
                 <CardContent className="p-6 space-y-5">
 
@@ -416,7 +492,7 @@ export default function Settings() {
                             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 flex items-center gap-2">
                                 <Landmark size={13} /> Eurobank
                             </p>
-                            <CopyPair plain={copyEurobank} message={msgEurobank} />
+                            <CopyPair plain={copyEurobank} msgEl={msgElEurobank} msgEn={msgEnEurobank} />
                         </div>
                         <div className="px-4 py-3">
                             {editMode ? (
@@ -443,7 +519,7 @@ export default function Settings() {
                             <p className="text-xs font-bold uppercase tracking-widest text-red-600 flex items-center gap-2">
                                 <Landmark size={13} /> Alpha Bank
                             </p>
-                            <CopyPair plain={copyAlpha} message={msgAlpha} />
+                            <CopyPair plain={copyAlpha} msgEl={msgElAlpha} msgEn={msgEnAlpha} />
                         </div>
                         <div className="px-4 py-3">
                             {editMode ? (
@@ -470,7 +546,7 @@ export default function Settings() {
                             <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 flex items-center gap-2">
                                 <Globe size={13} /> Wise — International / SEPA
                             </p>
-                            <CopyPair plain={copyWise} message={msgWise} />
+                            <CopyPair plain={copyWise} msgEl={msgElWise} msgEn={msgEnWise} />
                         </div>
                         <div className="px-4 py-3">
                             {editMode ? (
