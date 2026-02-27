@@ -94,12 +94,12 @@ export default function InvoiceExchange() {
     async function fetchShares() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("hub_shares")
                 .select("*")
                 .order("created_at", { ascending: false });
             if (error) throw error;
-            setShares((data as HubShare[]) || []);
+            setShares((data as unknown as HubShare[]) || []);
         } catch (e) {
             console.error(e);
             toast.error("Αποτυχία φόρτωσης");
@@ -114,14 +114,14 @@ export default function InvoiceExchange() {
     }
 
     async function fetchInvoices() {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
             .from("invoices")
-            .select("id,invoice_number,amount,invoice_date,merchant,type")
+            .select("id,amount,invoice_date,merchant,type")
             .eq("type", "income")
             .is("package_id", null)
             .order("invoice_date", { ascending: false })
             .limit(100);
-        setInvoices((data as Invoice[]) || []);
+        setInvoices((data as unknown as Invoice[]) || []);
     }
 
     function handleCustomerSelect(customerId: string) {
@@ -146,7 +146,7 @@ export default function InvoiceExchange() {
             const userId = sessionData?.session?.user?.id;
 
             // 1. Create hub_share record
-            const { data: share, error: shareErr } = await supabase
+            const { data: share, error: shareErr } = await (supabase as any)
                 .from("hub_shares")
                 .insert({
                     invoice_id: form.invoice_id,

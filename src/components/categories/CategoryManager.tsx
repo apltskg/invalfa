@@ -86,7 +86,7 @@ export function CategoryManager() {
   }, []);
 
   async function fetchCategories() {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("expense_categories")
       .select("*")
       .order("sort_order", { ascending: true });
@@ -95,7 +95,7 @@ export function CategoryManager() {
       toast.error("Αποτυχία φόρτωσης κατηγοριών");
       console.error(error);
     } else {
-      setCategories((data as Category[]) || []);
+      setCategories((data as unknown as Category[]) || []);
     }
     setLoading(false);
   }
@@ -151,7 +151,7 @@ export function CategoryManager() {
     try {
       // If setting as default, unset other defaults first
       if (formData.is_default) {
-        await supabase
+        await (supabase as any)
           .from("expense_categories")
           .update({ is_default: false })
           .eq("is_default", true);
@@ -159,7 +159,7 @@ export function CategoryManager() {
 
       if (editingCategory) {
         // Update
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("expense_categories")
           .update({
             name: formData.name || formData.name_el,
@@ -177,7 +177,7 @@ export function CategoryManager() {
       } else {
         // Insert
         const maxOrder = Math.max(...categories.map((c) => c.sort_order || 0), 0);
-        const { error } = await supabase.from("expense_categories").insert({
+        const { error } = await (supabase as any).from("expense_categories").insert({
           name: formData.name || formData.name_el,
           name_el: formData.name_el,
           icon: formData.icon,
@@ -212,7 +212,7 @@ export function CategoryManager() {
           .eq("expense_category_id", deletingCategory.id);
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("expense_categories")
         .delete()
         .eq("id", deletingCategory.id);

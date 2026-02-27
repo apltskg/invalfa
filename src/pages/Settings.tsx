@@ -165,7 +165,7 @@ export default function Settings() {
 
     async function fetchSettings() {
         try {
-            const { data, error } = await supabase.from("agency_settings").select("*").single();
+            const { data, error } = await (supabase as any).from("agency_settings").select("*").single();
             if (error && error.code !== "PGRST116") throw error;
             if (data) setSettings({ ...DEFAULT_SETTINGS, ...data });
         } catch (e) {
@@ -179,12 +179,12 @@ export default function Settings() {
     async function handleSave() {
         setSaving(true);
         try {
-            const { data: existing } = await supabase.from("agency_settings").select("id").single();
+            const { data: existing } = await (supabase as any).from("agency_settings").select("id").single();
             if (existing) {
-                const { error } = await supabase.from("agency_settings").update(settings).eq("id", existing.id);
+                const { error } = await (supabase as any).from("agency_settings").update(settings).eq("id", existing.id);
                 if (error) throw error;
             } else {
-                const { error } = await supabase.from("agency_settings").insert([settings]);
+                const { error } = await (supabase as any).from("agency_settings").insert([settings]);
                 if (error) throw error;
             }
             toast.success("Αποθηκεύτηκε επιτυχώς");
