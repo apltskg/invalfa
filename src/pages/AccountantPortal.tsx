@@ -7,6 +7,7 @@ import { Package, Invoice, BankTransaction } from "@/types/database";
 import {
   FileText, CreditCard, AlertCircle, FileSpreadsheet,
   Download, Folder, TrendingUp, TrendingDown, BarChart3,
+  Link2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,11 +48,22 @@ interface InvoiceListImport {
   items: InvoiceListItem[];
 }
 
+// Extended BankTransaction with matching fields from DB
+interface PortalTransaction extends BankTransaction {
+  bank_name?: string | null;
+  match_status?: string | null;
+  matched_record_id?: string | null;
+  matched_record_type?: string | null;
+  category_type?: string | null;
+  folder_id?: string | null;
+  notes?: string | null;
+}
+
 interface PortalResponse {
   authorized: boolean;
   monthYear?: string;
   packages?: PackageWithInvoices[];
-  transactions?: BankTransaction[];
+  transactions?: PortalTransaction[];
   generalInvoices?: Invoice[];
   invoiceListImports?: InvoiceListImport[];
   error?: string;
@@ -60,6 +72,14 @@ interface PortalResponse {
 /* ── Helpers ── */
 const eur = (n: number) => `€${n.toFixed(2)}`;
 const fmtDate = (d: string | null) => d ? format(new Date(d), "dd/MM/yyyy") : "—";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  hotel: "Ξενοδοχεία", airline: "Αεροπορικά", tolls: "Διόδια",
+  fuel: "Καύσιμα", payroll: "Μισθοδοσία", government: "Δημόσιο / ΦΠΑ / ΕΦΚΑ",
+  transport: "Μεταφορές Επιβατών", rent: "Ενοίκια / Πάγια",
+  telecom: "Τηλεπικοινωνίες", insurance: "Ασφάλεια", office: "Γραφική Ύλη",
+  maintenance: "Συντήρηση", marketing: "Διαφήμιση", other: "Λοιπά",
+};
 
 function SectionTitle({ num, children }: { num: number; children: React.ReactNode }) {
   return (
@@ -78,9 +98,9 @@ function Th({ children, right }: { children: React.ReactNode; right?: boolean })
   );
 }
 
-function Td({ children, right, mono, bold }: { children: React.ReactNode; right?: boolean; mono?: boolean; bold?: boolean }) {
+function Td({ children, right, mono, bold, className = "" }: { children: React.ReactNode; right?: boolean; mono?: boolean; bold?: boolean; className?: string }) {
   return (
-    <td className={`p-3 text-sm ${right ? "text-right" : ""} ${mono ? "font-mono" : ""} ${bold ? "font-semibold" : ""}`}>
+    <td className={`p-3 text-sm ${right ? "text-right" : ""} ${mono ? "font-mono" : ""} ${bold ? "font-semibold" : ""} ${className}`}>
       {children}
     </td>
   );
@@ -98,6 +118,32 @@ function DownloadBtn({ onClick, label }: { onClick: () => void; label: string })
   );
 }
 
+function SmallDownload({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-blue-600 hover:text-blue-800 print:hidden p-1 rounded hover:bg-blue-50 transition-colors"
+      title="Λήψη παραστατικού"
+    >
+      <Download className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function MatchBadge({ text, color = "gray" }: { text: string; color?: "green" | "blue" | "gray" | "amber" }) {
+  const colors = {
+    green: "bg-green-100 text-green-700 border-green-200",
+    blue: "bg-blue-100 text-blue-700 border-blue-200",
+    gray: "bg-gray-100 text-gray-500 border-gray-200",
+    amber: "bg-amber-100 text-amber-700 border-amber-200",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${colors[color]}`}>
+      {text}
+    </span>
+  );
+}
+
 /* ════════════════════════════════════════════ */
 export default function AccountantPortal() {
   const { token } = useParams();
@@ -106,7 +152,7 @@ export default function AccountantPortal() {
   const [monthYear, setMonthYear] = useState("");
   const [packages, setPackages] = useState<PackageWithInvoices[]>([]);
   const [generalInvoices, setGeneralInvoices] = useState<Invoice[]>([]);
-  const [transactions, setTransactions] = useState<BankTransaction[]>([]);
+  const [transactions, setTransactions] = useState<PortalTransaction[]>([]);
   const [invoiceListImports, setInvoiceListImports] = useState<InvoiceListImport[]>([]);
 
   useEffect(() => { verifyAndFetch(); }, [token]);
@@ -131,27 +177,32 @@ export default function AccountantPortal() {
     }
   }
 
-  const handleDownloadExcel = async (filePath: string, fileName: string) => {
+  // Download via edge function (works without auth)
+  const handleDownloadFile = async (bucket: string, filePath: string, fileName?: string) => {
     try {
-      const { data, error } = await supabase.storage.from("invoice-lists").createSignedUrl(filePath, 3600);
-      if (error) throw error;
-      const link = document.createElement("a");
-      link.href = data.signedUrl;
-      link.download = fileName;
-      link.click();
+      // Try via edge function first
+      const { data, error } = await supabase.functions.invoke("accountant-portal-access", {
+        body: { token, action: "get_file_url", bucket, filePath },
+      });
+      if (!error && data?.url) {
+        window.open(data.url, "_blank");
+        return;
+      }
+      // Fallback: try direct signed URL
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 3600);
+      if (signedError) throw signedError;
+      if (bucket === "invoice-lists") {
+        const link = document.createElement("a");
+        link.href = signedData.signedUrl;
+        link.download = fileName || "file";
+        link.click();
+      } else {
+        window.open(signedData.signedUrl, "_blank");
+      }
     } catch {
-      toast.error("Αποτυχία λήψης αρχείου");
-    }
-  };
-
-  const handleDownloadInvoice = async (filePath: string | null | undefined) => {
-    if (!filePath) { toast.error("Δεν υπάρχει αρχείο"); return; }
-    try {
-      const { data, error } = await supabase.storage.from("invoices").createSignedUrl(filePath, 3600);
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank");
-    } catch {
-      toast.error("Αποτυχία λήψης αρχείου");
+      toast.error("Αποτυχία λήψης αρχείου. Δοκιμάστε ξανά ή επικοινωνήστε μαζί μας.");
     }
   };
 
@@ -190,6 +241,24 @@ export default function AccountantPortal() {
     );
   }
 
+  /* ── Build lookup maps for cross-referencing ── */
+  const allInvoices = [
+    ...packages.flatMap(p => p.invoices),
+    ...generalInvoices,
+  ];
+  const invoiceById = new Map(allInvoices.map(inv => [inv.id, inv]));
+  const packageById = new Map(packages.map(pkg => [pkg.id, pkg]));
+
+  // Map: invoiceId → transaction (from matched_record_id on transactions)
+  const invoiceToTransaction = new Map<string, PortalTransaction>();
+  const transactionToInvoice = new Map<string, Invoice>();
+  transactions.forEach(txn => {
+    if (txn.matched_record_id && txn.matched_record_type === "invoice") {
+      transactionToInvoice.set(txn.id, invoiceById.get(txn.matched_record_id)!);
+      invoiceToTransaction.set(txn.matched_record_id, txn);
+    }
+  });
+
   /* ── Calculations ── */
   const generalIncomeInvoices = generalInvoices.filter(i => (i.type || "expense") === "income");
   const generalExpenseInvoices = generalInvoices.filter(i => (i.type || "expense") === "expense");
@@ -204,33 +273,61 @@ export default function AccountantPortal() {
 
   const profit = totalIncome - totalExpenses;
 
-  // Category grouping for general expenses
-  const expensesByCategory = new Map<string, { invoices: Invoice[]; total: number }>();
-  generalExpenseInvoices.forEach(inv => {
-    const cat = inv.category || "other";
-    if (!expensesByCategory.has(cat)) expensesByCategory.set(cat, { invoices: [], total: 0 });
-    const entry = expensesByCategory.get(cat)!;
-    entry.invoices.push(inv);
-    entry.total += inv.amount || 0;
-  });
-
-  const CATEGORY_LABELS: Record<string, string> = {
-    hotel: "Ξενοδοχεία", airline: "Αεροπορικά", tolls: "Διόδια",
-    fuel: "Καύσιμα", payroll: "Μισθοδοσία", government: "Δημόσιο / ΦΠΑ / ΕΦΚΑ",
-    transport: "Μεταφορές Επιβατών", rent: "Ενοίκια / Πάγια",
-    telecom: "Τηλεπικοινωνίες", insurance: "Ασφάλεια", office: "Γραφική Ύλη",
-    other: "Λοιπά",
-  };
-
   const downloadableExcels = invoiceListImports.filter(imp => imp.file_path);
   const allInvoiceListItems = invoiceListImports.flatMap(imp => imp.items || []);
-
   const monthLabel = monthYear ? format(new Date(`${monthYear}-01`), "MMMM yyyy", { locale: el }) : "";
+
+  // Helper to find what a transaction corresponds to
+  function getTransactionMatchLabel(txn: PortalTransaction): { label: string; color: "green" | "blue" | "amber" | "gray" } {
+    // Check if matched to an invoice
+    const matchedInv = transactionToInvoice.get(txn.id);
+    if (matchedInv) {
+      const invType = (matchedInv.type || "expense") === "income" ? "Έσοδο" : "Έξοδο";
+      const merchant = matchedInv.merchant || matchedInv.category || "";
+      return { label: `${invType}: ${merchant}`, color: (matchedInv.type || "expense") === "income" ? "green" : "blue" };
+    }
+    // Check if linked to a package
+    const pkgId = txn.package_id || txn.folder_id;
+    if (pkgId) {
+      const pkg = packageById.get(pkgId);
+      if (pkg) return { label: `Φάκελος: ${pkg.client_name}`, color: "blue" };
+    }
+    // Check category_type
+    if (txn.category_type) {
+      return { label: CATEGORY_LABELS[txn.category_type] || txn.category_type, color: "amber" };
+    }
+    if (txn.match_status === "matched") {
+      return { label: "Αντιστοιχισμένο", color: "green" };
+    }
+    return { label: "Μη αντιστοιχισμένο", color: "gray" };
+  }
+
+  // Helper to find what an invoice list item corresponds to
+  function getInvoiceListMatchLabel(item: InvoiceListItem): { label: string; color: "green" | "blue" | "gray" } {
+    if (item.matched_folder_id) {
+      const pkg = packageById.get(item.matched_folder_id);
+      if (pkg) return { label: `Φάκελος: ${pkg.client_name}`, color: "blue" };
+      return { label: "Φάκελος", color: "blue" };
+    }
+    if (item.matched_income_id) {
+      const inv = invoiceById.get(item.matched_income_id);
+      if (inv) return { label: `${inv.merchant || "Έσοδο"}`, color: "green" };
+      return { label: "Αντιστοιχισμένο", color: "green" };
+    }
+    if (item.match_status === "matched") {
+      return { label: "Αντιστοιχισμένο", color: "green" };
+    }
+    return { label: "—", color: "gray" };
+  }
+
+  const hasFile = (inv: Invoice) => inv.file_path && !inv.file_path.startsWith("manual/");
+
+  let secNum = 0;
 
   /* ════════════════════════════════════════════════════ */
   return (
     <div className="min-h-screen bg-white print:bg-white">
-      <div className="max-w-4xl mx-auto px-6 py-10 md:px-12 md:py-14">
+      <div className="max-w-5xl mx-auto px-6 py-10 md:px-12 md:py-14">
 
         {/* ── HEADER ── */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 border-gray-900 pb-5 mb-8">
@@ -277,7 +374,7 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {/* 1. ΑΡΧΕΙΑ ΓΙΑ ΛΗΨΗ                        */}
         {/* ═══════════════════════════════════════════ */}
-        <SectionTitle num={1}>Αρχεία για Λήψη</SectionTitle>
+        <SectionTitle num={++secNum}>Αρχεία για Λήψη</SectionTitle>
 
         {downloadableExcels.length > 0 ? (
           <div className="space-y-3 mb-4">
@@ -290,45 +387,13 @@ export default function AccountantPortal() {
                     <p className="text-xs text-gray-500">{imp.row_count} τιμολόγια · {eur(imp.total_gross || 0)}</p>
                   </div>
                 </div>
-                <DownloadBtn onClick={() => handleDownloadExcel(imp.file_path, imp.file_name)} label="Λήψη Excel" />
+                <DownloadBtn onClick={() => handleDownloadFile("invoice-lists", imp.file_path, imp.file_name)} label="Λήψη Excel" />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 mb-4">Δεν υπάρχουν αρχεία Excel για λήψη αυτόν τον μήνα.</p>
+          <p className="text-sm text-gray-400 mb-4">Δεν υπάρχουν αρχεία Excel αυτόν τον μήνα.</p>
         )}
-
-        {/* Individual invoice file downloads */}
-        {(() => {
-          const allDownloadable = [
-            ...packages.flatMap(p => p.invoices),
-            ...generalInvoices,
-          ].filter(inv => inv.file_path && !inv.file_path.startsWith("manual/"));
-          if (allDownloadable.length === 0) return null;
-          return (
-            <div className="mt-4">
-              <p className="text-sm font-semibold text-gray-600 mb-2">Παραστατικά (μεμονωμένα PDF):</p>
-              <div className="space-y-1">
-                {allDownloadable.map(inv => (
-                  <div key={inv.id} className="flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm">
-                      <FileText className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-gray-700">{inv.merchant || inv.file_name || inv.category}</span>
-                      <span className="text-gray-400">· {fmtDate(inv.invoice_date)}</span>
-                      <span className="text-gray-400">· {eur(inv.amount || 0)}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDownloadInvoice(inv.file_path)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 print:hidden"
-                    >
-                      <Download className="h-3 w-3" /> Λήψη
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
 
 
         {/* ═══════════════════════════════════════════ */}
@@ -336,7 +401,7 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {packages.length > 0 && (
           <>
-            <SectionTitle num={2}>Πακέτα / Φάκελοι Ταξιδιών</SectionTitle>
+            <SectionTitle num={++secNum}>Πακέτα / Φάκελοι Ταξιδιών</SectionTitle>
             <p className="text-sm text-gray-500 mb-4 -mt-2">
               Κάθε πακέτο περιέχει τα έσοδα από τον πελάτη και τα αντίστοιχα έξοδα προμηθευτών.
             </p>
@@ -349,7 +414,6 @@ export default function AccountantPortal() {
 
               return (
                 <div key={pkg.id} className="mb-6 border border-gray-200 rounded-xl overflow-hidden">
-                  {/* Package header */}
                   <div className="bg-gray-50 px-5 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Folder className="h-4 w-4 text-blue-600" />
@@ -358,49 +422,44 @@ export default function AccountantPortal() {
                         {format(new Date(pkg.start_date), "dd/MM", { locale: el })} — {format(new Date(pkg.end_date), "dd/MM/yy", { locale: el })}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <span className={`font-bold text-sm ${pkgProfit >= 0 ? "text-blue-700" : "text-red-600"}`}>
-                        Κέρδος: {eur(pkgProfit)}
-                      </span>
-                    </div>
+                    <span className={`font-bold text-sm ${pkgProfit >= 0 ? "text-blue-700" : "text-red-600"}`}>
+                      Κέρδος: {eur(pkgProfit)}
+                    </span>
                   </div>
 
-                  {/* Summary row */}
                   <div className="grid grid-cols-3 text-center text-sm border-b border-gray-100 py-2 bg-white">
-                    <div>
-                      <span className="text-gray-500">Έσοδα: </span>
-                      <span className="font-semibold text-green-700">{eur(pkgIncome)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Έξοδα: </span>
-                      <span className="font-semibold text-red-600">{eur(pkgExpenses)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Κέρδος: </span>
-                      <span className={`font-semibold ${pkgProfit >= 0 ? "text-blue-700" : "text-red-600"}`}>{eur(pkgProfit)}</span>
-                    </div>
+                    <div><span className="text-gray-500">Έσοδα: </span><span className="font-semibold text-green-700">{eur(pkgIncome)}</span></div>
+                    <div><span className="text-gray-500">Έξοδα: </span><span className="font-semibold text-red-600">{eur(pkgExpenses)}</span></div>
+                    <div><span className="text-gray-500">Κέρδος: </span><span className={`font-semibold ${pkgProfit >= 0 ? "text-blue-700" : "text-red-600"}`}>{eur(pkgProfit)}</span></div>
                   </div>
 
-                  {/* Invoices table */}
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
                       <tr>
                         <Th>Τύπος</Th>
                         <Th>Προμηθευτής / Πελάτης</Th>
+                        <Th>Κατηγορία</Th>
                         <Th>Ημερομηνία</Th>
                         <Th right>Ποσό</Th>
+                        <Th>Αρχείο</Th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {[...incomes, ...expenses].map(inv => (
-                        <tr key={inv.id} className="hover:bg-gray-50/50">
+                        <tr key={inv.id}>
                           <Td>
                             <span className={`inline-block w-2 h-2 rounded-full mr-2 ${(inv.type || "expense") === "income" ? "bg-green-500" : "bg-red-400"}`} />
                             {(inv.type || "expense") === "income" ? "Έσοδο" : "Έξοδο"}
                           </Td>
-                          <Td>{inv.merchant || inv.category || "—"}</Td>
+                          <Td>{inv.merchant || "—"}</Td>
+                          <Td>{CATEGORY_LABELS[inv.category] || inv.category}</Td>
                           <Td>{fmtDate(inv.invoice_date)}</Td>
                           <Td right bold>{eur(inv.amount || 0)}</Td>
+                          <Td>
+                            {hasFile(inv) ? (
+                              <SmallDownload onClick={() => handleDownloadFile("invoices", inv.file_path)} />
+                            ) : <span className="text-gray-300 text-xs">—</span>}
+                          </Td>
                         </tr>
                       ))}
                     </tbody>
@@ -417,121 +476,193 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {generalIncomeInvoices.length > 0 && (
           <>
-            <SectionTitle num={3}>Γενικά Έσοδα (εκτός πακέτων)</SectionTitle>
-            <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <Th>Περιγραφή</Th>
-                  <Th>Κατηγορία</Th>
-                  <Th>Ημερομηνία</Th>
-                  <Th right>Ποσό</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {generalIncomeInvoices.map(inv => (
-                  <tr key={inv.id}>
-                    <Td>{inv.merchant || inv.file_name || "—"}</Td>
-                    <Td>{CATEGORY_LABELS[inv.category] || inv.category}</Td>
-                    <Td>{fmtDate(inv.invoice_date)}</Td>
-                    <Td right bold>{eur(inv.amount || 0)}</Td>
+            <SectionTitle num={++secNum}>Γενικά Έσοδα (εκτός πακέτων)</SectionTitle>
+            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <Th>Περιγραφή</Th>
+                    <Th>Κατηγορία</Th>
+                    <Th>Ημερομηνία</Th>
+                    <Th>Αντιστοιχεί σε</Th>
+                    <Th right>Ποσό</Th>
+                    <Th>Αρχείο</Th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-green-50">
-                <tr>
-                  <td colSpan={3} className="p-3 text-sm font-semibold text-green-700">Σύνολο Γενικών Εσόδων</td>
-                  <td className="p-3 text-sm font-bold text-right text-green-700">{eur(generalIncomeInvoices.reduce((s, i) => s + (i.amount || 0), 0))}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </>
-        )}
-
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* 4. ΓΕΝΙΚΑ ΕΞΟΔΑ (ανά κατηγορία)            */}
-        {/* ═══════════════════════════════════════════ */}
-        {generalExpenseInvoices.length > 0 && (
-          <>
-            <SectionTitle num={4}>Γενικά Έξοδα (ανά κατηγορία)</SectionTitle>
-
-            {Array.from(expensesByCategory.entries())
-              .sort((a, b) => b[1].total - a[1].total)
-              .map(([cat, { invoices: catInvoices, total }]) => (
-                <div key={cat} className="mb-5">
-                  <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-t-xl px-4 py-2">
-                    <p className="text-sm font-semibold text-gray-800">{CATEGORY_LABELS[cat] || cat}</p>
-                    <p className="text-sm font-bold text-red-600">{eur(total)}</p>
-                  </div>
-                  <table className="w-full text-sm border-x border-b border-gray-200 rounded-b-xl overflow-hidden">
-                    <tbody className="divide-y divide-gray-100">
-                      {catInvoices.map(inv => (
-                        <tr key={inv.id}>
-                          <Td>{inv.merchant || inv.file_name || "—"}</Td>
-                          <Td>{fmtDate(inv.invoice_date)}</Td>
-                          <Td right bold>{eur(inv.amount || 0)}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-
-            <div className="flex justify-between items-center bg-red-50 border border-red-100 rounded-xl px-5 py-3 mt-2">
-              <p className="font-bold text-red-700">Σύνολο Γενικών Εξόδων</p>
-              <p className="text-xl font-bold text-red-700">{eur(generalExpenseInvoices.reduce((s, i) => s + (i.amount || 0), 0))}</p>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {generalIncomeInvoices.map(inv => {
+                    const txn = invoiceToTransaction.get(inv.id);
+                    return (
+                      <tr key={inv.id}>
+                        <Td>{inv.merchant || inv.file_name || "—"}</Td>
+                        <Td>{CATEGORY_LABELS[inv.category] || inv.category}</Td>
+                        <Td>{fmtDate(inv.invoice_date)}</Td>
+                        <Td>
+                          {txn ? (
+                            <span className="text-xs text-gray-500">
+                              Κίνηση {fmtDate(txn.transaction_date)} · {eur(Math.abs(txn.amount))}
+                            </span>
+                          ) : <span className="text-gray-300 text-xs">—</span>}
+                        </Td>
+                        <Td right bold>{eur(inv.amount || 0)}</Td>
+                        <Td>
+                          {hasFile(inv) ? (
+                            <SmallDownload onClick={() => handleDownloadFile("invoices", inv.file_path)} />
+                          ) : <span className="text-gray-300 text-xs">—</span>}
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-green-50">
+                  <tr>
+                    <td colSpan={4} className="p-3 text-sm font-semibold text-green-700">Σύνολο Γενικών Εσόδων</td>
+                    <td className="p-3 text-sm font-bold text-right text-green-700">
+                      {eur(generalIncomeInvoices.reduce((s, i) => s + (i.amount || 0), 0))}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </>
         )}
 
 
         {/* ═══════════════════════════════════════════ */}
-        {/* 5. ΛΙΣΤΑ ΠΑΡΑΣΤΑΤΙΚΩΝ                       */}
+        {/* 4. ΓΕΝΙΚΑ ΕΞΟΔΑ                            */}
+        {/* ═══════════════════════════════════════════ */}
+        {generalExpenseInvoices.length > 0 && (
+          <>
+            <SectionTitle num={++secNum}>Γενικά Έξοδα (ανά κατηγορία)</SectionTitle>
+            <p className="text-sm text-gray-500 mb-3 -mt-2">
+              Κάθε γραμμή δείχνει τον προμηθευτή, την κατηγορία εξόδου και μπορείτε να κατεβάσετε το αντίστοιχο παραστατικό.
+            </p>
+            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <Th>Προμηθευτής</Th>
+                    <Th>Κατηγορία</Th>
+                    <Th>Ημερομηνία</Th>
+                    <Th>Αντιστοιχεί σε</Th>
+                    <Th right>Ποσό</Th>
+                    <Th>Αρχείο</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {generalExpenseInvoices
+                    .sort((a, b) => (a.category || "other").localeCompare(b.category || "other"))
+                    .map(inv => {
+                      const txn = invoiceToTransaction.get(inv.id);
+                      return (
+                        <tr key={inv.id}>
+                          <Td>{inv.merchant || inv.file_name || "—"}</Td>
+                          <Td>
+                            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                              {CATEGORY_LABELS[inv.category] || inv.category}
+                            </span>
+                          </Td>
+                          <Td>{fmtDate(inv.invoice_date)}</Td>
+                          <Td>
+                            {txn ? (
+                              <span className="text-xs text-gray-500">
+                                Κίνηση {fmtDate(txn.transaction_date)} · {eur(Math.abs(txn.amount))}
+                              </span>
+                            ) : <span className="text-gray-300 text-xs">—</span>}
+                          </Td>
+                          <Td right bold>{eur(inv.amount || 0)}</Td>
+                          <Td>
+                            {hasFile(inv) ? (
+                              <SmallDownload onClick={() => handleDownloadFile("invoices", inv.file_path)} />
+                            ) : <span className="text-gray-300 text-xs">—</span>}
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+                <tfoot className="bg-red-50">
+                  <tr>
+                    <td colSpan={4} className="p-3 text-sm font-semibold text-red-700">Σύνολο Γενικών Εξόδων</td>
+                    <td className="p-3 text-sm font-bold text-right text-red-700">
+                      {eur(generalExpenseInvoices.reduce((s, i) => s + (i.amount || 0), 0))}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Category subtotals */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+              {(() => {
+                const cats = new Map<string, number>();
+                generalExpenseInvoices.forEach(inv => {
+                  const c = inv.category || "other";
+                  cats.set(c, (cats.get(c) || 0) + (inv.amount || 0));
+                });
+                return Array.from(cats.entries())
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([cat, total]) => (
+                    <div key={cat} className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm">
+                      <span className="text-gray-600">{CATEGORY_LABELS[cat] || cat}</span>
+                      <span className="font-semibold text-red-600">{eur(total)}</span>
+                    </div>
+                  ));
+              })()}
+            </div>
+          </>
+        )}
+
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* 5. ΛΙΣΤΑ ΠΑΡΑΣΤΑΤΙΚΩΝ (τιμολόγια που κόψαμε) */}
         {/* ═══════════════════════════════════════════ */}
         {allInvoiceListItems.length > 0 && (
           <>
-            <SectionTitle num={5}>Λίστα Παραστατικών (εκδοθέντα τιμολόγια)</SectionTitle>
+            <SectionTitle num={++secNum}>Τιμολόγια που Εκδώσαμε</SectionTitle>
             <p className="text-sm text-gray-500 mb-3 -mt-2">
-              Τιμολόγια που κόψαμε — {allInvoiceListItems.length} συνολικά
+              {allInvoiceListItems.length} τιμολόγια — στήλη «Αντιστοιχεί σε» δείχνει σε ποιον φάκελο ή συναλλαγή ανήκει.
             </p>
             <div className="overflow-x-auto border border-gray-200 rounded-xl">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <Th>Ημ/νία</Th>
-                    <Th>Αρ. Παραστατικού</Th>
+                    <Th>Αρ. Παραστ.</Th>
                     <Th>Πελάτης</Th>
                     <Th>ΑΦΜ</Th>
+                    <Th>Αντιστοιχεί σε</Th>
                     <Th right>Καθαρή</Th>
                     <Th right>ΦΠΑ</Th>
                     <Th right>Σύνολο</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {allInvoiceListItems.map(item => (
-                    <tr key={item.id}>
-                      <Td>{item.invoice_date ? format(new Date(item.invoice_date), "dd/MM/yy") : "—"}</Td>
-                      <Td mono>{item.invoice_number || "—"}</Td>
-                      <Td>{item.client_name || "—"}</Td>
-                      <Td mono>{item.client_vat || "—"}</Td>
-                      <Td right>{eur(item.net_amount || 0)}</Td>
-                      <Td right>{eur(item.vat_amount || 0)}</Td>
-                      <Td right bold>{eur(item.total_amount || 0)}</Td>
-                    </tr>
-                  ))}
+                  {allInvoiceListItems.map(item => {
+                    const match = getInvoiceListMatchLabel(item);
+                    return (
+                      <tr key={item.id}>
+                        <Td>{item.invoice_date ? format(new Date(item.invoice_date), "dd/MM/yy") : "—"}</Td>
+                        <Td mono>{item.invoice_number || "—"}</Td>
+                        <Td>{item.client_name || "—"}</Td>
+                        <Td mono className="text-xs">{item.client_vat || "—"}</Td>
+                        <Td>
+                          <MatchBadge text={match.label} color={match.color} />
+                        </Td>
+                        <Td right>{eur(item.net_amount || 0)}</Td>
+                        <Td right>{eur(item.vat_amount || 0)}</Td>
+                        <Td right bold>{eur(item.total_amount || 0)}</Td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-gray-50 border-t border-gray-200">
                   <tr>
-                    <td colSpan={4} className="p-3 text-sm font-semibold">Σύνολα</td>
-                    <td className="p-3 text-sm font-bold text-right">
-                      {eur(allInvoiceListItems.reduce((s, i) => s + (i.net_amount || 0), 0))}
-                    </td>
-                    <td className="p-3 text-sm font-bold text-right">
-                      {eur(allInvoiceListItems.reduce((s, i) => s + (i.vat_amount || 0), 0))}
-                    </td>
-                    <td className="p-3 text-sm font-bold text-right">
-                      {eur(allInvoiceListItems.reduce((s, i) => s + (i.total_amount || 0), 0))}
-                    </td>
+                    <td colSpan={5} className="p-3 text-sm font-semibold">Σύνολα</td>
+                    <td className="p-3 text-sm font-bold text-right">{eur(allInvoiceListItems.reduce((s, i) => s + (i.net_amount || 0), 0))}</td>
+                    <td className="p-3 text-sm font-bold text-right">{eur(allInvoiceListItems.reduce((s, i) => s + (i.vat_amount || 0), 0))}</td>
+                    <td className="p-3 text-sm font-bold text-right">{eur(allInvoiceListItems.reduce((s, i) => s + (i.total_amount || 0), 0))}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -545,9 +676,9 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {transactions.length > 0 && (
           <>
-            <SectionTitle num={6}>Τραπεζικές Κινήσεις</SectionTitle>
+            <SectionTitle num={++secNum}>Τραπεζικές Κινήσεις</SectionTitle>
             <p className="text-sm text-gray-500 mb-3 -mt-2">
-              {transactions.length} κινήσεις
+              {transactions.length} κινήσεις — στήλη «Αντιστοιχεί σε» δείχνει σε ποιο έσοδο, έξοδο ή φάκελο ανήκει η κάθε κίνηση.
             </p>
             <div className="overflow-x-auto border border-gray-200 rounded-xl">
               <table className="w-full text-sm">
@@ -555,30 +686,37 @@ export default function AccountantPortal() {
                   <tr>
                     <Th>Ημερομηνία</Th>
                     <Th>Περιγραφή</Th>
+                    <Th>Τράπεζα</Th>
+                    <Th>Αντιστοιχεί σε</Th>
                     <Th right>Ποσό</Th>
                     <Th>Τύπος</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {transactions.map(txn => (
-                    <tr key={txn.id}>
-                      <Td>{fmtDate(txn.transaction_date)}</Td>
-                      <Td>{txn.description}</Td>
-                      <Td right mono bold>{eur(Math.abs(txn.amount))}</Td>
-                      <Td>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${txn.amount >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {txn.amount >= 0 ? "Πίστωση" : "Χρέωση"}
-                        </span>
-                      </Td>
-                    </tr>
-                  ))}
+                  {transactions.map(txn => {
+                    const match = getTransactionMatchLabel(txn);
+                    return (
+                      <tr key={txn.id}>
+                        <Td>{fmtDate(txn.transaction_date)}</Td>
+                        <Td>{txn.description}</Td>
+                        <Td className="text-xs text-gray-500">{txn.bank_name || "—"}</Td>
+                        <Td>
+                          <MatchBadge text={match.label} color={match.color} />
+                        </Td>
+                        <Td right mono bold>{eur(Math.abs(txn.amount))}</Td>
+                        <Td>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${txn.amount >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {txn.amount >= 0 ? "Πίστωση" : "Χρέωση"}
+                          </span>
+                        </Td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-gray-50 border-t border-gray-200">
                   <tr>
-                    <td colSpan={2} className="p-3 text-sm font-semibold">Σύνολο</td>
-                    <td className="p-3 text-sm font-bold text-right font-mono">
-                      {eur(transactions.reduce((s, t) => s + t.amount, 0))}
-                    </td>
+                    <td colSpan={4} className="p-3 text-sm font-semibold">Σύνολο</td>
+                    <td className="p-3 text-sm font-bold text-right font-mono">{eur(transactions.reduce((s, t) => s + t.amount, 0))}</td>
                     <td />
                   </tr>
                 </tfoot>
