@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import {
     Save, Building2, Tag, CreditCard, Mail, Phone, MapPin, Globe,
-    Loader2, Check, Copy, CheckCheck, ExternalLink, Hash, Landmark, Wallet
+    Loader2, Check, Copy, CheckCheck, ExternalLink, Hash, Landmark,
+    Wallet, Pencil, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 import { CategoryManager } from "@/components/categories/CategoryManager";
 import { IncomeCategoryManager } from "@/components/categories/IncomeCategoryManager";
 
+/* ─── Types ─── */
 interface AgencySettings {
     company_name: string;
     company_name_gr: string;
@@ -25,20 +27,16 @@ interface AgencySettings {
     address_gr: string;
     phone: string;
     email: string;
-    // Eurobank
     eurobank_beneficiary: string;
     eurobank_iban: string;
     eurobank_bic: string;
-    // Alpha Bank
     alpha_beneficiary: string;
     alpha_iban: string;
     alpha_bic: string;
-    // Wise
     wise_beneficiary: string;
     wise_iban: string;
     wise_swift: string;
     wise_bank_address: string;
-    // Viva Wallet
     viva_wallet_url: string;
     logo_url: string;
 }
@@ -69,85 +67,97 @@ const DEFAULT_SETTINGS: AgencySettings = {
     logo_url: "",
 };
 
-function CopyField({
-    label,
-    value,
-    onChange,
-    mono = false,
-    icon,
-    readOnly = false,
-}: {
-    label: string;
-    value: string;
-    onChange?: (v: string) => void;
-    mono?: boolean;
-    icon?: React.ReactNode;
-    readOnly?: boolean;
-}) {
+/* ─── Copy button ─── */
+function CopyBtn({ text, label }: { text: string; label: string }) {
     const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        if (!value) return;
-        navigator.clipboard.writeText(value);
+    const handle = () => {
+        navigator.clipboard.writeText(text);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setTimeout(() => setCopied(false), 2200);
     };
-
     return (
-        <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                {icon}
-                {label}
-            </Label>
-            <div className="flex gap-2">
-                <Input
-                    value={value}
-                    onChange={e => onChange?.(e.target.value)}
-                    readOnly={readOnly}
-                    className={`rounded-xl border-slate-200 text-sm h-9 flex-1 ${mono ? "font-mono tracking-wider" : ""} ${readOnly ? "bg-slate-50 cursor-default" : ""}`}
-                />
-                <button
-                    type="button"
-                    onClick={handleCopy}
-                    title="Copy"
-                    className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-xl border transition-all duration-200 ${copied
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                            : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-                        }`}
-                >
-                    {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-            </div>
+        <button
+            onClick={handle}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-200 ${copied
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+        >
+            {copied ? <CheckCheck size={12} /> : <Copy size={12} />}
+            {copied ? "Αντιγράφηκε!" : label}
+        </button>
+    );
+}
+
+/* ─── Pair: plain + message-ready ─── */
+function CopyPair({ plain, message }: { plain: string; message: string }) {
+    return (
+        <div className="flex items-center gap-1.5">
+            <CopyBtn text={plain} label="Αντιγραφή" />
+            <CopyBtn text={message} label="Ως μήνυμα 💬" />
         </div>
     );
 }
 
-function BankCard({
-    title,
-    color,
-    icon,
-    children,
+/* ─── Display row (read-only) ─── */
+function DisplayRow({ label, value, mono = false }: { label: string; value?: string; mono?: boolean }) {
+    if (!value) return null;
+    return (
+        <div className="py-2 border-b border-slate-100 last:border-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+            <p className={`text-sm text-slate-800 ${mono ? "font-mono tracking-wider" : ""}`}>{value}</p>
+        </div>
+    );
+}
+
+/* ─── Edit field ─── */
+function EditField({
+    label, value, onChange, mono = false, multiline = false,
 }: {
-    title: string;
-    color: string;
-    icon: React.ReactNode;
-    children: React.ReactNode;
+    label: string; value: string; onChange: (v: string) => void;
+    mono?: boolean; multiline?: boolean;
 }) {
     return (
-        <div className={`rounded-xl border p-4 space-y-3 ${color}`}>
-            <p className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 opacity-80">
-                {icon}
-                {title}
-            </p>
-            {children}
+        <div className="space-y-1">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</Label>
+            {multiline ? (
+                <Textarea
+                    value={value} onChange={e => onChange(e.target.value)}
+                    className="rounded-xl border-slate-200 text-sm resize-none"
+                    rows={2}
+                />
+            ) : (
+                <Input
+                    value={value} onChange={e => onChange(e.target.value)}
+                    className={`rounded-xl border-slate-200 text-sm h-9 ${mono ? "font-mono tracking-wider" : ""}`}
+                />
+            )}
         </div>
     );
 }
 
+/* ─── Section header ─── */
+function SectionHeader({
+    icon, title, plain, message,
+}: {
+    icon: React.ReactNode; title: string; plain: string; message: string;
+}) {
+    return (
+        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                {icon}{title}
+            </p>
+            <CopyPair plain={plain} message={message} />
+        </div>
+    );
+}
+
+/* ─── Main ─── */
 export default function Settings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [editMode, setEditMode] = useState(false);
     const [settings, setSettings] = useState<AgencySettings>(DEFAULT_SETTINGS);
 
     useEffect(() => { fetchSettings(); }, []);
@@ -156,10 +166,7 @@ export default function Settings() {
         try {
             const { data, error } = await supabase.from("agency_settings").select("*").single();
             if (error && error.code !== "PGRST116") throw error;
-            if (data) {
-                // Merge with defaults so new fields are pre-filled
-                setSettings({ ...DEFAULT_SETTINGS, ...data });
-            }
+            if (data) setSettings({ ...DEFAULT_SETTINGS, ...data });
         } catch (e) {
             console.error(e);
             toast.error("Αποτυχία φόρτωσης ρυθμίσεων");
@@ -181,6 +188,7 @@ export default function Settings() {
             }
             toast.success("Αποθηκεύτηκε επιτυχώς");
             setSaved(true);
+            setEditMode(false);
             setTimeout(() => setSaved(false), 3000);
         } catch (e: any) {
             console.error(e);
@@ -193,6 +201,101 @@ export default function Settings() {
     const upd = (key: keyof AgencySettings) => (v: string) =>
         setSettings(s => ({ ...s, [key]: v }));
 
+    /* ── copy-all text blocks ── */
+    // ── Plain copy blocks ──
+    const copyCompany = [
+        `${settings.company_name} / ${settings.company_name_gr}`,
+        `${settings.activity} / ${settings.activity_gr}`,
+        `ΑΦΜ: ${settings.vat_number}  |  ${settings.doy}`,
+        `ΓΕΜΗ: ${settings.registry_number}`,
+        `${settings.address}`,
+        `${settings.address_gr}`,
+        `Tel: ${settings.phone}`,
+        `Email: ${settings.email}`,
+    ].join("\n");
+
+    const copyEurobank = [
+        `Eurobank`,
+        `Δικαιούχος: ${settings.eurobank_beneficiary}`,
+        `IBAN: ${settings.eurobank_iban}`,
+        `BIC: ${settings.eurobank_bic}`,
+    ].join("\n");
+
+    const copyAlpha = [
+        `Alpha Bank`,
+        `Δικαιούχος: ${settings.alpha_beneficiary}`,
+        `IBAN: ${settings.alpha_iban}`,
+        `BIC: ${settings.alpha_bic}`,
+    ].join("\n");
+
+    const copyWise = [
+        `Wise (International / SEPA)`,
+        `Beneficiary: ${settings.wise_beneficiary}`,
+        `IBAN: ${settings.wise_iban}`,
+        `Swift/BIC: ${settings.wise_swift}`,
+        `Bank address: ${settings.wise_bank_address}`,
+    ].join("\n");
+
+    const copyAllBanks = [copyEurobank, "", copyAlpha, "", copyWise].join("\n");
+
+    // ── Message-ready copy blocks ──
+    const msgCompany = [
+        `Ορίστε τα στοιχεία μας:\n`,
+        `🏢 Επωνυμία: ${settings.company_name_gr} (${settings.company_name})`,
+        `📋 Δραστηριότητα: ${settings.activity_gr}`,
+        `🔢 ΑΦΜ: ${settings.vat_number}  |  ${settings.doy}`,
+        `📍 Διεύθυνση: ${settings.address_gr}`,
+        `📞 Τηλ: ${settings.phone}`,
+        `✉️ Email: ${settings.email}`,
+    ].join("\n");
+
+    const msgEurobank = [
+        `Ορίστε τα στοιχεία μας για Eurobank:\n`,
+        `🏦 Τράπεζα: Eurobank`,
+        `👤 Δικαιούχος: ${settings.eurobank_beneficiary}`,
+        `💳 IBAN: ${settings.eurobank_iban}`,
+        `🔑 BIC: ${settings.eurobank_bic}`,
+    ].join("\n");
+
+    const msgAlpha = [
+        `Ορίστε τα στοιχεία μας για Alpha Bank:\n`,
+        `🏦 Τράπεζα: Alpha Bank`,
+        `👤 Δικαιούχος: ${settings.alpha_beneficiary}`,
+        `💳 IBAN: ${settings.alpha_iban}`,
+        `🔑 BIC: ${settings.alpha_bic}`,
+    ].join("\n");
+
+    const msgWise = [
+        `Ορίστε τα στοιχεία μας για διεθνείς μεταφορές (Wise / SEPA):\n`,
+        `🏦 Bank: Wise`,
+        `👤 Beneficiary: ${settings.wise_beneficiary}`,
+        `💳 IBAN: ${settings.wise_iban}`,
+        `🔑 Swift/BIC: ${settings.wise_swift}`,
+        `📍 Bank address: ${settings.wise_bank_address}`,
+    ].join("\n");
+
+    const msgAllBanks = [
+        `Ορίστε τα τραπεζικά μας στοιχεία:\n`,
+        `🏦 Eurobank`,
+        `👤 ${settings.eurobank_beneficiary}`,
+        `💳 IBAN: ${settings.eurobank_iban}`,
+        `🔑 BIC: ${settings.eurobank_bic}`,
+        ``,
+        `🏦 Alpha Bank`,
+        `👤 ${settings.alpha_beneficiary}`,
+        `💳 IBAN: ${settings.alpha_iban}`,
+        `🔑 BIC: ${settings.alpha_bic}`,
+        ``,
+        `🌍 Wise (International / SEPA)`,
+        `👤 ${settings.wise_beneficiary}`,
+        `💳 IBAN: ${settings.wise_iban}`,
+        `🔑 BIC: ${settings.wise_swift}`,
+        `📍 ${settings.wise_bank_address}`,
+        ``,
+        `Παρακαλώ αναφέρετε τον σκοπό της πληρωμής κατά τη μεταφορά.`,
+        `Ευχαριστούμε! 🙏`,
+    ].join("\n");
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
@@ -203,274 +306,210 @@ export default function Settings() {
 
     return (
         <div className="space-y-6 max-w-3xl">
-            {/* Header */}
+
+            {/* ── Page header ── */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Ρυθμίσεις</h1>
                     <p className="text-sm text-slate-500 mt-0.5">Στοιχεία εταιρείας, τράπεζες και πληρωμές</p>
                 </div>
-                <Button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className={`rounded-xl gap-2 h-9 text-sm transition-colors ${saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
-                >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                    {saving ? "Αποθήκευση..." : saved ? "Αποθηκεύτηκε" : "Αποθήκευση"}
-                </Button>
+                <div className="flex items-center gap-2">
+                    {editMode ? (
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setEditMode(false); fetchSettings(); }}
+                                className="rounded-xl gap-2 border-slate-200 text-slate-500"
+                            >
+                                <X className="h-4 w-4" /> Άκυρο
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving}
+                                size="sm"
+                                className={`rounded-xl gap-2 transition-colors ${saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                            >
+                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                                {saving ? "Αποθήκευση..." : saved ? "Αποθηκεύτηκε" : "Αποθήκευση"}
+                            </Button>
+                        </>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditMode(true)}
+                            className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+                        >
+                            <Pencil className="h-4 w-4" /> Επεξεργασία
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* ── Company Info ── */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-slate-400" />
-                        Στοιχεία Εταιρείας / Company Details
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-5">
-                    {/* Names */}
-                    <div className="grid grid-cols-2 gap-5">
-                        <CopyField
-                            label="Επωνυμία (EN)"
-                            value={settings.company_name}
-                            onChange={upd("company_name")}
-                        />
-                        <CopyField
-                            label="Επωνυμία (ΕΛ)"
-                            value={settings.company_name_gr}
-                            onChange={upd("company_name_gr")}
-                        />
-                    </div>
-
-                    {/* Activities */}
-                    <div className="grid grid-cols-2 gap-5">
-                        <CopyField
-                            label="Δραστηριότητα (EN)"
-                            value={settings.activity}
-                            onChange={upd("activity")}
-                        />
-                        <CopyField
-                            label="Δραστηριότητα (ΕΛ)"
-                            value={settings.activity_gr}
-                            onChange={upd("activity_gr")}
-                        />
-                    </div>
-
-                    {/* Tax / Registry */}
-                    <div className="grid grid-cols-3 gap-5">
-                        <CopyField
-                            label="ΑΦΜ / VAT"
-                            value={settings.vat_number}
-                            onChange={upd("vat_number")}
-                            mono
-                            icon={<Hash className="h-3 w-3" />}
-                        />
-                        <CopyField
-                            label="ΔΟΥ"
-                            value={settings.doy}
-                            onChange={upd("doy")}
-                        />
-                        <CopyField
-                            label="Αρ. ΓΕΜΗ / Registry No."
-                            value={settings.registry_number}
-                            onChange={upd("registry_number")}
-                            mono
-                            icon={<Hash className="h-3 w-3" />}
-                        />
-                    </div>
-
-                    {/* Addresses */}
-                    <div className="grid grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                                <MapPin className="h-3 w-3" /> Διεύθυνση (EN)
-                            </Label>
-                            <div className="flex gap-2">
-                                <Textarea
-                                    value={settings.address}
-                                    onChange={e => upd("address")(e.target.value)}
-                                    className="rounded-xl border-slate-200 text-sm resize-none flex-1"
-                                    rows={2}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => { navigator.clipboard.writeText(settings.address); toast.success("Copied!"); }}
-                                    className="flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all self-start mt-0"
-                                >
-                                    <Copy className="h-3.5 w-3.5" />
-                                </button>
+                <SectionHeader
+                    icon={<Building2 className="h-4 w-4 text-slate-400" />}
+                    title="Στοιχεία Εταιρείας / Company Details"
+                    plain={copyCompany}
+                    message={msgCompany}
+                />
+                <CardContent className="p-6">
+                    {editMode ? (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditField label="Επωνυμία (EN)" value={settings.company_name} onChange={upd("company_name")} />
+                                <EditField label="Επωνυμία (ΕΛ)" value={settings.company_name_gr} onChange={upd("company_name_gr")} />
                             </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                                <MapPin className="h-3 w-3" /> Διεύθυνση (ΕΛ)
-                            </Label>
-                            <div className="flex gap-2">
-                                <Textarea
-                                    value={settings.address_gr}
-                                    onChange={e => upd("address_gr")(e.target.value)}
-                                    className="rounded-xl border-slate-200 text-sm resize-none flex-1"
-                                    rows={2}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => { navigator.clipboard.writeText(settings.address_gr); toast.success("Copied!"); }}
-                                    className="flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all self-start"
-                                >
-                                    <Copy className="h-3.5 w-3.5" />
-                                </button>
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditField label="Δραστηριότητα (EN)" value={settings.activity} onChange={upd("activity")} />
+                                <EditField label="Δραστηριότητα (ΕΛ)" value={settings.activity_gr} onChange={upd("activity_gr")} />
                             </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <EditField label="ΑΦΜ / VAT" value={settings.vat_number} onChange={upd("vat_number")} mono />
+                                <EditField label="ΔΟΥ" value={settings.doy} onChange={upd("doy")} />
+                                <EditField label="Αρ. ΓΕΜΗ / Registry" value={settings.registry_number} onChange={upd("registry_number")} mono />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditField label="Διεύθυνση (EN)" value={settings.address} onChange={upd("address")} multiline />
+                                <EditField label="Διεύθυνση (ΕΛ)" value={settings.address_gr} onChange={upd("address_gr")} multiline />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditField label="Τηλέφωνο" value={settings.phone} onChange={upd("phone")} />
+                                <EditField label="Email" value={settings.email} onChange={upd("email")} />
+                            </div>
+                            <EditField label="URL Λογότυπου" value={settings.logo_url} onChange={upd("logo_url")} />
                         </div>
-                    </div>
-
-                    {/* Contact */}
-                    <div className="grid grid-cols-2 gap-5">
-                        <CopyField
-                            label="Τηλέφωνο"
-                            value={settings.phone}
-                            onChange={upd("phone")}
-                            icon={<Phone className="h-3 w-3" />}
-                        />
-                        <CopyField
-                            label="Email"
-                            value={settings.email}
-                            onChange={upd("email")}
-                            icon={<Mail className="h-3 w-3" />}
-                        />
-                    </div>
-
-                    {/* Logo */}
-                    <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                            <Globe className="h-3 w-3" /> URL Λογότυπου
-                        </Label>
-                        <Input
-                            value={settings.logo_url}
-                            onChange={e => upd("logo_url")(e.target.value)}
-                            placeholder="https://example.com/logo.png"
-                            className="rounded-xl border-slate-200 text-sm h-9"
-                        />
-                        <p className="text-xs text-slate-400">Ανεβάστε το λογότυπο σε cloud και επικολλήστε το URL</p>
-                    </div>
+                    ) : (
+                        <div className="divide-y divide-slate-100">
+                            <DisplayRow label="Επωνυμία (EN)" value={settings.company_name} />
+                            <DisplayRow label="Επωνυμία (ΕΛ)" value={settings.company_name_gr} />
+                            <DisplayRow label="Δραστηριότητα (EN)" value={settings.activity} />
+                            <DisplayRow label="Δραστηριότητα (ΕΛ)" value={settings.activity_gr} />
+                            <DisplayRow label="ΑΦΜ / VAT" value={settings.vat_number} mono />
+                            <DisplayRow label="ΔΟΥ" value={settings.doy} />
+                            <DisplayRow label="Αρ. ΓΕΜΗ / Registry No." value={settings.registry_number} mono />
+                            <DisplayRow label="Διεύθυνση (EN)" value={settings.address} />
+                            <DisplayRow label="Διεύθυνση (ΕΛ)" value={settings.address_gr} />
+                            <DisplayRow label="Τηλέφωνο" value={settings.phone} />
+                            <DisplayRow label="Email" value={settings.email} />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
             {/* ── Banking ── */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-slate-400" />
                         Τραπεζικά Στοιχεία / Bank Accounts
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                    </p>
+                    <CopyPair plain={copyAllBanks} message={msgAllBanks} />
+                </div>
+                <CardContent className="p-6 space-y-5">
 
                     {/* Eurobank */}
-                    <BankCard
-                        title="Eurobank"
-                        color="bg-blue-50 border-blue-100"
-                        icon={<Landmark className="h-3.5 w-3.5 text-blue-500" />}
-                    >
-                        <div className="grid grid-cols-2 gap-3">
-                            <CopyField
-                                label="Δικαιούχος / Beneficiary"
-                                value={settings.eurobank_beneficiary}
-                                onChange={upd("eurobank_beneficiary")}
-                            />
-                            <CopyField
-                                label="BIC / SWIFT"
-                                value={settings.eurobank_bic}
-                                onChange={upd("eurobank_bic")}
-                                mono
-                            />
+                    <div className="rounded-xl border border-blue-100 bg-blue-50 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-blue-100">
+                            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 flex items-center gap-2">
+                                <Landmark size={13} /> Eurobank
+                            </p>
+                            <CopyPair plain={copyEurobank} message={msgEurobank} />
                         </div>
-                        <CopyField
-                            label="IBAN"
-                            value={settings.eurobank_iban}
-                            onChange={upd("eurobank_iban")}
-                            mono
-                        />
-                    </BankCard>
+                        <div className="px-4 py-3">
+                            {editMode ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <EditField label="Δικαιούχος" value={settings.eurobank_beneficiary} onChange={upd("eurobank_beneficiary")} />
+                                        <EditField label="BIC" value={settings.eurobank_bic} onChange={upd("eurobank_bic")} mono />
+                                    </div>
+                                    <EditField label="IBAN" value={settings.eurobank_iban} onChange={upd("eurobank_iban")} mono />
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-blue-100/70">
+                                    <DisplayRow label="Δικαιούχος" value={settings.eurobank_beneficiary} />
+                                    <DisplayRow label="IBAN" value={settings.eurobank_iban} mono />
+                                    <DisplayRow label="BIC / SWIFT" value={settings.eurobank_bic} mono />
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Alpha Bank */}
-                    <BankCard
-                        title="Alpha Bank"
-                        color="bg-red-50 border-red-100"
-                        icon={<Landmark className="h-3.5 w-3.5 text-red-500" />}
-                    >
-                        <div className="grid grid-cols-2 gap-3">
-                            <CopyField
-                                label="Δικαιούχος / Beneficiary"
-                                value={settings.alpha_beneficiary}
-                                onChange={upd("alpha_beneficiary")}
-                            />
-                            <CopyField
-                                label="BIC / SWIFT"
-                                value={settings.alpha_bic}
-                                onChange={upd("alpha_bic")}
-                                mono
-                            />
+                    <div className="rounded-xl border border-red-100 bg-red-50 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-red-100">
+                            <p className="text-xs font-bold uppercase tracking-widest text-red-600 flex items-center gap-2">
+                                <Landmark size={13} /> Alpha Bank
+                            </p>
+                            <CopyPair plain={copyAlpha} message={msgAlpha} />
                         </div>
-                        <CopyField
-                            label="IBAN"
-                            value={settings.alpha_iban}
-                            onChange={upd("alpha_iban")}
-                            mono
-                        />
-                    </BankCard>
+                        <div className="px-4 py-3">
+                            {editMode ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <EditField label="Δικαιούχος" value={settings.alpha_beneficiary} onChange={upd("alpha_beneficiary")} />
+                                        <EditField label="BIC" value={settings.alpha_bic} onChange={upd("alpha_bic")} mono />
+                                    </div>
+                                    <EditField label="IBAN" value={settings.alpha_iban} onChange={upd("alpha_iban")} mono />
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-red-100/70">
+                                    <DisplayRow label="Δικαιούχος" value={settings.alpha_beneficiary} />
+                                    <DisplayRow label="IBAN" value={settings.alpha_iban} mono />
+                                    <DisplayRow label="BIC / SWIFT" value={settings.alpha_bic} mono />
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Wise */}
-                    <BankCard
-                        title="Wise (International / SEPA)"
-                        color="bg-emerald-50 border-emerald-100"
-                        icon={<Globe className="h-3.5 w-3.5 text-emerald-600" />}
-                    >
-                        <p className="text-xs text-emerald-700 bg-emerald-100 rounded-lg px-3 py-1.5">
-                            💡 Use for <strong>SEPA domestic</strong> transfers or <strong>international Swift</strong> from outside SEPA.
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <CopyField
-                                label="Δικαιούχος / Beneficiary"
-                                value={settings.wise_beneficiary}
-                                onChange={upd("wise_beneficiary")}
-                            />
-                            <CopyField
-                                label="Swift / BIC"
-                                value={settings.wise_swift}
-                                onChange={upd("wise_swift")}
-                                mono
-                            />
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-emerald-100">
+                            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 flex items-center gap-2">
+                                <Globe size={13} /> Wise — International / SEPA
+                            </p>
+                            <CopyPair plain={copyWise} message={msgWise} />
                         </div>
-                        <CopyField
-                            label="IBAN (BE)"
-                            value={settings.wise_iban}
-                            onChange={upd("wise_iban")}
-                            mono
-                        />
-                        <CopyField
-                            label="Διεύθυνση Τράπεζας / Bank Address"
-                            value={settings.wise_bank_address}
-                            onChange={upd("wise_bank_address")}
-                        />
-                    </BankCard>
+                        <div className="px-4 py-3">
+                            {editMode ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <EditField label="Beneficiary" value={settings.wise_beneficiary} onChange={upd("wise_beneficiary")} />
+                                        <EditField label="Swift / BIC" value={settings.wise_swift} onChange={upd("wise_swift")} mono />
+                                    </div>
+                                    <EditField label="IBAN (BE)" value={settings.wise_iban} onChange={upd("wise_iban")} mono />
+                                    <EditField label="Διεύθυνση Τράπεζας" value={settings.wise_bank_address} onChange={upd("wise_bank_address")} />
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-emerald-100/70">
+                                    <DisplayRow label="Beneficiary" value={settings.wise_beneficiary} />
+                                    <DisplayRow label="IBAN" value={settings.wise_iban} mono />
+                                    <DisplayRow label="Swift / BIC" value={settings.wise_swift} mono />
+                                    <DisplayRow label="Διεύθυνση Τράπεζας" value={settings.wise_bank_address} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
             {/* ── Viva Wallet ── */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-violet-400" />
                         Viva Wallet — Πύλη Πληρωμής
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                    <CopyField
-                        label="Payment Link"
-                        value={settings.viva_wallet_url}
-                        onChange={upd("viva_wallet_url")}
-                        icon={<Globe className="h-3 w-3" />}
-                    />
+                    </p>
+                    <CopyBtn text={settings.viva_wallet_url} label="Αντιγραφή link" />
+                </div>
+                <CardContent className="p-6 space-y-3">
+                    {editMode ? (
+                        <EditField label="Payment Link" value={settings.viva_wallet_url} onChange={upd("viva_wallet_url")} />
+                    ) : (
+                        <DisplayRow label="Payment Link" value={settings.viva_wallet_url} />
+                    )}
                     {settings.viva_wallet_url && (
                         <a
                             href={settings.viva_wallet_url}
@@ -487,12 +526,12 @@ export default function Settings() {
 
             {/* ── Expense categories ── */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <Tag className="h-4 w-4 text-slate-400" />
                         Κατηγορίες Εξόδων
-                    </CardTitle>
-                </CardHeader>
+                    </p>
+                </div>
                 <CardContent className="p-6">
                     <CategoryManager />
                 </CardContent>
@@ -500,12 +539,12 @@ export default function Settings() {
 
             {/* ── Income categories ── */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <CardHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <Tag className="h-4 w-4 text-emerald-400" />
                         Κατηγορίες Εσόδων
-                    </CardTitle>
-                </CardHeader>
+                    </p>
+                </div>
                 <CardContent className="p-6">
                     <IncomeCategoryManager />
                 </CardContent>
