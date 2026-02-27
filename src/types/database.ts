@@ -1,5 +1,5 @@
 export type PackageStatus = 'quote' | 'active' | 'completed';
-export type InvoiceCategory = 'airline' | 'hotel' | 'tolls' | 'other';
+export type InvoiceCategory = 'airline' | 'hotel' | 'tolls' | 'fuel' | 'transport' | 'payroll' | 'government' | 'rent' | 'telecom' | 'insurance' | 'office' | 'maintenance' | 'marketing' | 'other';
 export type MatchStatus = 'confirmed' | 'pending' | 'rejected';
 
 export interface Package {
@@ -57,14 +57,19 @@ export interface Invoice {
 export interface ExtractedData {
   merchant?: string;
   amount?: number;
+  net_amount?: number;
   date?: string;
   category?: InvoiceCategory;
   confidence?: number;
   raw_text?: string;
   currency?: string;
   vat_amount?: number;
+  vat_rate?: number;
   invoice_number?: string;
   tax_id?: string;
+  buyer_name?: string;
+  buyer_vat?: string;
+  document_type?: 'invoice' | 'receipt' | 'credit_note' | 'proforma';
   items?: Array<{ description: string; quantity: number; unit_price: number; total: number }>;
 }
 

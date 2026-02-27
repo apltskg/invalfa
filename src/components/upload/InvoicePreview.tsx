@@ -67,7 +67,7 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       if (pkgData) {
         setPackages(pkgData as Package[]);
 
-        // Suggest Package logic (same as before)
+        // Suggest Package logic
         const effectivePackageId = propPackageId || defaultPackageId;
         if (effectivePackageId) {
           const defaultPkg = pkgData.find((p: Package) => p.id === effectivePackageId);
@@ -85,20 +85,42 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         }
       }
 
-      // 2. Fetch Customers OR Suppliers based on type
+      // 2. Fetch Customers OR Suppliers based on type + auto-match by ΑΦΜ
+      const extractedVat = (extractedData as any)?.tax_id || (extractedData as any)?.buyer_vat || null;
+      const extractedMerchant = extractedData?.merchant || null;
+
       if (type === "income") {
         const { data: custData } = await supabase.from("customers").select("*").order("name");
         if (custData) {
           setCustomers(custData as Customer[]);
-          // Auto-match Customer
-          if (extractedData?.merchant || extractedData?.tax_id) {
-            const match = custData.find(c =>
-              (extractedData.merchant && c.name.toLowerCase().includes(extractedData.merchant.toLowerCase())) ||
-              (extractedData.tax_id && c.vat_number === extractedData.tax_id)
-            );
+          // Priority: match by ΑΦΜ first, then by name
+          if (extractedVat || extractedMerchant) {
+            let match = extractedVat
+              ? custData.find(c => c.vat_number === extractedVat)
+              : null;
+            if (!match && extractedMerchant) {
+              match = custData.find(c =>
+                c.name.toLowerCase().includes(extractedMerchant.toLowerCase()) ||
+                extractedMerchant.toLowerCase().includes(c.name.toLowerCase())
+              ) || null;
+            }
             if (match) {
               setSelectedEntityId(match.id);
               setMerchant(match.name);
+            } else if (extractedVat && extractedMerchant) {
+              // Auto-create new customer with ΑΦΜ
+              try {
+                const { data: newCust, error } = await supabase
+                  .from("customers")
+                  .insert({ name: extractedMerchant, vat_number: extractedVat })
+                  .select()
+                  .single();
+                if (!error && newCust) {
+                  setCustomers(prev => [...prev, newCust as Customer]);
+                  setSelectedEntityId(newCust.id);
+                  setMerchant(newCust.name);
+                }
+              } catch (e) { console.error("Auto-create customer failed:", e); }
             }
           }
         }
@@ -106,25 +128,76 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
         const { data: suppData } = await supabase.from("suppliers").select("*").order("name");
         if (suppData) {
           setSuppliers(suppData as Supplier[]);
-          // Auto-match Supplier
-          if (extractedData?.merchant || extractedData?.tax_id) {
-            const match = suppData.find(s =>
-              (extractedData.merchant && s.name.toLowerCase().includes(extractedData.merchant.toLowerCase()))
-              // Suppliers might not have vat_number in interface but good to check if added
-            );
+          // Priority: match by ΑΦΜ first, then by name
+          if (extractedVat || extractedMerchant) {
+            let match = extractedVat
+              ? suppData.find((s: any) => s.vat_number === extractedVat || s.tax_id === extractedVat)
+              : null;
+            if (!match && extractedMerchant) {
+              match = suppData.find(s =>
+                s.name.toLowerCase().includes(extractedMerchant.toLowerCase()) ||
+                extractedMerchant.toLowerCase().includes(s.name.toLowerCase())
+              ) || null;
+            }
             if (match) {
               setSelectedEntityId(match.id);
               setMerchant(match.name);
+            } else if (extractedVat && extractedMerchant) {
+              // Auto-create new supplier with ΑΦΜ
+              try {
+                const { data: newSupp, error } = await supabase
+                  .from("suppliers")
+                  .insert({ name: extractedMerchant })
+                  .select()
+                  .single();
+                if (!error && newSupp) {
+                  setSuppliers(prev => [...prev, newSupp as Supplier]);
+                  setSelectedEntityId(newSupp.id);
+                  setMerchant(newSupp.name);
+                }
+              } catch (e) { console.error("Auto-create supplier failed:", e); }
             }
           }
         }
       }
-      // 3. Fetch categories based on type
+
+      // 3. Fetch categories based on type + auto-match AI category
       if (type === "expense") {
-        const { data: catData } = await supabase.from('expense_categories').select('id,name,name_el').order('sort_order');
-        if (catData) setExpenseCategories(catData as any);
+        const { data: catData } = await (supabase as any).from('expense_categories').select('id,name,name_el').order('sort_order');
+        if (catData) {
+          setExpenseCategories(catData as any);
+          // Auto-match category from AI extraction
+          const aiCategory = extractedData?.category || "other";
+          const CATEGORY_TO_NAME: Record<string, string[]> = {
+            airline: ["airline", "αεροπορικά", "flights"],
+            hotel: ["hotel", "ξενοδοχεία", "hotels"],
+            tolls: ["tolls", "διόδια"],
+            fuel: ["fuel", "καύσιμα"],
+            transport: ["transport", "μεταφορές", "passenger"],
+            payroll: ["payroll", "μισθοδοσία"],
+            government: ["government", "δημόσιο", "tax"],
+            rent: ["rent", "ενοίκια", "fixed"],
+            telecom: ["telecom", "τηλεπικοινωνίες"],
+            insurance: ["insurance", "ασφάλεια"],
+            office: ["office", "γραφική", "supplies"],
+            maintenance: ["maintenance", "συντήρηση"],
+            marketing: ["marketing", "διαφήμιση"],
+            other: ["other", "λοιπά"],
+          };
+          const keywords = CATEGORY_TO_NAME[aiCategory] || [aiCategory];
+          const matchedCat = catData.find((c: any) =>
+            keywords.some(kw =>
+              c.name?.toLowerCase().includes(kw) ||
+              c.name_el?.toLowerCase().includes(kw) ||
+              kw.includes(c.name?.toLowerCase())
+            )
+          );
+          if (matchedCat) {
+            setExpenseCategoryId((matchedCat as any).id);
+          }
+        }
       } else if (type === "income") {
-        const { data: catData } = await supabase.from('income_categories').select('id,name_el,color,icon').order('sort_order');
+        const { data: catData } = await (supabase as any).from('income_categories').select('id,name_el,color,icon').order('sort_order');
         if (catData) setIncomeCategories(catData as any);
       }
     }

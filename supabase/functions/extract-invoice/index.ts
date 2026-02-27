@@ -146,8 +146,8 @@ serve(async (req) => {
 
     console.log("[AI] Sending to Gemini 2.5 Flash for extraction...");
 
-    // Enhanced system prompt for Greek documents - AGGRESSIVE EXTRACTION
-    const systemPrompt = `You are an expert financial auditor specializing in Greek and European tax documents.
+    // Enhanced system prompt for Greek documents - TRAVEL AGENCY SPECIFIC
+    const systemPrompt = `You are an expert financial auditor specializing in Greek travel agency invoices and European tax documents.
 Your task is to ACCURATELY extract ALL invoice data. Be AGGRESSIVE in finding the correct values.
 
 CRITICAL RULES FOR GREEK INVOICES:
@@ -157,45 +157,68 @@ CRITICAL RULES FOR GREEK INVOICES:
    - "1.234,56" = 1234.56 (NOT 1.23456 or 1234.56)
    - "12.500,00" = 12500.00
    - "500,00" = 500.00
-   - "-1.234,56" = -1234.56
    - ALWAYS convert to standard decimal format in your response
 
 2. **DATE FORMATS**:
    - Greek dates: DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY
    - Convert ALL dates to ISO format: YYYY-MM-DD
-   - Example: 15/03/2026 → 2026-03-15
 
-3. **MERCHANT NAME (IMPORTANT)**:
+3. **TWO PARTIES ON EVERY INVOICE**:
+   - SELLER (Πωλητής/Εκδότης): the company that ISSUED the invoice
+   - BUYER (Αγοραστής/Πελάτης): the company that RECEIVED/PAID
+   - Extract NAME and ΑΦΜ (VAT number) for BOTH parties
+   - The MERCHANT is the SELLER (who we paid)
+   - The BUYER is usually us (the travel agency)
+   - Look for: ΣΤΟΙΧΕΙΑ ΠΩΛΗΤΗ / ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
+
+4. **MERCHANT NAME (SELLER - IMPORTANT)**:
    - ALWAYS prefer the BRAND/TRADING name over legal entity
    - "Aegean Airlines" NOT "ΑΕΡΟΠΟΡΙΑ ΑΙΓΑΙΟΥ Α.Ε."
-   - "Vodafone" NOT "Vodafone-Panafon Α.Ε.Ε.Τ."
    - "Cosmote" NOT "COSMOTE - ΚΙΝΗΤΕΣ ΤΗΛΕΠΙΚΟΙΝΩΝΙΕΣ Α.Ε."
-   - Look for logos, brand names at the top of document
-   - Look for: ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης, Προμηθευτής
+   - Look for logos, brand names, ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης
 
-4. **VAT/TAX ID (ΑΦΜ)**:
+5. **VAT/TAX ID (ΑΦΜ)**:
    - Greek VAT numbers are EXACTLY 9 digits
    - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number, TIN
-   - Extract ONLY the 9-digit number, no prefixes
+   - Extract the SELLER's ΑΦΜ as "tax_id"
+   - Extract the BUYER's ΑΦΜ as "buyer_vat" (this is critical for matching)
+   - Extract ONLY the 9-digit number, no "EL" prefix
 
-5. **AMOUNTS (CRITICAL)**:
-   - Extract the FINAL TOTAL (Σύνολο Πληρωμής, Grand Total) INCLUDING VAT
-   - This is usually the LARGEST amount on the invoice
-   - NOT the net amount (Καθαρή Αξία)
-   - Look for: ΣΥΝΟΛΟ, Πληρωτέο, Total, Σύνολο με ΦΠΑ, Πληρωτέο Ποσό
-   - If multiple totals exist, use the FINAL one (bottom of invoice)
+6. **AMOUNTS (CRITICAL)**:
+   - amount = FINAL TOTAL INCLUDING VAT (Σύνολο Πληρωμής, Grand Total)
+   - net_amount = Total BEFORE VAT (Καθαρή Αξία)
+   - vat_amount = VAT amount (ΦΠΑ)
+   - vat_rate = VAT percentage (usually 24%, 13%, or 6% in Greece)
+   - Look for: ΣΥΝΟΛΟ, Πληρωτέο, Σύνολο με ΦΠΑ
 
-6. **CATEGORIES** (choose the BEST match):
-   - "airline": Αεροπορικά, Aegean, Sky Express, Ryanair, Olympic, Volotea, boarding pass, flight, ticket
-   - "hotel": Ξενοδοχείο, διαμονή, Airbnb, Booking.com, Hotels.com, accommodation, room, stay
-   - "tolls": Διόδια, Attiki Odos, Egnatia, Gefyra, Olympia Odos, Moreas, Ionia Odos, e-pass, motorway
-   - "other": Everything else (taxi, fuel, restaurant, parking, supplies, software, services, utilities, telecom)
+7. **CATEGORIES** (choose the BEST match for a travel agency):
+   - "airline": flights, Aegean, Sky Express, Ryanair, Olympic, boarding pass, αεροπορικά
+   - "hotel": hotels, Airbnb, Booking.com, accommodation, ξενοδοχείο, διαμονή
+   - "tolls": tolls, Attiki Odos, Egnatia, Gefyra, Olympia Odos, e-pass, διόδια
+   - "fuel": gas stations, Shell, BP, EKO, petrol, diesel, benzine, καύσιμα, πετρέλαιο
+   - "transport": buses, ferries, taxi, KTEL, Blue Star Ferries, passenger transport, μεταφορές
+   - "payroll": salaries, wages, ΕΦΚΑ contributions, μισθοδοσία
+   - "government": tax payments, ΦΠΑ, ΕΦΚΑ, ΕΝΦΙΑ, taxes, πρόστιμα, δημόσιο
+   - "rent": rent, lease, office space, ενοίκιο, μίσθωμα
+   - "telecom": Cosmote, Vodafone, WIND, internet, phone, τηλεπικοινωνίες
+   - "insurance": insurance policies, travel insurance, car insurance, ασφάλεια
+   - "office": office supplies, stationery, equipment, Plaisio, Public, γραφική ύλη
+   - "maintenance": repairs, car service, building maintenance, συντήρηση
+   - "marketing": Google Ads, Facebook Ads, advertising, printing, διαφήμιση
+   - "other": anything that doesn't fit above
 
-7. **INVOICE NUMBER**:
-   - Look for: Αριθμός Τιμολογίου, Αρ. Παραστατικού, Invoice No, Receipt No, Σειρά/Αριθμός
+8. **DOCUMENT TYPE**:
+   - "invoice" (Τιμολόγιο)
+   - "receipt" (Απόδειξη)
+   - "credit_note" (Πιστωτικό)
+   - "proforma" (Προτιμολόγιο)
+
+9. **INVOICE NUMBER**:
+   - Look for: Αριθμός Τιμολογίου, Αρ. Παραστατικού, Invoice No
    - Include the full number with any prefix letters
 
-REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.`;
+REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.
+The ΑΦΜ is the MOST important field - search every corner of the document for both seller and buyer ΑΦΜ.`;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -219,15 +242,27 @@ REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.`;
                 properties: {
                   merchant: {
                     type: "string",
-                    description: "Company or vendor name (prefer trading name over legal entity)"
+                    description: "Seller/vendor company or brand name (prefer trading name)"
                   },
                   tax_id: {
                     type: "string",
-                    description: "The 9-digit Greek VAT number (ΑΦΜ) or equivalent Tax ID"
+                    description: "Seller's 9-digit Greek VAT number (ΑΦΜ Πωλητή)"
+                  },
+                  buyer_name: {
+                    type: "string",
+                    description: "Buyer company name (Αγοραστής)"
+                  },
+                  buyer_vat: {
+                    type: "string",
+                    description: "Buyer's 9-digit Greek VAT number (ΑΦΜ Αγοραστή)"
                   },
                   amount: {
                     type: "number",
-                    description: "Total amount paid (final price INCLUDING VAT) as a decimal number"
+                    description: "Total amount INCLUDING VAT (Σύνολο Πληρωμής) as decimal"
+                  },
+                  net_amount: {
+                    type: "number",
+                    description: "Net amount BEFORE VAT (Καθαρή Αξία) as decimal"
                   },
                   currency: {
                     type: "string",
@@ -239,16 +274,25 @@ REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.`;
                   },
                   category: {
                     type: "string",
-                    enum: ["airline", "hotel", "tolls", "other"],
-                    description: "Category based on merchant type"
+                    enum: ["airline", "hotel", "tolls", "fuel", "transport", "payroll", "government", "rent", "telecom", "insurance", "office", "maintenance", "marketing", "other"],
+                    description: "Expense category based on merchant/service type"
                   },
                   vat_amount: {
                     type: "number",
-                    description: "VAT/tax amount if visible as a decimal number"
+                    description: "VAT amount (ΦΠΑ) as decimal"
+                  },
+                  vat_rate: {
+                    type: "number",
+                    description: "VAT rate percentage (e.g. 24, 13, 6)"
                   },
                   invoice_number: {
                     type: "string",
                     description: "Invoice or receipt number"
+                  },
+                  document_type: {
+                    type: "string",
+                    enum: ["invoice", "receipt", "credit_note", "proforma"],
+                    description: "Type of document"
                   }
                 },
                 required: ["merchant", "amount", "date", "category"],
@@ -310,12 +354,17 @@ REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.`;
             extracted: {
               merchant: parsed.merchant || null,
               tax_id: parsed.tax_id || null,
+              buyer_name: parsed.buyer_name || null,
+              buyer_vat: parsed.buyer_vat || null,
               amount: typeof parsed.amount === 'number' ? parsed.amount : null,
+              net_amount: typeof parsed.net_amount === 'number' ? parsed.net_amount : null,
               date: parsed.date || null,
               category: parsed.category || "other",
               currency: parsed.currency || "EUR",
               vat_amount: typeof parsed.vat_amount === 'number' ? parsed.vat_amount : null,
+              vat_rate: typeof parsed.vat_rate === 'number' ? parsed.vat_rate : null,
               invoice_number: parsed.invoice_number || null,
+              document_type: parsed.document_type || "invoice",
               confidence: 0.9
             }
           }),
