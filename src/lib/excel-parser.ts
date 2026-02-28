@@ -79,15 +79,28 @@ function normalizeHeader(header: string | null | undefined): string {
     .toLowerCase()
     .trim()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/\s+/g, ' '); // Normalize whitespace
+}
+
+// Cache normalized patterns for performance
+const normalizedPatterns: Record<string, string[]> = {};
+function getNormalizedPatterns(key: string): string[] {
+  if (!normalizedPatterns[key]) {
+    normalizedPatterns[key] = (COLUMN_PATTERNS as any)[key].map((p: string) => normalizeHeader(p));
+  }
+  return normalizedPatterns[key];
 }
 
 function findColumnIndex(headers: (string | null | undefined)[], patterns: string[]): number {
+  // Normalize the patterns too (they contain Greek diacritics!)
+  const normalizedPats = patterns.map(p => normalizeHeader(p));
+
   for (let i = 0; i < headers.length; i++) {
     const normalized = normalizeHeader(headers[i]);
     if (!normalized) continue;
-    for (const pattern of patterns) {
-      if (normalized.includes(normalizeHeader(pattern))) {
+    for (const pattern of normalizedPats) {
+      if (normalized.includes(pattern) || pattern.includes(normalized)) {
         return i;
       }
     }
@@ -247,11 +260,44 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
           }
         }
 
-        const headers = (jsonData[headerRowIndex] || []).map(h => String(h || ''));
+        let headers = (jsonData[headerRowIndex] || []).map(h => String(h || ''));
+
+        // ── Handle multi-row headers (e.g., merged "ΑΞΙΕΣ" with sub-columns) ──
+        // Check if the next row is also a header row (contains text like "Καθαρή Αξία")
+        let dataStartRow = headerRowIndex + 1;
+        const nextRow = jsonData[headerRowIndex + 1];
+        if (nextRow) {
+          const nextRowCells = nextRow.map(c => String(c || '').trim()).filter(Boolean);
+          // Check if next row cells look like sub-headers (contain Greek text, not just numbers)
+          const textCells = nextRowCells.filter(cell => {
+            // It's a text header if it contains Greek letters or is not purely numeric
+            return /[α-ωά-ώΑ-ΩΆ-Ώa-zA-Z]/.test(cell);
+          });
+
+          if (textCells.length >= 2) {
+            // Merge sub-headers into main headers
+            const maxLen = Math.max(headers.length, nextRow.length);
+            const mergedHeaders: string[] = [];
+            for (let i = 0; i < maxLen; i++) {
+              const main = (headers[i] || '').trim();
+              const sub = String(nextRow[i] || '').trim();
+              if (sub && !main) {
+                mergedHeaders.push(sub);
+              } else if (sub && main && /[α-ωά-ώΑ-ΩΆ-Ώa-zA-Z]/.test(sub)) {
+                mergedHeaders.push(main + ' ' + sub);
+              } else {
+                mergedHeaders.push(main);
+              }
+            }
+            headers = mergedHeaders;
+            dataStartRow = headerRowIndex + 2; // data starts after sub-header row
+          }
+        }
 
         // Debug: Log detected headers
         console.log('Excel Parser - Detected headers:', headers);
         console.log('Excel Parser - Header row index:', headerRowIndex);
+        console.log('Excel Parser - Data start row:', dataStartRow);
 
         // Auto-detect column mapping
         const columnMapping: Record<string, number> = {
@@ -269,16 +315,16 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
         console.log('Excel Parser - Column mapping:', columnMapping);
 
         // Debug: Log first data row
-        if (jsonData[headerRowIndex + 1]) {
-          console.log('Excel Parser - First data row:', jsonData[headerRowIndex + 1]);
+        if (jsonData[dataStartRow]) {
+          console.log('Excel Parser - First data row:', jsonData[dataStartRow]);
         }
 
         const rows: ParsedInvoiceRow[] = [];
         let calculatedTotals = { net: 0, vat: 0, gross: 0 };
         let footerTotals = { net: 0, vat: 0, gross: 0 };
 
-        // Process data rows
-        for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+        // Process data rows (from dataStartRow, which accounts for multi-row headers)
+        for (let i = dataStartRow; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length === 0) continue;
 
@@ -311,9 +357,16 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
 
           const netAmount = columnMapping.netAmount >= 0 ? parseGreekNumber(row[columnMapping.netAmount]) : 0;
           const vatAmount = columnMapping.vatAmount >= 0 ? parseGreekNumber(row[columnMapping.vatAmount]) : 0;
-          const totalAmount = columnMapping.totalAmount >= 0 ? parseGreekNumber(row[columnMapping.totalAmount]) : 0;
+          let totalAmount = columnMapping.totalAmount >= 0 ? parseGreekNumber(row[columnMapping.totalAmount]) : 0;
 
-          calculatedTotals.net += netAmount;
+          // Fallback: if total is 0 but we have net + vat, calculate it
+          if (totalAmount === 0 && (netAmount > 0 || vatAmount > 0)) {
+            totalAmount = netAmount + vatAmount;
+          }
+          // Fallback: if net is 0 but we have total - vat, calculate it
+          const finalNet = netAmount === 0 && totalAmount > 0 ? totalAmount - vatAmount : netAmount;
+
+          calculatedTotals.net += finalNet;
           calculatedTotals.vat += vatAmount;
           calculatedTotals.gross += totalAmount;
 
@@ -323,7 +376,7 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
             mydataCode,
             clientName: columnMapping.clientName >= 0 ? String(row[columnMapping.clientName] || '') : '',
             clientVat: columnMapping.clientVat >= 0 ? String(row[columnMapping.clientVat] || '') : '',
-            netAmount,
+            netAmount: finalNet,
             vatAmount,
             totalAmount,
             mydataMark: columnMapping.mydataMark >= 0 ? String(row[columnMapping.mydataMark] || '') : '',
