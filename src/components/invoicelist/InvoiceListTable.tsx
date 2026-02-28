@@ -207,7 +207,6 @@ export function InvoiceListTable({
               <SortableHeader field="invoice_date">Ημερομηνία</SortableHeader>
               <SortableHeader field="invoice_number">Παραστατικό</SortableHeader>
               <SortableHeader field="client_name">Πελάτης</SortableHeader>
-              <TableHead>Α.Φ.Μ.</TableHead>
               <TableHead className="text-right">Καθαρή</TableHead>
               <TableHead className="text-right">Φ.Π.Α.</TableHead>
               <SortableHeader field="total_amount">
@@ -219,7 +218,7 @@ export function InvoiceListTable({
           <TableBody>
             {filteredItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                   Δεν βρέθηκαν τιμολόγια
                 </TableCell>
               </TableRow>
@@ -256,9 +255,6 @@ export function InvoiceListTable({
                       )}
                       <span className="truncate">{item.client_name || '-'}</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {item.client_vat || '-'}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     €{(item.net_amount || 0).toFixed(2)}
