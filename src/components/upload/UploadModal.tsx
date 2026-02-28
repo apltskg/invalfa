@@ -146,7 +146,34 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     const isManual = uploadedFile.isManual || !uploadedFile.file;
 
     try {
-      const { error } = await supabase.from("invoices").insert([{
+      // Auto-create supplier for expenses if no supplier is linked
+      let finalSupplierId = data.supplierId || null;
+      if (defaultType === "expense" && !finalSupplierId && data.merchant) {
+        // Try to find existing supplier by name
+        const { data: existingSupp } = await supabase
+          .from("suppliers")
+          .select("id")
+          .ilike("name", data.merchant.trim())
+          .maybeSingle();
+
+        if (existingSupp) {
+          finalSupplierId = existingSupp.id;
+        } else {
+          // Create new supplier with VAT if available
+          const extractedVat = (uploadedFile.extractedData as any)?.tax_id || null;
+          const { data: newSupp, error: suppErr } = await supabase
+            .from("suppliers")
+            .insert({ name: data.merchant.trim() })
+            .select("id")
+            .single();
+
+          if (!suppErr && newSupp) {
+            finalSupplierId = newSupp.id;
+          }
+        }
+      }
+
+      const { error } = await (supabase as any).from("invoices").insert([{
         file_path: uploadedFile.path,
         file_name: uploadedFile.file?.name || "Manual Entry",
         merchant: data.merchant || null,
@@ -159,7 +186,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         extracted_data: uploadedFile.extractedData as any,
         type: defaultType,
         customer_id: data.customerId || null,
-        supplier_id: data.supplierId || null
+        supplier_id: finalSupplierId
       }]);
 
       if (error) {
@@ -169,15 +196,15 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       }
 
       if (isManual) {
-        toast.success("Entry saved! Remember to upload the PDF file later.", {
+        toast.success("Αποθηκεύτηκε! Θυμηθείτε να ανεβάσετε το αρχείο αργότερα.", {
           duration: 5000,
           action: {
-            label: "Got it",
+            label: "OK",
             onClick: () => { }
           }
         });
       } else {
-        toast.success("Document saved successfully");
+        toast.success("Αποθηκεύτηκε επιτυχώς");
       }
 
       onUploadComplete?.();

@@ -92,6 +92,10 @@ export default function GeneralExpenses() {
     const handleDelete = async () => {
         if (!selectedInvoice) return;
         try {
+            // Delete file from storage if exists
+            if (selectedInvoice.file_path && !selectedInvoice.file_path.startsWith("manual/")) {
+                await supabase.storage.from("invoices").remove([selectedInvoice.file_path]);
+            }
             const { error } = await supabase.from("invoices").delete().eq("id", selectedInvoice.id);
             if (error) throw error;
             toast.success("Διαγράφηκε επιτυχώς");

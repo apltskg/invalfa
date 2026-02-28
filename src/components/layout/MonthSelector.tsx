@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { el } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -8,17 +8,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-const VIEW_MODE_LABELS: Record<ViewMode, { label: string; shortLabel: string }> = {
-  day: { label: 'Ημέρα', shortLabel: 'Η' },
-  week: { label: 'Εβδομάδα', shortLabel: 'Ε' },
-  month: { label: 'Μήνας', shortLabel: 'Μ' },
-  year: { label: 'Έτος', shortLabel: 'Ε' },
-};
+const VIEW_MODES: { value: ViewMode; label: string }[] = [
+  { value: 'day', label: 'Ημέρα' },
+  { value: 'week', label: 'Εβδομάδα' },
+  { value: 'month', label: 'Μήνας' },
+  { value: 'year', label: 'Έτος' },
+];
 
 export function MonthSelector() {
   const {
@@ -47,56 +45,45 @@ export function MonthSelector() {
     }
   })();
 
+  const currentModeLabel = VIEW_MODES.find(m => m.value === viewMode)?.label || 'Μήνας';
+
   return (
     <div className="flex items-center gap-2">
-      {/* View Mode Toggle */}
-      <ToggleGroup
-        type="single"
-        value={viewMode}
-        onValueChange={(value) => value && setViewMode(value as ViewMode)}
-        className="bg-muted/50 rounded-xl p-0.5 border border-border/50"
-      >
-        <ToggleGroupItem
-          value="day"
-          aria-label="Ημέρα"
-          className="h-7 w-7 rounded-lg text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          title="Ημέρα"
-        >
-          Η
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="week"
-          aria-label="Εβδομάδα"
-          className="h-7 w-7 rounded-lg text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          title="Εβδομάδα"
-        >
-          Ε
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="month"
-          aria-label="Μήνας"
-          className="h-7 w-7 rounded-lg text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          title="Μήνας"
-        >
-          Μ
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="year"
-          aria-label="Έτος"
-          className="h-7 w-7 rounded-lg text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-          title="Έτος"
-        >
-          Χ
-        </ToggleGroupItem>
-      </ToggleGroup>
+      {/* View Mode Selector — clear dropdown instead of tiny letter buttons */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 rounded-xl gap-1.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50"
+          >
+            {currentModeLabel}
+            <ChevronDown className="h-3 w-3 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-36">
+          {VIEW_MODES.map(mode => (
+            <DropdownMenuItem
+              key={mode.value}
+              onClick={() => setViewMode(mode.value)}
+              className={cn(
+                "cursor-pointer text-sm",
+                viewMode === mode.value && "bg-blue-50 text-blue-700 font-medium"
+              )}
+            >
+              {mode.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Date Navigation */}
-      <div className="flex items-center gap-1 bg-muted/50 rounded-2xl p-1 border border-border/50">
+      <div className="flex items-center gap-0.5 bg-white rounded-xl border border-slate-200 p-0.5">
         <Button
           variant="ghost"
           size="icon"
           onClick={goToPrevious}
-          className="h-8 w-8 rounded-xl hover:bg-background"
+          className="h-7 w-7 rounded-lg hover:bg-slate-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -106,13 +93,13 @@ export function MonthSelector() {
             <Button
               variant="ghost"
               className={cn(
-                "h-8 px-3 rounded-xl gap-2 font-medium capitalize min-w-[140px] hover:bg-background",
-                isCurrentPeriod && "text-primary"
+                "h-7 px-3 rounded-lg gap-1.5 font-medium capitalize text-sm hover:bg-slate-100",
+                isCurrentPeriod && "text-blue-600"
               )}
             >
-              <Calendar className="h-4 w-4" />
-              <span className="truncate max-w-[120px]">{displayLabel}</span>
-              <ChevronDown className="h-3 w-3 opacity-50" />
+              <Calendar className="h-3.5 w-3.5" />
+              <span className="truncate max-w-[130px]">{displayLabel}</span>
+              <ChevronDown className="h-3 w-3 opacity-40" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-48 max-h-80 overflow-y-auto">
@@ -125,7 +112,7 @@ export function MonthSelector() {
                   onClick={() => setSelectedDate(month)}
                   className={cn(
                     "capitalize cursor-pointer",
-                    isSelected && "bg-primary/10 text-primary font-medium"
+                    isSelected && "bg-blue-50 text-blue-600 font-medium"
                   )}
                 >
                   {format(month, "MMMM yyyy", { locale: el })}
@@ -143,7 +130,7 @@ export function MonthSelector() {
                       onClick={() => setSelectedDate(new Date(year, 0, 1))}
                       className={cn(
                         "cursor-pointer",
-                        isSelected && "bg-primary/10 text-primary font-medium"
+                        isSelected && "bg-blue-50 text-blue-600 font-medium"
                       )}
                     >
                       {year}
@@ -153,8 +140,8 @@ export function MonthSelector() {
               </>
             )}
             {(viewMode === 'day' || viewMode === 'week') && (
-              <div className="p-2 text-center text-sm text-muted-foreground">
-                Χρησιμοποιήστε τα βέλη για πλοήγηση
+              <div className="p-2 text-center text-sm text-slate-400">
+                Χρησιμοποιήστε τα βέλη ← →
               </div>
             )}
           </DropdownMenuContent>
@@ -164,7 +151,7 @@ export function MonthSelector() {
           variant="ghost"
           size="icon"
           onClick={goToNext}
-          className="h-8 w-8 rounded-xl hover:bg-background"
+          className="h-7 w-7 rounded-lg hover:bg-slate-100"
           disabled={isCurrentPeriod}
         >
           <ChevronRight className="h-4 w-4" />
