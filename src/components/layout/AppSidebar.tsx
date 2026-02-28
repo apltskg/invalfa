@@ -3,7 +3,7 @@ import {
   BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users,
   LayoutDashboard, Shield, Receipt, ClipboardList, ArrowLeftRight,
   Brain, ChevronRight, Infinity as InfinityIcon, CreditCard,
-  Globe, Briefcase
+  Globe, Briefcase, Plane
 } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
@@ -35,6 +35,7 @@ const companyItems = [
   { title: "Γενικά Έσοδα", icon: ArrowUpCircle, url: "/general-income" },
   { title: "Προμηθευτές", icon: Truck, url: "/suppliers" },
   { title: "Πελάτες", icon: Users, url: "/customers" },
+  { title: "Ταξιδιώτες", icon: Plane, url: "/travellers" },
 ];
 
 // ── Analytics & Reports ─────────────────────────────────────────────────────
