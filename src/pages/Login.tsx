@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, FileText, Eye, EyeOff, Infinity as InfinityIcon } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth } from '@/components/auth/AuthProvider';
 
@@ -20,6 +24,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate('/packages', { replace: true });
@@ -28,6 +33,7 @@ export default function Login() {
 
   const validateForm = () => {
     setErrors({});
+
     try {
       loginSchema.parse({ email, password });
       return true;
@@ -35,7 +41,9 @@ export default function Login() {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+          if (err.path[0]) {
+            newErrors[err.path[0] as string] = err.message;
+          }
         });
         setErrors(newErrors);
       }
@@ -45,55 +53,49 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!validateForm()) return;
+
     setLoading(true);
+
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
+
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        toast.error('Λάθος email ή κωδικός');
+        toast.error('Invalid email or password');
       } else {
-        toast.error('Αποτυχία σύνδεσης: ' + error.message);
+        toast.error('Login failed: ' + error.message);
       }
       setLoading(false);
     } else {
-      toast.success('Καλώς ήρθατε!');
+      toast.success('Welcome back!');
       navigate('/packages', { replace: true });
     }
   };
 
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-white to-amber-50/30">
-      {/* Decorative shapes */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-100/30 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
-
-      <div className="relative w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div
-            className="mx-auto h-14 w-14 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
-            style={{ background: 'linear-gradient(135deg, hsl(43,96%,50%), hsl(43,100%,62%))' }}
-          >
-            <span className="text-xl font-black text-white tracking-tighter">FC</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+      <Card className="w-full max-w-md rounded-3xl border-border/50 shadow-2xl">
+        <CardHeader className="space-y-2 text-center pb-6">
+          <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-md flex items-center justify-center mb-2">
+            <InfinityIcon className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            First <span className="text-amber-500">Class</span>
-          </h1>
-          <p className="mt-1.5 text-sm text-slate-400">
-            Premium Financial Management
-          </p>
-        </div>
-
-        {/* Card */}
-        <div className="rounded-2xl bg-white p-8 shadow-xl border border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800 mb-5">Είσοδος</h2>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Always <span className="text-blue-600">First</span>
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Sign in to manage your invoices
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
@@ -101,16 +103,18 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                className={`rounded-xl h-11 ${errors.email ? 'border-destructive' : ''}`}
                 autoComplete="email"
-                className={`w-full h-11 px-4 rounded-xl text-sm text-slate-900 bg-slate-50 border placeholder-slate-300 outline-none transition-all focus:border-amber-400 focus:ring-2 focus:ring-amber-100 ${errors.email ? 'border-red-300' : 'border-slate-200'}`}
               />
-              {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Κωδικός</label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <input
+                <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
@@ -118,36 +122,37 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
+                  className={`rounded-xl h-11 pr-10 ${errors.password ? 'border-destructive' : ''}`}
                   autoComplete="current-password"
-                  className={`w-full h-11 px-4 pr-11 rounded-xl text-sm text-slate-900 bg-slate-50 border placeholder-slate-300 outline-none transition-all focus:border-amber-400 focus:ring-2 focus:ring-amber-100 ${errors.password ? 'border-red-300' : 'border-slate-200'}`}
                 />
-                <button
+                <Button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                </Button>
               </div>
-              {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password}</p>
+              )}
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all mt-2 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
-              style={{ background: 'linear-gradient(135deg, hsl(43,96%,48%), hsl(43,90%,55%))' }}
-            >
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Είσοδος
-            </button>
-          </form>
-        </div>
 
-        <p className="text-center mt-6 text-xs text-slate-300">
-          First Class © 2025
-        </p>
-      </div>
+            <Button
+              type="submit"
+              className="w-full rounded-xl h-11 font-medium"
+              disabled={loading}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign In
+            </Button>
+          </form>
+
+        </CardContent>
+      </Card>
     </div>
   );
 }
