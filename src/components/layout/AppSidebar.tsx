@@ -87,14 +87,14 @@ export function AppSidebar() {
           isActive={isActive}
           className={cn(
             "h-9 rounded-lg px-3 text-sm font-medium transition-all duration-150",
-            "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-            isActive && "bg-slate-100 text-slate-900 font-semibold"
+            "text-white/60 hover:text-white hover:bg-white/8",
+            isActive && "bg-amber-500/15 text-amber-400 font-semibold"
           )}
         >
           <Link to={item.url} className="flex items-center gap-2.5">
-            <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-blue-600" : "text-slate-400")} />
+            <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-amber-400" : "text-white/40")} />
             <span>{item.title}</span>
-            {isActive && <ChevronRight className="h-3 w-3 ml-auto text-blue-600" />}
+            {isActive && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-400" />}
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -102,29 +102,31 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-slate-200 bg-white w-56">
+    <Sidebar className="border-r border-white/5 w-56" style={{ background: 'hsl(222, 47%, 11%)' }}>
       {/* Brand Header */}
-      <SidebarHeader className="px-4 py-5 border-b border-slate-100">
+      <SidebarHeader className="px-4 py-5 border-b border-white/8">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 shadow-sm">
-            <InfinityIcon className="h-4 w-4 text-white" />
+          {/* FC diamond logo mark */}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-lg relative"
+            style={{ background: 'linear-gradient(135deg, hsl(43,85%,48%), hsl(43,100%,65%))' }}>
+            <span className="text-[13px] font-black text-white tracking-tighter">FC</span>
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900 leading-none">Always First</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Enterprise v15</p>
+            <p className="text-[13px] font-bold text-white leading-none tracking-wide">First Class</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'hsl(43,70%,55%)' }}>Enterprise Suite</p>
           </div>
         </div>
 
         {/* Company badge */}
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-          <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <div className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'hsl(222,40%,16%)' }}>
+          <Briefcase className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(43,70%,55%)' }} />
           <div className="min-w-0">
             {companyName ? (
-              <p className="text-[11px] font-semibold text-slate-700 truncate">{companyName}</p>
+              <p className="text-[11px] font-semibold text-white/90 truncate">{companyName}</p>
             ) : (
-              <div className="h-2.5 w-28 rounded bg-slate-200 animate-pulse" />
+              <div className="h-2.5 w-28 rounded animate-pulse" style={{ background: 'hsl(222,40%,22%)' }} />
             )}
-            <p className="text-[10px] text-slate-400">Διαχειριστής</p>
+            <p className="text-[10px] text-white/35">Διαχειριστής</p>
           </div>
         </div>
       </SidebarHeader>
@@ -132,7 +134,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-3 space-y-1">
         {/* My Company */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'hsl(43,60%,45%)' }}>
             Η Εταιρεία μου
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -142,11 +144,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-3 border-t border-slate-100" />
+        <div className="mx-3 border-t" style={{ borderColor: 'hsl(222,40%,18%)' }} />
 
         {/* Analytics */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'hsl(43,60%,45%)' }}>
             Αναλύσεις
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -156,11 +158,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-3 border-t border-slate-100" />
+        <div className="mx-3 border-t" style={{ borderColor: 'hsl(222,40%,18%)' }} />
 
         {/* Platform Suite */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'hsl(43,60%,45%)' }}>
             <Globe className="h-3 w-3" />
             Platform Suite
           </SidebarGroupLabel>
@@ -173,15 +175,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="px-2 py-3 border-t border-slate-100 space-y-0.5">
+      <SidebarFooter className="px-2 py-3 space-y-0.5" style={{ borderTop: '1px solid hsl(222,40%,17%)' }}>
         {isAdmin && (
           <SidebarMenuItem className="list-none">
             <SidebarMenuButton
               asChild
-              className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="h-9 rounded-lg px-3 text-sm font-medium text-white/50 hover:text-white hover:bg-white/8"
             >
               <Link to="/admin" className="flex items-center gap-2.5">
-                <Shield className="h-4 w-4 text-slate-400" />
+                <Shield className="h-4 w-4 text-white/35" />
                 <span>Admin</span>
               </Link>
             </SidebarMenuButton>
@@ -190,10 +192,10 @@ export function AppSidebar() {
         <SidebarMenuItem className="list-none">
           <SidebarMenuButton
             asChild
-            className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            className="h-9 rounded-lg px-3 text-sm font-medium text-white/50 hover:text-white hover:bg-white/8"
           >
             <Link to="/settings" className="flex items-center gap-2.5">
-              <Settings className="h-4 w-4 text-slate-400" />
+              <Settings className="h-4 w-4 text-white/35" />
               <span>Ρυθμίσεις</span>
             </Link>
           </SidebarMenuButton>
@@ -201,16 +203,17 @@ export function AppSidebar() {
 
         {/* User row */}
         {user && (
-          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg bg-slate-50">
-            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-              <span className="text-[10px] font-bold text-white">
+          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg" style={{ background: 'hsl(222,40%,16%)' }}>
+            <div className="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, hsl(43,85%,48%), hsl(43,100%,65%))' }}>
+              <span className="text-[10px] font-black text-white">
                 {user.email?.[0]?.toUpperCase() || "U"}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 truncate flex-1">{user.email}</p>
+            <p className="text-[11px] text-white/40 truncate flex-1">{user.email}</p>
             <button
               onClick={handleSignOut}
-              className="text-slate-400 hover:text-red-500 transition-colors"
+              className="text-white/30 hover:text-red-400 transition-colors"
               title="Αποσύνδεση"
             >
               <LogOut className="h-3.5 w-3.5" />

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, FileText, Eye, EyeOff, Infinity as InfinityIcon } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth } from '@/components/auth/AuthProvider';
 
@@ -78,24 +78,34 @@ export default function Login() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
-      <Card className="w-full max-w-md rounded-3xl border-border/50 shadow-2xl">
-        <CardHeader className="space-y-2 text-center pb-6">
-          <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-md flex items-center justify-center mb-2">
-            <InfinityIcon className="h-8 w-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(160deg, hsl(222,47%,8%) 0%, hsl(222,47%,13%) 50%, hsl(222,40%,10%) 100%)' }}>
+
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(hsl(43,85%,60%) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+
+      <div className="relative w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto h-16 w-16 rounded-2xl flex items-center justify-center mb-5 shadow-2xl"
+            style={{ background: 'linear-gradient(135deg, hsl(43,85%,44%), hsl(43,100%,62%))' }}>
+            <span className="text-2xl font-black text-white tracking-tighter">FC</span>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            Always <span className="text-blue-600">First</span>
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Sign in to manage your invoices
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          <h1 className="text-3xl font-black text-white tracking-tight">
+            First{' '}
+            <span style={{ color: 'hsl(43,85%,60%)' }}>Class</span>
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: 'hsl(222,20%,60%)' }}>
+            Premium Financial Management Suite
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-2xl p-8 shadow-2xl" style={{ background: 'hsl(222,40%,13%)', border: '1px solid hsl(222,40%,20%)' }}>
+          <h2 className="text-base font-semibold text-white mb-6">Είσοδος</h2>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(222,20%,55%)' }}>Εμαιλ</label>
+              <input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
@@ -103,18 +113,22 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className={`rounded-xl h-11 ${errors.email ? 'border-destructive' : ''}`}
                 autoComplete="email"
+                className="w-full h-11 px-4 rounded-xl text-sm text-white placeholder-white/25 outline-none transition-all"
+                style={{
+                  background: 'hsl(222,40%,17%)',
+                  border: `1px solid ${errors.email ? 'hsl(0,84%,60%)' : 'hsl(222,40%,24%)'}`,
+                }}
+                onFocus={e => e.target.style.borderColor = 'hsl(43,85%,48%)'}
+                onBlur={e => e.target.style.borderColor = errors.email ? 'hsl(0,84%,60%)' : 'hsl(222,40%,24%)'}
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(222,20%,55%)' }}>Κωδικός</label>
               <div className="relative">
-                <Input
+                <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
@@ -122,37 +136,43 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className={`rounded-xl h-11 pr-10 ${errors.password ? 'border-destructive' : ''}`}
                   autoComplete="current-password"
+                  className="w-full h-11 px-4 pr-11 rounded-xl text-sm text-white placeholder-white/25 outline-none transition-all"
+                  style={{
+                    background: 'hsl(222,40%,17%)',
+                    border: `1px solid ${errors.password ? 'hsl(0,84%,60%)' : 'hsl(222,40%,24%)'}`,
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'hsl(43,85%,48%)'}
+                  onBlur={e => e.target.style.borderColor = errors.password ? 'hsl(0,84%,60%)' : 'hsl(222,40%,24%)'}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                  style={{ color: 'hsl(222,20%,50%)' }}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+                </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
-              )}
+              {errors.password && <p className="text-xs text-red-400">{errors.password}</p>}
             </div>
 
-
-            <Button
+            <button
               type="submit"
-              className="w-full rounded-xl h-11 font-medium"
               disabled={loading}
+              className="w-full h-11 rounded-xl text-sm font-bold text-white transition-all mt-2 flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, hsl(43,85%,44%), hsl(43,85%,52%))', boxShadow: '0 4px 20px hsl(43,85%,44%,0.35)' }}
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
-            </Button>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Είσοδος
+            </button>
           </form>
+        </div>
 
-        </CardContent>
-      </Card>
+        <p className="text-center mt-6 text-xs" style={{ color: 'hsl(222,20%,38%)' }}>
+          First Class © 2025 — Premium Financial Suite
+        </p>
+      </div>
     </div>
   );
 }

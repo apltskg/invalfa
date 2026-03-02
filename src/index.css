@@ -1,84 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
+    /* First Class — deep midnight navy + warm gold accent */
+    --background: 220 20% 97%;
+    --foreground: 220 30% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 220 30% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
-    --primary: 220 90% 56%;
+    --popover-foreground: 220 30% 10%;
+
+    /* Gold primary */
+    --primary: 43 85% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 0 0% 15%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 220 14% 94%;
-    --accent-foreground: 0 0% 15%;
+
+    --secondary: 220 16% 94%;
+    --secondary-foreground: 220 30% 20%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 48%;
+    --accent: 43 80% 96%;
+    --accent-foreground: 43 85% 30%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 90% 56%;
-    --radius: 1.5rem;
-    
+    --border: 220 14% 89%;
+    --input: 220 14% 89%;
+    --ring: 43 85% 48%;
+    --radius: 0.875rem;
+
     /* Custom tokens */
-    --glass: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.3;
-    --shadow-soft: 0 4px 24px -4px hsl(0 0% 0% / 0.08);
-    --shadow-elevated: 0 8px 32px -8px hsl(0 0% 0% / 0.12);
-    --success: 142 71% 45%;
+    --brand-gold: 43 85% 48%;
+    --brand-navy: 222 47% 14%;
+    --brand-gold-light: 43 100% 96%;
+    --glass: 0 0% 100% / 0.75;
+    --glass-border: 43 60% 60% / 0.2;
+    --shadow-soft: 0 4px 24px -4px hsl(222 47% 14% / 0.08);
+    --shadow-elevated: 0 8px 40px -8px hsl(222 47% 14% / 0.15);
+    --success: 142 71% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 8%;
-    --sidebar-primary: 220 90% 56%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 0 0% 15%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 220 90% 56%;
+
+    /* Sidebar — dark navy */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 43 20% 90%;
+    --sidebar-primary: 43 85% 52%;
+    --sidebar-primary-foreground: 222 47% 10%;
+    --sidebar-accent: 222 40% 18%;
+    --sidebar-accent-foreground: 43 20% 90%;
+    --sidebar-border: 222 40% 17%;
+    --sidebar-ring: 43 85% 52%;
   }
 
   .dark {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 220 90% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 18%;
-    --accent-foreground: 0 0% 95%;
+    --background: 222 47% 7%;
+    --foreground: 43 15% 92%;
+    --card: 222 40% 10%;
+    --card-foreground: 43 15% 92%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 43 15% 92%;
+    --primary: 43 85% 52%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 222 32% 16%;
+    --secondary-foreground: 43 15% 92%;
+    --muted: 222 32% 16%;
+    --muted-foreground: 220 10% 58%;
+    --accent: 222 32% 20%;
+    --accent-foreground: 43 85% 60%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 220 90% 60%;
-    
-    --glass: 0 0% 12% / 0.7;
-    --glass-border: 0 0% 100% / 0.1;
+    --border: 222 32% 20%;
+    --input: 222 32% 20%;
+    --ring: 43 85% 52%;
+
+    --glass: 222 40% 12% / 0.8;
+    --glass-border: 43 60% 50% / 0.15;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --sidebar-background: 0 0% 9%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 220 90% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 220 90% 60%;
+
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 43 15% 88%;
+    --sidebar-primary: 43 85% 52%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 222 40% 14%;
+    --sidebar-accent-foreground: 43 15% 88%;
+    --sidebar-border: 222 40% 13%;
+    --sidebar-ring: 43 85% 52%;
   }
 }
 
@@ -88,35 +100,71 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Glass card effect */
+/* ── First Class brand utilities ── */
+.fc-gold {
+  color: hsl(var(--brand-gold));
+}
+.fc-gold-bg {
+  background: hsl(var(--brand-gold));
+}
+.fc-navy {
+  color: hsl(var(--brand-navy));
+}
+.fc-navy-bg {
+  background: hsl(var(--brand-navy));
+}
+
+/* Glass card */
 .glass-card {
   background: hsl(var(--glass));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid hsl(var(--glass-border));
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Gold shimmer animation for special elements */
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.fc-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(43, 85%, 48%) 0%,
+    hsl(43, 100%, 70%) 50%,
+    hsl(43, 85%, 48%) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gold-shimmer 3s linear infinite;
 }
 
+/* Premium badge glow */
+.fc-badge-glow {
+  box-shadow: 0 0 12px hsl(43 85% 48% / 0.4);
+}
+
+/* Custom scrollbar — gold on navy */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+  background: hsl(43 85% 48% / 0.3);
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(43 85% 48% / 0.6);
 }
