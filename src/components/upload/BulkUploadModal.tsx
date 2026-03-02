@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Dialog,
@@ -70,7 +70,7 @@ export function BulkUploadModal({
   const [step, setStep] = useState<'upload' | 'processing' | 'review'>('upload');
 
   // Fetch categories and packages on open
-  useState(() => {
+  useEffect(() => {
     async function fetchData() {
       const pkgResult = await supabase.from('packages').select('*').order('start_date', { ascending: false }).limit(50);
       if (pkgResult.data) setPackages(pkgResult.data);
@@ -84,7 +84,7 @@ export function BulkUploadModal({
       }
     }
     if (open) fetchData();
-  });
+  }, [open, defaultType]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: BulkFileItem[] = acceptedFiles.slice(0, MAX_FILES - files.length).map(file => ({
@@ -188,7 +188,8 @@ export function BulkUploadModal({
   };
 
   const saveAllValid = async () => {
-    const validFiles = files.filter(f => f.status === 'done' && f.filePath);
+    // Include both 'done' and 'review' files — they all have valid uploads
+    const validFiles = files.filter(f => (f.status === 'done' || f.status === 'review') && f.filePath);
 
     if (validFiles.length === 0) {
       toast.warning('Δεν υπάρχουν έγκυρα αρχεία για αποθήκευση');
@@ -202,7 +203,7 @@ export function BulkUploadModal({
         merchant: f.extractedData?.merchant || null,
         amount: f.extractedData?.amount || null,
         invoice_date: f.extractedData?.date || null,
-        category: (f.extractedData?.category as InvoiceCategory) || 'other',
+        category: (f.extractedData?.category as string) || 'other',
         expense_category_id: defaultType === 'expense' ? (selectedCategory || null) : null,
         income_category_id: defaultType === 'income' ? (selectedCategory || null) : null,
         package_id: selectedPackage || null,
@@ -210,7 +211,7 @@ export function BulkUploadModal({
         type: defaultType,
       }));
 
-      const { error } = await supabase.from('invoices').insert(invoices);
+      const { error } = await (supabase as any).from('invoices').insert(invoices);
 
       if (error) throw error;
 
@@ -219,7 +220,7 @@ export function BulkUploadModal({
       handleClose();
     } catch (error: any) {
       console.error('Save error:', error);
-      toast.error('Αποτυχία αποθήκευσης');
+      toast.error('Αποτυχία αποθήκευσης: ' + (error.message || ''));
     }
   };
 
@@ -478,7 +479,7 @@ export function BulkUploadModal({
                     )}
                     <Button
                       onClick={saveAllValid}
-                      disabled={stats.done === 0}
+                      disabled={stats.done + stats.review === 0}
                       className="rounded-xl gap-2"
                     >
                       <CheckCircle className="h-4 w-4" />
