@@ -34,7 +34,7 @@ serve(async (req) => {
         console.log('Sending notification email to admin array for new invoice request...');
 
         // In a real scenario, this would be an env var. We use a placeholder admin email or notify the travel agency owner.
-        const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'info@atravel.gr'; // Fallback to agency email
+        const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'alex01pap@gmail.com'; // Fallback to user email
 
         const htmlContent = `
       <h2>Νέο Αίτημα Τιμολογίου</h2>
