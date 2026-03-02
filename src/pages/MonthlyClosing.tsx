@@ -9,7 +9,7 @@ import {
     CheckCircle2, Circle, ChevronRight, FileSpreadsheet, Receipt,
     Building2, ArrowLeftRight, Send, AlertTriangle, Calendar,
     Loader2, ChevronDown, ChevronUp, Clock, Sparkles, Lock,
-    FileText, CreditCard, Users, Truck, Fuel, Car
+    FileText, CreditCard, Users, Truck, Fuel, Car, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,12 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 // ── Types ──
+interface QuickLink {
+    label: string;
+    url: string;
+    color?: string;
+}
+
 interface ClosingStep {
     id: string;
     title: string;
@@ -26,6 +32,7 @@ interface ClosingStep {
     color: string;
     bgColor: string;
     route?: string;
+    links?: QuickLink[];
     checkFn: () => Promise<StepStatus>;
 }
 
@@ -68,6 +75,9 @@ export default function MonthlyClosing() {
             color: "text-blue-600",
             bgColor: "bg-blue-50",
             route: "/invoice-list",
+            links: [
+                { label: "Impact eInvoice", url: "https://einvoice.impact.gr/", color: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100" },
+            ],
             checkFn: async () => {
                 const { count } = await supabase
                     .from("invoice_list_imports")
@@ -127,11 +137,17 @@ export default function MonthlyClosing() {
         {
             id: "bank_sync",
             title: "Τραπεζικές Κινήσεις",
-            description: "Ανεβάστε ή συγχρονίστε τις κινήσεις τράπεζας για τον μήνα",
+            description: "Κατεβάστε τα statements και ανεβάστε τις κινήσεις τράπεζας για τον μήνα",
             icon: Building2,
             color: "text-indigo-600",
             bgColor: "bg-indigo-50",
             route: "/bank-sync",
+            links: [
+                { label: "Alpha Bank", url: "https://www.alpha.gr/", color: "text-blue-800 bg-blue-50 border-blue-200 hover:bg-blue-100" },
+                { label: "Eurobank", url: "https://ebanking.eurobank.gr/#/login", color: "text-red-700 bg-red-50 border-red-200 hover:bg-red-100" },
+                { label: "Wise → Statements", url: "https://wise.com/home", color: "text-green-700 bg-green-50 border-green-200 hover:bg-green-100" },
+                { label: "Viva → Reports", url: "https://www.viva.com/el-gr", color: "text-orange-700 bg-orange-50 border-orange-200 hover:bg-orange-100" },
+            ],
             checkFn: async () => {
                 const { count } = await supabase
                     .from("bank_transactions")
@@ -458,6 +474,30 @@ export default function MonthlyClosing() {
                                                                     value={status.total > 0 ? (status.count / status.total) * 100 : 0}
                                                                     className="h-1.5"
                                                                 />
+                                                            </div>
+                                                        )}
+
+                                                        {/* External quick-access links */}
+                                                        {step.links && step.links.length > 0 && (
+                                                            <div>
+                                                                <p className="text-xs font-medium text-slate-500 mb-2">Γρήγορη πρόσβαση:</p>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {step.links.map((link, li) => (
+                                                                        <a
+                                                                            key={li}
+                                                                            href={link.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={cn(
+                                                                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                                                                                link.color || "text-slate-600 bg-slate-50 border-slate-200 hover:bg-slate-100"
+                                                                            )}
+                                                                        >
+                                                                            <ExternalLink className="h-3 w-3" />
+                                                                            {link.label}
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         )}
 
