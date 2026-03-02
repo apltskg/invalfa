@@ -8,16 +8,12 @@ const T = {
         heading: "Αίτηση Παραστατικού",
         sub: "Συμπληρώστε τα παρακάτω στοιχεία και θα σας αποστείλουμε το τιμολόγιο.",
         full_name: "Ονοματεπώνυμο *",
-        company: "Επωνυμία Εταιρείας",
+        company: "Επωνυμία Εταιρείας *",
         vat: "ΑΦΜ *",
-        doy: "ΔΟΥ",
-        address: "Διεύθυνση",
         email: "Email *",
         phone: "Τηλέφωνο",
-        txn_date: "Ημερομηνία Συναλλαγής",
-        txn_ref: "Αρ. Συναλλαγής / Αναφορά",
-        amount: "Ποσό (€)",
-        service: "Περιγραφή Υπηρεσίας *",
+        txn_date: "Ημερομηνία Συναλλαγής *",
+        amount: "Ποσό (€) *",
         receipt: "Απόδειξη Πληρωμής",
         receiptHint: "Αναβάστε εικόνα ή PDF (μέγ. 5MB)",
         notes: "Σχόλια / Παρατηρήσεις",
@@ -28,21 +24,18 @@ const T = {
         another: "Νέο Αίτημα",
         required: "Συμπληρώστε τα υποχρεωτικά πεδία.",
         lang: "EN",
+        aadeHint: "Τα υπόλοιπα στοιχεία της εταιρείας θα αντληθούν αυτόματα μέσω ΑΑΔΕ χρησιμοποιώντας το ΑΦΜ σας.",
     },
     en: {
         heading: "Invoice Request",
         sub: "Fill in your details below and we'll issue an invoice for you.",
         full_name: "Full Name *",
-        company: "Company Name",
+        company: "Company Name *",
         vat: "VAT Number *",
-        doy: "Tax Office",
-        address: "Address",
         email: "Email *",
         phone: "Phone",
-        txn_date: "Transaction Date",
-        txn_ref: "Transaction Reference / ID",
-        amount: "Amount (€)",
-        service: "Service Description *",
+        txn_date: "Transaction Date *",
+        amount: "Amount (€) *",
         receipt: "Proof of Payment",
         receiptHint: "Upload image or PDF (max 5MB)",
         notes: "Notes",
@@ -53,6 +46,7 @@ const T = {
         another: "New Request",
         required: "Please fill in all required fields.",
         lang: "ΕΛ",
+        aadeHint: "Additional company details will be retrieved automatically using your VAT number.",
     },
 };
 
@@ -101,7 +95,7 @@ export default function InvoiceRequest() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.full_name || !form.vat_number || !form.email || !form.service_description) {
+        if (!form.full_name || !form.company_name || !form.vat_number || !form.email || !form.amount || !form.transaction_date) {
             setError(t.required);
             return;
         }
@@ -128,21 +122,30 @@ export default function InvoiceRequest() {
             const { error: dbErr } = await (supabase as any).from("invoice_requests").insert([{
                 lang,
                 full_name: form.full_name,
-                company_name: form.company_name || null,
+                company_name: form.company_name,
                 vat_number: form.vat_number,
-                tax_office: form.tax_office || null,
-                address: form.address || null,
                 email: form.email,
                 phone: form.phone || null,
-                transaction_date: form.transaction_date || null,
-                bank_transaction_ref: form.bank_transaction_ref || null,
-                amount: form.amount ? parseFloat(form.amount) : null,
-                service_description: form.service_description,
+                transaction_date: form.transaction_date,
+                amount: parseFloat(form.amount),
                 notes: form.notes || null,
                 receipt_url,
                 status: "pending",
             }]);
             if (dbErr) throw dbErr;
+
+            // Trigger email notification via edge function
+            await supabase.functions.invoke('notify-admin', {
+                body: {
+                    type: 'new_invoice_request',
+                    data: {
+                        full_name: form.full_name,
+                        company_name: form.company_name,
+                        amount: form.amount
+                    }
+                }
+            }).catch(console.error); // Catch but don't fail the request if notify fails
+
             setDone(true);
         } catch (err) {
             console.error(err);
@@ -210,29 +213,29 @@ export default function InvoiceRequest() {
                     {/* Personal / Company */}
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
-                            {lang === "el" ? "Στοιχεία" : "Details"}
+                            {lang === "el" ? "Στοιχεία Τιμολόγησης" : "Billing Details"}
                         </p>
                         <div className="grid grid-cols-2 gap-4">
                             <Field label={t.full_name}>
                                 <input className={inputCls} value={form.full_name} onChange={upd("full_name")}
                                     placeholder={lang === "el" ? "π.χ. Μαρία Παπαδοπούλου" : "e.g. Maria Papadopoulou"} />
                             </Field>
-                            <Field label={t.company}>
+                            <Field label={t.company} half>
                                 <input className={inputCls} value={form.company_name} onChange={upd("company_name")}
-                                    placeholder={lang === "el" ? "Προαιρετικό" : "Optional"} />
+                                    placeholder={lang === "el" ? "Επωνυμία επιχείρησης" : "Company Name"} />
                             </Field>
                             <Field label={t.vat} half>
                                 <input className={inputCls} value={form.vat_number} onChange={upd("vat_number")}
                                     placeholder="π.χ. 123456789" />
                             </Field>
-                            <Field label={t.doy} half>
-                                <input className={inputCls} value={form.tax_office} onChange={upd("tax_office")}
-                                    placeholder={lang === "el" ? "π.χ. ΔΟΥ Κατερίνης" : "e.g. Athens A'"} />
-                            </Field>
-                            <Field label={t.address}>
-                                <input className={inputCls} value={form.address} onChange={upd("address")}
-                                    placeholder={lang === "el" ? "Οδός, Πόλη, Τ.Κ." : "Street, City, ZIP"} />
-                            </Field>
+
+                            <div className="col-span-2 pt-1 pb-2">
+                                <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 p-2.5 rounded-lg flex items-center gap-2">
+                                    <span className="flex-shrink-0">i</span>
+                                    {t.aadeHint}
+                                </p>
+                            </div>
+
                             <Field label={t.email} half>
                                 <input type="email" className={inputCls} value={form.email} onChange={upd("email")}
                                     placeholder="email@example.com" />
@@ -249,29 +252,28 @@ export default function InvoiceRequest() {
                     {/* Payment */}
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
-                            {lang === "el" ? "Πληρωμή" : "Payment"}
+                            {lang === "el" ? "Στοιχεία Πληρωμής & Σχόλια" : "Payment Details & Notes"}
                         </p>
                         <div className="grid grid-cols-2 gap-4">
                             <Field label={t.txn_date} half>
-                                <input type="date" className={inputCls} value={form.transaction_date}
-                                    onChange={upd("transaction_date")} />
+                                <input
+                                    type="date"
+                                    className={`${inputCls} cursor-pointer hover:border-blue-400`}
+                                    value={form.transaction_date}
+                                    onChange={upd("transaction_date")}
+                                />
                             </Field>
                             <Field label={t.amount} half>
                                 <input type="number" min="0" step="0.01" className={inputCls}
                                     value={form.amount} onChange={upd("amount")} placeholder="0.00" />
                             </Field>
-                            <Field label={t.txn_ref}>
-                                <input className={inputCls} value={form.bank_transaction_ref}
-                                    onChange={upd("bank_transaction_ref")}
-                                    placeholder={lang === "el" ? "π.χ. αρ. εντολής ή αναφορά τράπεζας" : "e.g. bank reference or order ID"} />
-                            </Field>
 
                             {/* File upload */}
-                            <Field label={t.receipt}>
+                            <Field label={t.receipt} half>
                                 <input ref={fileRef} type="file" accept="image/*,.pdf"
                                     onChange={handleFile} className="hidden" />
                                 {file ? (
-                                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                    <div className="flex items-center gap-2 h-10 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-gray-50">
                                         <FileText size={14} className="text-blue-500 shrink-0" />
                                         <span className="flex-1 truncate">{file.name}</span>
                                         <button type="button" onClick={() => setFile(null)}
@@ -281,31 +283,16 @@ export default function InvoiceRequest() {
                                     </div>
                                 ) : (
                                     <button type="button" onClick={() => fileRef.current?.click()}
-                                        className="w-full flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-500 transition">
+                                        className="w-full h-10 flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 transition bg-gray-50/50">
                                         <Upload size={14} /> {t.receiptHint}
                                     </button>
                                 )}
                             </Field>
-                        </div>
-                    </div>
 
-                    <div className="border-t border-gray-100" />
-
-                    {/* Service */}
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
-                            {lang === "el" ? "Υπηρεσία" : "Service"}
-                        </p>
-                        <div className="space-y-4">
-                            <Field label={t.service}>
-                                <textarea className={inputCls + " resize-none"} rows={3}
-                                    value={form.service_description} onChange={upd("service_description")}
-                                    placeholder={lang === "el" ? "π.χ. Αεροπορικά εισιτήρια Αθήνα–Λονδίνο, 2 άτομα" : "e.g. Air tickets Athens–London, 2 passengers"} />
-                            </Field>
-                            <Field label={t.notes}>
-                                <textarea className={inputCls + " resize-none"} rows={2}
+                            <Field label={t.notes} half>
+                                <input className={inputCls}
                                     value={form.notes} onChange={upd("notes")}
-                                    placeholder={lang === "el" ? "Προαιρετικές παρατηρήσεις..." : "Optional notes..."} />
+                                    placeholder={lang === "el" ? "Προαιρετικά..." : "Optional..."} />
                             </Field>
                         </div>
                     </div>
