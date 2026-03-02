@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     FileText, TrendingDown, MoreVertical, Eye,
-    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar
+    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar, ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/database";
@@ -15,6 +15,7 @@ import { BulkUploadModal } from "@/components/upload/BulkUploadModal";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useMonth } from "@/contexts/MonthContext";
+import { useNavigate } from "react-router-dom";
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuTrigger, DropdownMenuSeparator,
@@ -29,9 +30,22 @@ import {
     DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 
+// Invoice list entry for matching
+interface InvoiceListEntry {
+    id: string;
+    invoice_date: string | null;
+    total_amount: number | null;
+    client_vat: string | null;
+    client_name: string | null;
+    invoice_number: string | null;
+    match_status: string;
+}
+
 export default function GeneralExpenses() {
     const { startDate, endDate, monthKey } = useMonth();
+    const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [invoiceListEntries, setInvoiceListEntries] = useState<InvoiceListEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
@@ -47,22 +61,68 @@ export default function GeneralExpenses() {
     async function fetchData() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from("invoices")
-                .select("*")
-                .is("package_id", null)
-                .eq("type", "expense")
-                .gte("invoice_date", startDate)
-                .lte("invoice_date", endDate)
-                .order("invoice_date", { ascending: false });
-            if (error) throw error;
-            setInvoices(((data as any[]) || []) as Invoice[]);
+            const [expensesRes, invoiceListRes] = await Promise.all([
+                supabase
+                    .from("invoices")
+                    .select("*")
+                    .is("package_id", null)
+                    .eq("type", "expense")
+                    .gte("invoice_date", startDate)
+                    .lte("invoice_date", endDate)
+                    .order("invoice_date", { ascending: false }),
+                (supabase as any)
+                    .from("invoice_list")
+                    .select("id, invoice_date, total_amount, client_vat, client_name, invoice_number, match_status")
+                    .gte("invoice_date", startDate)
+                    .lte("invoice_date", endDate)
+            ]);
+            if (expensesRes.error) throw expensesRes.error;
+            setInvoices(((expensesRes.data as any[]) || []) as Invoice[]);
+            if (invoiceListRes.data) setInvoiceListEntries(invoiceListRes.data as InvoiceListEntry[]);
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
         }
     }
+
+    // Find best matching invoice list entry for an expense
+    const findInvoiceListMatch = useCallback((inv: Invoice): InvoiceListEntry | null => {
+        if (!inv.amount || !invoiceListEntries.length) return null;
+        const invDate = inv.invoice_date ? new Date(inv.invoice_date).getTime() : null;
+        const invVat = (inv as any).extracted_data?.tax_id || (inv as any).extracted_data?.extracted?.tax_id || null;
+
+        let bestMatch: InvoiceListEntry | null = null;
+        let bestScore = 0;
+
+        for (const entry of invoiceListEntries) {
+            let score = 0;
+
+            // Amount match (within 1 cent)
+            if (entry.total_amount && Math.abs(entry.total_amount - inv.amount) < 0.02) score += 50;
+            else if (entry.total_amount && Math.abs(entry.total_amount - inv.amount) < 1) score += 20;
+            else continue; // amount must match somewhat
+
+            // Date match (within 3 days)
+            if (invDate && entry.invoice_date) {
+                const entryDate = new Date(entry.invoice_date).getTime();
+                const diffDays = Math.abs(invDate - entryDate) / (1000 * 60 * 60 * 24);
+                if (diffDays === 0) score += 30;
+                else if (diffDays <= 1) score += 20;
+                else if (diffDays <= 3) score += 10;
+            }
+
+            // VAT match
+            if (invVat && entry.client_vat && invVat === entry.client_vat) score += 20;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = entry;
+            }
+        }
+
+        return bestScore >= 50 ? bestMatch : null;
+    }, [invoiceListEntries]);
 
     const handleView = async (inv: Invoice) => {
         if (!inv.file_path || inv.file_path.startsWith("manual/")) {
@@ -210,11 +270,26 @@ export default function GeneralExpenses() {
                                             <p className="text-sm font-medium text-slate-800 truncate">
                                                 {inv.merchant || "Άγνωστος Προμηθευτής"}
                                             </p>
-                                            {!hasFile && (
-                                                <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 py-0 mt-0.5">
-                                                    Χωρίς αρχείο
-                                                </Badge>
-                                            )}
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {!hasFile && (
+                                                    <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 py-0">
+                                                        Χωρίς αρχείο
+                                                    </Badge>
+                                                )}
+                                                {(() => {
+                                                    const match = findInvoiceListMatch(inv);
+                                                    if (!match) return null;
+                                                    return (
+                                                        <button
+                                                            onClick={() => navigate(`/invoice-list?highlight=${match.id}`)}
+                                                            className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0 hover:bg-emerald-100 transition-colors"
+                                                        >
+                                                            <ExternalLink className="h-2.5 w-2.5" />
+                                                            Λίστα #{match.invoice_number || match.id.slice(0, 6)}
+                                                        </button>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
 

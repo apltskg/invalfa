@@ -167,9 +167,9 @@ CRITICAL RULES FOR GREEK INVOICES:
    - SELLER (Πωλητής/Εκδότης): the company that ISSUED the invoice
    - BUYER (Αγοραστής/Πελάτης): the company that RECEIVED/PAID
    - Extract NAME and ΑΦΜ (VAT number) for BOTH parties
-   - The MERCHANT is the SELLER (who we paid)
-   - The BUYER is usually us (the travel agency)
-   - Look for: ΣΤΟΙΧΕΙΑ ΠΩΛΗΤΗ / ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
+   - The MERCHANT is the SELLER (who we paid / who issued the invoice)
+   - The BUYER is usually us (the travel agency receiving the invoice)
+   - Look for: ΣΤΟΙΧΕΙΑ ΠΩΛΗΤΗ / ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ / ΕΚΔΟΤΗΣ / ΠΑΡΑΛΗΠΤΗΣ
 
 4. **MERCHANT NAME (SELLER - IMPORTANT)**:
    - ALWAYS prefer the BRAND/TRADING name over legal entity
@@ -177,12 +177,19 @@ CRITICAL RULES FOR GREEK INVOICES:
    - "Cosmote" NOT "COSMOTE - ΚΙΝΗΤΕΣ ΤΗΛΕΠΙΚΟΙΝΩΝΙΕΣ Α.Ε."
    - Look for logos, brand names, ΕΠΩΝΥΜΙΑ, Πωλητής, Εκδότης
 
-5. **VAT/TAX ID (ΑΦΜ)**:
-   - Greek VAT numbers are EXACTLY 9 digits
-   - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number, TIN
-   - Extract the SELLER's ΑΦΜ as "tax_id"
-   - Extract the BUYER's ΑΦΜ as "buyer_vat" (this is critical for matching)
-   - Extract ONLY the 9-digit number, no "EL" prefix
+5. **VAT/TAX ID (ΑΦΜ) - CRITICALLY IMPORTANT**:
+   - Greek VAT numbers are EXACTLY 9 digits (e.g. 123456789)
+   - Look for: ΑΦΜ, Α.Φ.Μ., Tax ID, VAT Number, TIN, ΑΡ.ΦΟΡ.ΜΗΤΡΩΟΥ
+   - Extract the SELLER's ΑΦΜ as "tax_id" (the issuer of the invoice)
+   - Extract the BUYER's ΑΦΜ as "buyer_vat" (who received the invoice - critical for customer matching)
+   - RULES FOR AFM OUTPUT:
+     * Strip any prefix like "EL", "GR", spaces, dots, dashes
+     * Return ONLY the raw 9 digit number
+     * If a VAT looks like "EL801234567" → output "801234567"
+     * If the document is an income invoice (we are the issuer/seller), then the BUYER is the customer → their AFM is "buyer_vat"
+     * If the document is an expense invoice (someone else is the issuer), then the SELLER is the supplier → their AFM is "tax_id"
+     * NEVER confuse seller and buyer VAT numbers
+     * If you cannot find a 9-digit number for either party, output null
 
 6. **AMOUNTS (CRITICAL)**:
    - amount = FINAL TOTAL INCLUDING VAT (Σύνολο Πληρωμής, Grand Total)
@@ -218,7 +225,8 @@ CRITICAL RULES FOR GREEK INVOICES:
    - Include the full number with any prefix letters
 
 REMEMBER: Extract EXACTLY what you see. Convert numbers correctly. Be precise.
-The ΑΦΜ is the MOST important field - search every corner of the document for both seller and buyer ΑΦΜ.`;
+The ΑΦΜ is the MOST important field - search every corner of the document for both seller and buyer ΑΦΜ.
+NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9 digits, no prefix.`;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -346,16 +354,29 @@ The ΑΦΜ is the MOST important field - search every corner of the document for
         console.log("[EXTRACTED] amount:", parsed.amount);
         console.log("[EXTRACTED] date:", parsed.date);
         console.log("[EXTRACTED] category:", parsed.category);
-        console.log("[EXTRACTED] tax_id:", parsed.tax_id);
+        console.log("[EXTRACTED] tax_id (raw):", parsed.tax_id);
+        console.log("[EXTRACTED] buyer_vat (raw):", parsed.buyer_vat);
         console.log("[EXTRACTED] invoice_number:", parsed.invoice_number);
+
+        // Sanitize VAT numbers: strip EL/GR prefix, spaces, dots → exactly 9 digits or null
+        const sanitizeVat = (raw: string | null | undefined): string | null => {
+          if (!raw) return null;
+          const cleaned = String(raw).replace(/[^0-9]/g, ''); // keep only digits
+          return cleaned.length === 9 ? cleaned : null;
+        };
+
+        const cleanTaxId = sanitizeVat(parsed.tax_id);
+        const cleanBuyerVat = sanitizeVat(parsed.buyer_vat);
+        console.log("[EXTRACTED] tax_id (clean):", cleanTaxId);
+        console.log("[EXTRACTED] buyer_vat (clean):", cleanBuyerVat);
 
         return new Response(
           JSON.stringify({
             extracted: {
               merchant: parsed.merchant || null,
-              tax_id: parsed.tax_id || null,
+              tax_id: cleanTaxId,
               buyer_name: parsed.buyer_name || null,
-              buyer_vat: parsed.buyer_vat || null,
+              buyer_vat: cleanBuyerVat,
               amount: typeof parsed.amount === 'number' ? parsed.amount : null,
               net_amount: typeof parsed.net_amount === 'number' ? parsed.net_amount : null,
               date: parsed.date || null,
