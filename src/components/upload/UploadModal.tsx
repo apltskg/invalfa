@@ -9,6 +9,7 @@ import { InvoicePreview } from "./InvoicePreview";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { ExtractionProgress } from "./ExtractionProgress";
+import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
 
 interface UploadedFile {
   file?: File;
@@ -146,6 +147,32 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     const isManual = uploadedFile.isManual || !uploadedFile.file;
 
     try {
+      // Duplicate detection
+      const invoiceNumber = (uploadedFile.extractedData as any)?.invoice_number || null;
+      const dupeCheck = await checkDuplicateInvoice({
+        invoiceNumber,
+        merchant: data.merchant,
+        amount: data.amount,
+        date: data.date,
+        type: defaultType,
+      });
+
+      if (dupeCheck.isDuplicate) {
+        toast.error(`Διπλότυπο! ${dupeCheck.reason}`, {
+          duration: 6000,
+          description: dupeCheck.existingMerchant
+            ? `Υπάρχει ήδη: ${dupeCheck.existingMerchant} - €${dupeCheck.existingAmount?.toFixed(2) || '?'} (${dupeCheck.existingDate || '?'})`
+            : undefined,
+        });
+        return;
+      }
+
+      if (dupeCheck.isPotential) {
+        const confirmed = window.confirm(
+          `⚠️ Πιθανό διπλότυπο!\n\n${dupeCheck.reason}\n\nΥπάρχει ήδη: ${dupeCheck.existingMerchant || '?'} - €${dupeCheck.existingAmount?.toFixed(2) || '?'} (${dupeCheck.existingDate || '?'})\n\nΑποθήκευση ούτως ή άλλως;`
+        );
+        if (!confirmed) return;
+      }
       // Auto-create supplier for expenses if no supplier is linked
       let finalSupplierId = data.supplierId || null;
       if (defaultType === "expense" && !finalSupplierId && data.merchant) {

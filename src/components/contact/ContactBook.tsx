@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useAfmVerification, validateAfmChecksum } from "@/hooks/useAfmVerification";
 
 /* ─── types ────────────────────────────────────────────────────────── */
 type Mode = "customers" | "suppliers";
@@ -99,6 +100,9 @@ export default function ContactBook({ mode }: ContactBookProps) {
         tax_office: "", iban: "", default_category_id: "", invoice_instructions: "",
     };
     const [formData, setFormData] = useState(emptyForm);
+
+    // AFM verification
+    const { verify: verifyAfm, loading: afmLoading, result: afmResult } = useAfmVerification();
 
     /* ── fetch ─────────────────────────────────────────────────────── */
     useEffect(() => { fetchAll(); }, [mode]);
@@ -694,12 +698,53 @@ export default function ContactBook({ mode }: ContactBookProps) {
                             {/* VAT */}
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ΑΦΜ</Label>
-                                <Input
-                                    value={formData.vat_number}
-                                    onChange={e => { setFormData({ ...formData, vat_number: e.target.value }); checkDuplicate(e.target.value); }}
-                                    placeholder="000000000"
-                                    className={cn("h-11 rounded-xl font-mono", duplicateWarning ? "border-amber-400" : "")}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={formData.vat_number}
+                                        onChange={e => { setFormData({ ...formData, vat_number: e.target.value }); checkDuplicate(e.target.value); }}
+                                        placeholder="000000000"
+                                        className={cn("h-11 rounded-xl font-mono flex-1", duplicateWarning ? "border-amber-400" : "")}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={afmLoading || !formData.vat_number || formData.vat_number.length < 9}
+                                        onClick={async () => {
+                                            const cleanAfm = formData.vat_number.replace(/\s/g, '').replace(/^EL/i, '');
+                                            if (!validateAfmChecksum(cleanAfm)) {
+                                                toast.error("Μη έγκυρο checksum ΑΦΜ");
+                                                return;
+                                            }
+                                            const result = await verifyAfm(cleanAfm);
+                                            if (result?.found) {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    name: prev.name || result.name || prev.name,
+                                                    address: prev.address || (
+                                                        result.address
+                                                            ? `${result.address.street} ${result.address.number}, ${result.address.zip} ${result.address.city}`.trim()
+                                                            : prev.address
+                                                    ),
+                                                    tax_office: prev.tax_office || result.doy || prev.tax_office,
+                                                }));
+                                            }
+                                        }}
+                                        className="h-11 px-3 rounded-xl text-xs shrink-0"
+                                    >
+                                        {afmLoading ? <span className="animate-spin">⏳</span> : "ΑΑΔΕ"}
+                                    </Button>
+                                </div>
+                                {afmResult?.found && (
+                                    <p className="text-[10px] text-emerald-600 mt-1">
+                                        ✓ {afmResult.name} ({afmResult.doy})
+                                    </p>
+                                )}
+                                {afmResult && !afmResult.found && afmResult.error && (
+                                    <p className="text-[10px] text-amber-600 mt-1">
+                                        ⚠ {afmResult.error}
+                                    </p>
+                                )}
                             </div>
                             {/* Contact */}
                             <div className="space-y-1.5">

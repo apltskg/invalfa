@@ -117,6 +117,30 @@ function calculateMatchConfidence(
         reasons.push("Ίδιος φάκελος");
     }
 
+    // 5. VAT/ΑΦΜ-based matching (bonus up to 15%)
+    if (inv.extracted_data) {
+        const extracted = inv.extracted_data?.extracted || inv.extracted_data;
+        const taxId = extracted?.tax_id as string;
+        const buyerVat = extracted?.buyer_vat as string;
+        const descLower = (txn.description || "").toLowerCase().replace(/\s/g, "");
+
+        // Check if the bank transaction description contains the supplier/buyer VAT
+        if (taxId && taxId.length === 9 && descLower.includes(taxId)) {
+            confidence += 15;
+            reasons.push("ΑΦΜ πωλητή στην περιγραφή");
+        } else if (buyerVat && buyerVat.length === 9 && descLower.includes(buyerVat)) {
+            confidence += 10;
+            reasons.push("ΑΦΜ αγοραστή στην περιγραφή");
+        }
+
+        // Also check if invoice number appears in bank description
+        const invoiceNum = (extracted?.invoice_number || "").toString().trim();
+        if (invoiceNum.length >= 3 && descLower.includes(invoiceNum.toLowerCase())) {
+            confidence += 10;
+            reasons.push("Αρ. τιμολογίου στην περιγραφή");
+        }
+    }
+
     return { confidence, reasons };
 }
 

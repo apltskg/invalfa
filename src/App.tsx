@@ -33,6 +33,7 @@ import InvoiceRequest from "./pages/InvoiceRequest";
 import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 import Travellers from "./pages/Travellers";
 import MonthlyClosing from "./pages/MonthlyClosing";
+import QuickScan from "./pages/QuickScan";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,9 @@ const App = () => (
             <Route path="/accountant/:token" element={<AccountantPortal />} />
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/invoice-request" element={<InvoiceRequest />} />
+            <Route path="/quick-scan" element={
+              <ProtectedRoute><QuickScan /></ProtectedRoute>
+            } />
 
             {/* Protected routes */}
             <Route

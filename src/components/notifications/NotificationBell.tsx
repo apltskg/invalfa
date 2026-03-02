@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { findAllDuplicates } from "@/lib/duplicate-detection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SystemAlert {
@@ -172,6 +173,43 @@ export function NotificationBell() {
                         isSystem: true
                     });
                 }
+            }
+
+            // 5. Duplicate Invoice Detection
+            const expenseDupes = await findAllDuplicates("expense");
+            const incomeDupes = await findAllDuplicates("income");
+            const totalDupes = expenseDupes.size + incomeDupes.size;
+
+            if (totalDupes > 0) {
+                newAlerts.push({
+                    id: "duplicate-invoices",
+                    type: "warning",
+                    title: "Πιθανά Διπλότυπα",
+                    message: `Βρέθηκαν ${totalDupes} πιθανά διπλότυπα τιμολόγια (${expenseDupes.size} έξοδα, ${incomeDupes.size} έσοδα).`,
+                    action: { label: "Έξοδα", onClick: () => (window.location.href = "/general-expenses") },
+                    date: today,
+                    isSystem: true
+                });
+            }
+
+            // 6. Invoices without category
+            const { count: noCategoryCount } = await supabase
+                .from("invoices")
+                .select("*", { count: 'exact', head: true })
+                .is("expense_category_id", null)
+                .is("income_category_id", null)
+                .not("type", "is", null);
+
+            if (noCategoryCount && noCategoryCount > 5) {
+                newAlerts.push({
+                    id: "no-category",
+                    type: "info",
+                    title: "Χωρίς Κατηγορία",
+                    message: `${noCategoryCount} παραστατικά δεν έχουν κατηγορία.`,
+                    action: { label: "Τακτοποίηση", onClick: () => (window.location.href = "/general-expenses") },
+                    date: today,
+                    isSystem: true
+                });
             }
         } catch (err) {
             console.error(err);
