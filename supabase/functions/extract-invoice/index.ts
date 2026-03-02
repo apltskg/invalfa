@@ -107,7 +107,7 @@ serve(async (req) => {
       contentPayload = [
         {
           type: "text",
-          text: `Extract invoice data from this PDF document: ${safeFileName}`
+          text: `Extract ALL invoice data from this PDF document named "${safeFileName}". Read EVERY page carefully. Extract merchant, amounts, dates, VAT numbers, and all other fields.`
         },
         {
           type: "image_url",
@@ -116,6 +116,21 @@ serve(async (req) => {
           }
         }
       ];
+
+      // Some models don't support PDF via image_url, so also try creating a signed URL as fallback content
+      const { data: pdfSignedUrlData } = await supabase.storage
+        .from("invoices")
+        .createSignedUrl(filePath, 300);
+
+      if (pdfSignedUrlData?.signedUrl) {
+        // Add signed URL as alternative - model will use whichever works
+        contentPayload.push({
+          type: "image_url",
+          image_url: {
+            url: pdfSignedUrlData.signedUrl
+          }
+        });
+      }
     } else {
       // For images, use signed URL
       console.log("[IMAGE] Generating signed URL for image...");
@@ -135,7 +150,7 @@ serve(async (req) => {
       contentPayload = [
         {
           type: "text",
-          text: `Extract invoice data from this image: ${safeFileName}`
+          text: `Extract ALL invoice data from this image of an invoice/receipt named "${safeFileName}". Read every visible field carefully. Extract merchant name, amounts, dates, VAT numbers (ΑΦΜ), and all other fields.`
         },
         {
           type: "image_url",
