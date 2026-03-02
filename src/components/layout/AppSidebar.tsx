@@ -3,7 +3,7 @@ import {
   BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users,
   LayoutDashboard, Shield, Receipt, ClipboardList, ArrowLeftRight,
   Brain, ChevronRight, Infinity as InfinityIcon, CreditCard,
-  Globe, Briefcase, Plane
+  Globe, Briefcase, Plane, ClipboardCheck
 } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 // ── My Company section ──────────────────────────────────────────────────────
 const companyItems = [
   { title: "Αρχική", icon: LayoutDashboard, url: "/dashboard" },
+  { title: "Κλείσιμο Μήνα", icon: ClipboardCheck, url: "/monthly-closing" },
   { title: "Φάκελοι", icon: Package, url: "/packages" },
   { title: "Λίστα Παραστατικών", icon: Receipt, url: "/invoice-list" },
   { title: "Συγχρ. Τράπεζας", icon: Building2, url: "/bank-sync" },

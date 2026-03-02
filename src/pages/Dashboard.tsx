@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice, BankTransaction } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     FileText, CreditCard, TrendingUp, TrendingDown,
     ArrowUpRight, ArrowDownRight, Calendar, Building2,
-    Loader2, BarChart3
+    Loader2, BarChart3, ClipboardCheck, ChevronRight, X
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subMonths } from "date-fns";
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
@@ -23,9 +25,17 @@ interface TimelineItem {
 }
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [items, setItems] = useState<TimelineItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dismissedBanner, setDismissedBanner] = useState(false);
     const { startDate, endDate, displayLabel } = useMonth();
+
+    // Show monthly closing banner in the first 10 days of the month
+    const now = new Date();
+    const isMonthStart = now.getDate() <= 10;
+    const prevMonthLabel = format(subMonths(now, 1), "MMMM", { locale: el });
+    const showBanner = isMonthStart && !dismissedBanner;
 
     useEffect(() => {
         fetchData();
@@ -140,6 +150,44 @@ export default function Dashboard() {
                     {items.length} εγγραφές
                 </Badge>
             </div>
+
+            {/* Monthly Closing Banner */}
+            {showBanner && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <Card className="rounded-2xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-violet-50 overflow-hidden">
+                        <CardContent className="p-4 flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                                <ClipboardCheck className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-800">
+                                    Ώρα για κλείσιμο {prevMonthLabel}!
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Ανεβάστε τα παραστατικά, αντιστοιχίστε τις κινήσεις και στείλτε στον λογιστή
+                                </p>
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={() => navigate("/monthly-closing")}
+                                className="rounded-xl gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 shrink-0"
+                            >
+                                Ξεκινήστε
+                                <ChevronRight className="h-3 w-3" />
+                            </Button>
+                            <button
+                                onClick={() => setDismissedBanner(true)}
+                                className="p-1 rounded-lg hover:bg-slate-200/50 shrink-0"
+                            >
+                                <X className="h-4 w-4 text-slate-400" />
+                            </button>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
 
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

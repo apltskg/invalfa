@@ -32,6 +32,7 @@ import Landing from "./pages/Landing";
 import InvoiceRequest from "./pages/InvoiceRequest";
 import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 import Travellers from "./pages/Travellers";
+import MonthlyClosing from "./pages/MonthlyClosing";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ const App = () => (
                       <Route path="business-intelligence" element={<BusinessIntelligence />} />
                       <Route path="invoice-requests" element={<InvoiceRequestsInbox />} />
                       <Route path="travellers" element={<Travellers />} />
+                      <Route path="monthly-closing" element={<MonthlyClosing />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
