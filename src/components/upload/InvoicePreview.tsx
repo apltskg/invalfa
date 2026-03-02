@@ -86,17 +86,28 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       }
 
       // 2. Fetch Customers OR Suppliers based on type + auto-match by ΑΦΜ
-      const extractedVat = (extractedData as any)?.tax_id || (extractedData as any)?.buyer_vat || null;
-      const extractedMerchant = extractedData?.merchant || null;
+      // For INCOME: the customer is the BUYER → use buyer_vat
+      // For EXPENSE: the supplier is the SELLER → use tax_id
+      const extractedVat = type === "income"
+        ? ((extractedData as any)?.buyer_vat || null)
+        : ((extractedData as any)?.tax_id || null);
+      const extractedMerchant = type === "income"
+        ? ((extractedData as any)?.buyer_name || extractedData?.merchant || null)
+        : (extractedData?.merchant || null);
+
+      // Validate Greek VAT: exactly 9 digits
+      const isValidGreekVat = (vat: string | null) => vat && /^\d{9}$/.test(vat.replace(/\s/g, ''));
+      const cleanVat = extractedVat?.replace(/\s/g, '') || null;
+      const vatIsValid = isValidGreekVat(cleanVat);
 
       if (type === "income") {
         const { data: custData } = await supabase.from("customers").select("*").order("name");
         if (custData) {
           setCustomers(custData as Customer[]);
           // Priority: match by ΑΦΜ first, then by name
-          if (extractedVat || extractedMerchant) {
-            let match = extractedVat
-              ? custData.find(c => c.vat_number === extractedVat)
+          if (vatIsValid || extractedMerchant) {
+            let match = vatIsValid
+              ? custData.find(c => c.vat_number === cleanVat)
               : null;
             if (!match && extractedMerchant) {
               match = custData.find(c =>
@@ -107,20 +118,31 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
             if (match) {
               setSelectedEntityId(match.id);
               setMerchant(match.name);
-            } else if (extractedVat && extractedMerchant) {
-              // Auto-create new customer with ΑΦΜ
-              try {
-                const { data: newCust, error } = await supabase
-                  .from("customers")
-                  .insert({ name: extractedMerchant, vat_number: extractedVat })
-                  .select()
-                  .single();
-                if (!error && newCust) {
-                  setCustomers(prev => [...prev, newCust as Customer]);
-                  setSelectedEntityId(newCust.id);
-                  setMerchant(newCust.name);
-                }
-              } catch (e) { console.error("Auto-create customer failed:", e); }
+            } else if (vatIsValid && extractedMerchant) {
+              // Double-check no customer exists with this VAT before creating
+              const { data: existingByVat } = await supabase
+                .from("customers")
+                .select("id, name")
+                .eq("vat_number", cleanVat!)
+                .maybeSingle();
+              if (existingByVat) {
+                setSelectedEntityId(existingByVat.id);
+                setMerchant(existingByVat.name);
+              } else {
+                // Auto-create new customer with validated ΑΦΜ
+                try {
+                  const { data: newCust, error } = await supabase
+                    .from("customers")
+                    .insert({ name: extractedMerchant.trim(), vat_number: cleanVat })
+                    .select()
+                    .single();
+                  if (!error && newCust) {
+                    setCustomers(prev => [...prev, newCust as Customer]);
+                    setSelectedEntityId(newCust.id);
+                    setMerchant(newCust.name);
+                  }
+                } catch (e) { console.error("Auto-create customer failed:", e); }
+              }
             }
           }
         }
