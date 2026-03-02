@@ -186,41 +186,85 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
       // 3. Fetch categories based on type + auto-match AI category
       if (type === "expense") {
         const { data: catData } = await (supabase as any).from('expense_categories').select('id,name,name_el').order('sort_order');
-        if (catData) {
+        if (catData && catData.length > 0) {
           setExpenseCategories(catData as any);
-          // Auto-match category from AI extraction
+
+          // Fallback to default/first category
+          let matchedId = catData[0].id;
+
           const aiCategory = extractedData?.category || "other";
+          const searchKeywords = [
+            aiCategory.toLowerCase(),
+            extractedMerchant?.toLowerCase() || ""
+          ].filter(Boolean);
+
           const CATEGORY_TO_NAME: Record<string, string[]> = {
             airline: ["airline", "αεροπορικά", "flights"],
-            hotel: ["hotel", "ξενοδοχεία", "hotels"],
-            tolls: ["tolls", "διόδια"],
-            fuel: ["fuel", "καύσιμα"],
-            transport: ["transport", "μεταφορές", "passenger"],
-            payroll: ["payroll", "μισθοδοσία"],
-            government: ["government", "δημόσιο", "tax"],
-            rent: ["rent", "ενοίκια", "fixed"],
-            telecom: ["telecom", "τηλεπικοινωνίες"],
-            insurance: ["insurance", "ασφάλεια"],
-            office: ["office", "γραφική", "supplies"],
-            maintenance: ["maintenance", "συντήρηση"],
-            marketing: ["marketing", "διαφήμιση"],
-            other: ["other", "λοιπά"],
+            hotel: ["hotel", "ξενοδοχεία", "hotels", "διαμονή"],
+            tolls: ["tolls", "διόδια", "olympia", "attiki", "gefyra"],
+            fuel: ["fuel", "καύσιμα", "πετρέλαιο", "βενζίνη", "shell", "eko", "bp"],
+            transport: ["transport", "μεταφορές", "passenger", "ktel", "ferries", "taxi"],
+            payroll: ["payroll", "μισθοδοσία", "εφκα"],
+            government: ["government", "δημόσιο", "tax", "εφορία", "φπα"],
+            rent: ["rent", "ενοίκια", "fixed", "μίσθωμα"],
+            telecom: ["telecom", "τηλεπικοινωνίες", "cosmote", "vodafone", "nova"],
+            insurance: ["insurance", "ασφάλεια", "ασφάλιστρα"],
+            office: ["office", "γραφική", "supplies", "plaisio", "public"],
+            maintenance: ["maintenance", "συντήρηση", "επισκευές"],
+            marketing: ["marketing", "διαφήμιση", "εκτυπώσεις"],
+            other: ["other", "λοιπά", "διάφορα"],
           };
-          const keywords = CATEGORY_TO_NAME[aiCategory] || [aiCategory];
+
+          const mappedKws = CATEGORY_TO_NAME[aiCategory] || [];
+          const allKeywords = [...mappedKws, ...searchKeywords];
+
           const matchedCat = catData.find((c: any) =>
-            keywords.some(kw =>
-              c.name?.toLowerCase().includes(kw) ||
-              c.name_el?.toLowerCase().includes(kw) ||
-              kw.includes(c.name?.toLowerCase())
+            allKeywords.some(kw =>
+              kw.length > 3 && (
+                c.name?.toLowerCase().includes(kw) ||
+                c.name_el?.toLowerCase().includes(kw) ||
+                kw.includes(c.name?.toLowerCase()) ||
+                kw.includes(c.name_el?.toLowerCase())
+              )
             )
           );
+
           if (matchedCat) {
-            setExpenseCategoryId((matchedCat as any).id);
+            matchedId = (matchedCat as any).id;
           }
+          setExpenseCategoryId(matchedId);
         }
       } else if (type === "income") {
-        const { data: catData } = await (supabase as any).from('income_categories').select('id,name_el,color,icon').order('sort_order');
-        if (catData) setIncomeCategories(catData as any);
+        const { data: catData } = await (supabase as any).from('income_categories').select('id,name,name_el,color,icon').order('sort_order');
+        if (catData && catData.length > 0) {
+          setIncomeCategories(catData as any);
+
+          // Default to first category
+          let matchedId = catData[0].id;
+
+          // Attempt basic keyword matching based on merchant or category
+          const aiCategory = extractedData?.category || "";
+          const searchKeywords = [
+            aiCategory.toLowerCase(),
+            extractedMerchant?.toLowerCase() || ""
+          ].filter(Boolean);
+
+          const matchedCat = catData.find((c: any) =>
+            searchKeywords.some(kw =>
+              kw.length > 3 && (
+                c.name?.toLowerCase().includes(kw) ||
+                c.name_el?.toLowerCase().includes(kw) ||
+                kw.includes(c.name?.toLowerCase()) ||
+                kw.includes(c.name_el?.toLowerCase())
+              )
+            )
+          );
+
+          if (matchedCat) {
+            matchedId = (matchedCat as any).id;
+          }
+          setIncomeCategoryId(matchedId);
+        }
       }
     }
     fetchData();

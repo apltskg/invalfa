@@ -29,6 +29,9 @@ import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 // Invoice list entry for matching
 interface InvoiceListEntry {
@@ -41,11 +44,19 @@ interface InvoiceListEntry {
     match_status: string;
 }
 
+interface ExpenseCategory {
+    id: string;
+    name: string;
+    name_el: string;
+    color: string | null;
+}
+
 export default function GeneralExpenses() {
     const { startDate, endDate, monthKey } = useMonth();
     const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [invoiceListEntries, setInvoiceListEntries] = useState<InvoiceListEntry[]>([]);
+    const [categories, setCategories] = useState<ExpenseCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
@@ -55,8 +66,14 @@ export default function GeneralExpenses() {
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState("");
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-    useEffect(() => { fetchData(); }, [monthKey]);
+    useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
+
+    async function fetchCategories() {
+        const { data } = await supabase.from("expense_categories").select("id,name,name_el,color").order("sort_order");
+        setCategories((data as ExpenseCategory[]) || []);
+    }
 
     async function fetchData() {
         setLoading(true);
@@ -134,12 +151,30 @@ export default function GeneralExpenses() {
         window.open(data.signedUrl, "_blank");
     };
 
+    const updateCategory = async (invoiceId: string, newCategoryId: string | null) => {
+        try {
+            const { error } = await supabase.from("invoices")
+                .update({ expense_category_id: newCategoryId } as any)
+                .eq("id", invoiceId);
+            if (error) throw error;
+            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, expense_category_id: newCategoryId } as any : inv));
+            toast.success("Η κατηγορία ενημερώθηκε", { duration: 1500 });
+        } catch {
+            toast.error("Σφάλμα κατά την ενημέρωση κατηγορίας", { duration: 2500 });
+        }
+    };
+
     async function handleUpdate() {
         if (!editingInvoice) return;
         setSaving(true);
         try {
             const { error } = await supabase.from("invoices")
-                .update({ merchant: editingInvoice.merchant, amount: editingInvoice.amount, invoice_date: editingInvoice.invoice_date })
+                .update({
+                    merchant: editingInvoice.merchant,
+                    amount: editingInvoice.amount,
+                    invoice_date: editingInvoice.invoice_date,
+                    expense_category_id: (editingInvoice as any).expense_category_id || null
+                } as any)
                 .eq("id", editingInvoice.id);
             if (error) throw error;
             toast.success("Ενημερώθηκε επιτυχώς");
@@ -165,16 +200,22 @@ export default function GeneralExpenses() {
     };
 
     const totalAmount = invoices.reduce((s, i) => s + (i.amount || 0), 0);
-    const filtered = invoices.filter(i =>
-        !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase())
-    );
 
     // Group by category for the stat breakdown
     const byCategory = invoices.reduce((acc, inv) => {
-        const cat = inv.category || "other";
-        acc[cat] = (acc[cat] || 0) + (inv.amount || 0);
+        const catId = (inv as any).expense_category_id || "__none";
+        acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
         return acc;
     }, {} as Record<string, number>);
+
+    const filtered = invoices.filter(i => {
+        const matchSearch = !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase());
+        const matchCat = !activeCategory || (inv => (inv as any).expense_category_id === activeCategory)(i);
+        return matchSearch && matchCat;
+    });
+
+    const getCategoryById = (id: string | null | undefined) =>
+        categories.find(c => c.id === id) || null;
 
     return (
         <div className="space-y-6">
@@ -212,15 +253,51 @@ export default function GeneralExpenses() {
                         <p className="text-xs text-slate-400 mt-0.5">{invoices.length} καταχωρήσεις</p>
                     </CardContent>
                 </Card>
-                {Object.entries(byCategory).slice(0, 3).map(([cat, amt]) => (
-                    <Card key={cat} className="rounded-xl border-slate-200 bg-white">
-                        <CardContent className="p-4">
-                            <p className="text-xs font-medium text-slate-500 capitalize">{cat}</p>
-                            <p className="text-lg font-bold text-slate-700 mt-0.5">€{amt.toFixed(2)}</p>
-                        </CardContent>
-                    </Card>
-                ))}
+                {categories
+                    .filter(cat => byCategory[cat.id])
+                    .slice(0, 3)
+                    .map(cat => (
+                        <Card
+                            key={cat.id}
+                            className="rounded-xl border-slate-200 bg-white cursor-pointer hover:shadow-sm transition-shadow"
+                            style={{ borderLeftWidth: 4, borderLeftColor: cat.color || "#e11d48" }}
+                            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                        >
+                            <CardContent className="p-4">
+                                <p className="text-xs font-medium text-slate-500 truncate">{cat.name_el}</p>
+                                <p className="text-lg font-bold text-slate-700 mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
             </div>
+
+            {/* Category filter chips */}
+            {categories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => setActiveCategory(null)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${!activeCategory
+                            ? "bg-rose-600 text-white border-rose-600"
+                            : "border-slate-200 text-slate-500 hover:border-slate-400"
+                            }`}
+                    >
+                        Όλα
+                    </button>
+                    {categories.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                            className={`text-xs px-3 py-1 rounded-full border transition-colors ${activeCategory === cat.id
+                                ? "text-white border-transparent"
+                                : "border-slate-200 text-slate-500 hover:border-slate-400"
+                                }`}
+                            style={activeCategory === cat.id ? { backgroundColor: cat.color || "#e11d48", borderColor: cat.color || "#e11d48" } : {}}
+                        >
+                            {cat.name_el}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Search */}
             <div className="relative max-w-sm">
@@ -258,6 +335,7 @@ export default function GeneralExpenses() {
                     <div className="divide-y divide-slate-100">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
+                            const cat = getCategoryById((inv as any).expense_category_id);
                             return (
                                 <div key={inv.id} className="grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
                                     <div className="flex items-center gap-3 min-w-0">
@@ -293,9 +371,47 @@ export default function GeneralExpenses() {
                                         </div>
                                     </div>
 
-                                    <Badge variant="secondary" className="w-fit rounded-md text-xs capitalize">
-                                        {inv.category || "—"}
-                                    </Badge>
+                                    {/* Category Edit */}
+                                    <div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer">
+                                                    {cat ? (
+                                                        <span
+                                                            className="text-[10px] font-medium px-2 py-1 rounded-full border truncate max-w-[120px]"
+                                                            style={{ backgroundColor: `${cat.color}18`, color: cat.color || "#e11d48", borderColor: `${cat.color}40` }}
+                                                            title={cat.name_el}
+                                                        >
+                                                            {cat.name_el}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 border-dashed hover:bg-slate-200 transition-colors">
+                                                            {/* Show fallback string enum category if present, otherwise + */}
+                                                            {inv.category && inv.category !== 'other' ? (
+                                                                <span className="capitalize">{inv.category}</span>
+                                                            ) : "+ Κατηγορία"}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto rounded-xl">
+                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-slate-500 cursor-pointer">
+                                                    Χωρίς κατηγορία
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                {categories.map(c => (
+                                                    <DropdownMenuItem
+                                                        key={c.id}
+                                                        onClick={() => updateCategory(inv.id, c.id)}
+                                                        className="text-xs flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color || '#ccc' }} />
+                                                        <span className="truncate">{c.name_el}</span>
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
 
                                     <p className="text-sm text-slate-500 flex items-center gap-1.5">
                                         <Calendar className="h-3.5 w-3.5 text-slate-300" />
@@ -364,6 +480,27 @@ export default function GeneralExpenses() {
                                     onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
                                     className="rounded-xl border-slate-200 text-sm"
                                 />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500">Κατηγορία Εξόδου</Label>
+                                <Select
+                                    value={(editingInvoice as any).expense_category_id || "none"}
+                                    onValueChange={v => setEditingInvoice({
+                                        ...editingInvoice, ...({
+                                            expense_category_id: v === "none" ? null : v
+                                        } as any)
+                                    })}
+                                >
+                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                        <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                                        {categories.map(cat => (
+                                            <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">

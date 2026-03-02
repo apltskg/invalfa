@@ -89,6 +89,19 @@ export default function GeneralIncome() {
         window.open(data.signedUrl, "_blank");
     };
 
+    const updateCategory = async (invoiceId: string, newCategoryId: string | null) => {
+        try {
+            const { error } = await supabase.from("invoices")
+                .update({ income_category_id: newCategoryId } as any)
+                .eq("id", invoiceId);
+            if (error) throw error;
+            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, income_category_id: newCategoryId } as any : inv));
+            toast.success("Η κατηγορία ενημερώθηκε", { duration: 1500 });
+        } catch {
+            toast.error("Σφάλμα κατά την ενημέρωση κατηγορίας", { duration: 2500 });
+        }
+    };
+
     async function handleUpdate() {
         if (!editingInvoice) return;
         setSaving(true);
@@ -188,8 +201,8 @@ export default function GeneralIncome() {
                     <button
                         onClick={() => setActiveCategory(null)}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${!activeCategory
-                                ? "bg-emerald-600 text-white border-emerald-600"
-                                : "border-slate-200 text-slate-500 hover:border-slate-400"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "border-slate-200 text-slate-500 hover:border-slate-400"
                             }`}
                     >
                         Όλα
@@ -199,8 +212,8 @@ export default function GeneralIncome() {
                             key={cat.id}
                             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
                             className={`text-xs px-3 py-1 rounded-full border transition-colors ${activeCategory === cat.id
-                                    ? "text-white border-transparent"
-                                    : "border-slate-200 text-slate-500 hover:border-slate-400"
+                                ? "text-white border-transparent"
+                                : "border-slate-200 text-slate-500 hover:border-slate-400"
                                 }`}
                             style={activeCategory === cat.id ? { backgroundColor: cat.color || "#10b981", borderColor: cat.color || "#10b981" } : {}}
                         >
@@ -271,16 +284,41 @@ export default function GeneralIncome() {
 
                                     {/* Category */}
                                     <div>
-                                        {cat ? (
-                                            <span
-                                                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                                                style={{ backgroundColor: `${cat.color}18`, color: cat.color || "#10b981" }}
-                                            >
-                                                {cat.name_el}
-                                            </span>
-                                        ) : (
-                                            <span className="text-[10px] text-slate-300">—</span>
-                                        )}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer">
+                                                    {cat ? (
+                                                        <span
+                                                            className="text-[10px] font-medium px-2 py-1 rounded-full border truncate max-w-[120px]"
+                                                            style={{ backgroundColor: `${cat.color}18`, color: cat.color || "#10b981", borderColor: `${cat.color}40` }}
+                                                            title={cat.name_el}
+                                                        >
+                                                            {cat.name_el}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 border-dashed hover:bg-slate-200 transition-colors">
+                                                            + Κατηγορία
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto rounded-xl">
+                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-slate-500 cursor-pointer">
+                                                    Χωρίς κατηγορία
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                {categories.map(c => (
+                                                    <DropdownMenuItem
+                                                        key={c.id}
+                                                        onClick={() => updateCategory(inv.id, c.id)}
+                                                        className="text-xs flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color || '#ccc' }} />
+                                                        <span className="truncate">{c.name_el}</span>
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
 
                                     {/* Date */}
