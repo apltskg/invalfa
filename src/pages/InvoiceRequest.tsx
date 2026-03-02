@@ -131,8 +131,13 @@ export default function InvoiceRequest() {
                 notes: form.notes || null,
                 receipt_url,
                 status: "pending",
+                service_description: "Χωρίς Περιγραφή (από Νέα Φόρμα)",
             }]);
-            if (dbErr) throw dbErr;
+
+            if (dbErr) {
+                console.error("DB Insert Error:", dbErr);
+                throw dbErr;
+            }
 
             // Trigger email notification via edge function
             await supabase.functions.invoke('notify-admin', {
