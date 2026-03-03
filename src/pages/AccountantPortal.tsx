@@ -66,6 +66,7 @@ interface PortalResponse {
   transactions?: PortalTransaction[];
   generalInvoices?: Invoice[];
   invoiceListImports?: InvoiceListImport[];
+  bankStatements?: any[];
   error?: string;
 }
 
@@ -98,9 +99,9 @@ function Th({ children, right }: { children: React.ReactNode; right?: boolean })
   );
 }
 
-function Td({ children, right, mono, bold, className = "" }: { children: React.ReactNode; right?: boolean; mono?: boolean; bold?: boolean; className?: string }) {
+function Td({ children, right, mono, bold, className = "", title }: { children: React.ReactNode; right?: boolean; mono?: boolean; bold?: boolean; className?: string; title?: string }) {
   return (
-    <td className={`p-3 text-sm ${right ? "text-right" : ""} ${mono ? "font-mono" : ""} ${bold ? "font-semibold" : ""} ${className}`}>
+    <td title={title} className={`p-3 text-sm ${right ? "text-right" : ""} ${mono ? "font-mono" : ""} ${bold ? "font-semibold" : ""} ${className}`}>
       {children}
     </td>
   );
@@ -154,6 +155,7 @@ export default function AccountantPortal() {
   const [generalInvoices, setGeneralInvoices] = useState<Invoice[]>([]);
   const [transactions, setTransactions] = useState<PortalTransaction[]>([]);
   const [invoiceListImports, setInvoiceListImports] = useState<InvoiceListImport[]>([]);
+  const [bankStatements, setBankStatements] = useState<any[]>([]);
 
   useEffect(() => { verifyAndFetch(); }, [token]);
 
@@ -170,6 +172,7 @@ export default function AccountantPortal() {
       setGeneralInvoices(data.generalInvoices || []);
       setTransactions(data.transactions || []);
       setInvoiceListImports(data.invoiceListImports || []);
+      setBankStatements(data.bankStatements || []);
     } catch {
       setAuthorized(false);
     } finally {
@@ -282,9 +285,12 @@ export default function AccountantPortal() {
     // Check if matched to an invoice
     const matchedInv = transactionToInvoice.get(txn.id);
     if (matchedInv) {
+      const invMonth = matchedInv.invoice_date ? matchedInv.invoice_date.substring(0, 7) : "";
+      const isDifferentMonth = invMonth && monthYear && invMonth !== monthYear;
       const invType = (matchedInv.type || "expense") === "income" ? "Έσοδο" : "Έξοδο";
       const merchant = matchedInv.merchant || matchedInv.category || "";
-      return { label: `${invType}: ${merchant}`, color: (matchedInv.type || "expense") === "income" ? "green" : "blue" };
+      const text = isDifferentMonth ? `${invType}: ${merchant} (Από μήνα ${invMonth})` : `${invType}: ${merchant}`;
+      return { label: text, color: (matchedInv.type || "expense") === "income" ? "green" : "blue" };
     }
     // Check if linked to a package
     const pkgId = txn.package_id || txn.folder_id;
@@ -299,8 +305,16 @@ export default function AccountantPortal() {
     if (txn.match_status === "matched") {
       return { label: "Αντιστοιχισμένο", color: "green" };
     }
-    return { label: "Μη αντιστοιχισμένο", color: "gray" };
+    return { label: "— (Δεν έχει εκδοθεί παραστατικό/απόδειξη)", color: "gray" };
   }
+
+  // Group transactions by bank
+  const txnsByBank = transactions.reduce((acc, txn) => {
+    const bank = txn.bank_name || "Άγνωστη Τράπεζα";
+    if (!acc[bank]) acc[bank] = [];
+    acc[bank].push(txn);
+    return acc;
+  }, {} as Record<string, PortalTransaction[]>);
 
   // Helper to find what an invoice list item corresponds to
   function getInvoiceListMatchLabel(item: InvoiceListItem): { label: string; color: "green" | "blue" | "gray" } {
@@ -374,25 +388,43 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {/* 1. ΑΡΧΕΙΑ ΓΙΑ ΛΗΨΗ                        */}
         {/* ═══════════════════════════════════════════ */}
-        <SectionTitle num={++secNum}>Αρχεία για Λήψη</SectionTitle>
+        <SectionTitle num={++secNum}>Αρχεία για Λήψη (Excel & Extrait)</SectionTitle>
+        <p className="text-sm text-gray-500 mb-4 -mt-2">
+          Κατεβάστε τα παρακάτω αρχεία για εύκολη εισαγωγή στο λογιστικό σας πρόγραμμα και έλεγχο τραπεζικών μεταφορών.
+        </p>
 
-        {downloadableExcels.length > 0 ? (
+        {(downloadableExcels.length > 0 || bankStatements.length > 0) ? (
           <div className="space-y-3 mb-4">
+            {/* INVOICE LISTS EXCEL */}
             {downloadableExcels.map(imp => (
               <div key={imp.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center gap-3">
                   <FileSpreadsheet className="h-5 w-5 text-green-600 shrink-0" />
                   <div>
-                    <p className="font-medium text-sm text-gray-900">{imp.file_name}</p>
+                    <p className="font-medium text-sm text-gray-900">{imp.file_name} (Λίστα Τιμολογίων Έκδοσης)</p>
                     <p className="text-xs text-gray-500">{imp.row_count} τιμολόγια · {eur(imp.total_gross || 0)}</p>
                   </div>
                 </div>
-                <DownloadBtn onClick={() => handleDownloadFile("invoice-lists", imp.file_path, imp.file_name)} label="Λήψη Excel" />
+                <DownloadBtn onClick={() => handleDownloadFile("invoice-lists", imp.file_path, imp.file_name)} label="Λήψη Αρχείου" />
+              </div>
+            ))}
+
+            {/* BANK STATEMENTS EXTRE */}
+            {bankStatements.map(stmt => (
+              <div key={stmt.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-blue-600 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm text-gray-900">{stmt.file_name} (Extrait Τράπεζας)</p>
+                    <p className="text-xs text-gray-500">{stmt.bank_name || "Άγνωστη Τράπεζα"} · Ανέβηκε {fmtDate(stmt.upload_date)}</p>
+                  </div>
+                </div>
+                <DownloadBtn onClick={() => handleDownloadFile("bank-statements", stmt.file_path, stmt.file_name)} label="Λήψη Extrait" />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 mb-4">Δεν υπάρχουν αρχεία Excel αυτόν τον μήνα.</p>
+          <p className="text-sm text-gray-400 mb-4 bg-gray-50 p-4 border border-gray-200 rounded-xl">Δεν υπάρχουν νέα αρχεία (excel ή extrait bank statements) αυτόν τον μήνα.</p>
         )}
 
 
@@ -481,10 +513,11 @@ export default function AccountantPortal() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <Th>Περιγραφή</Th>
+                    <Th>Πελάτης</Th>
+                    <Th>ΑΦΜ</Th>
                     <Th>Κατηγορία</Th>
                     <Th>Ημερομηνία</Th>
-                    <Th>Αντιστοιχεί σε</Th>
+                    <Th>Αντιστοιχεί σε (Συναλλαγή)</Th>
                     <Th right>Ποσό</Th>
                     <Th>Αρχείο</Th>
                   </tr>
@@ -495,6 +528,13 @@ export default function AccountantPortal() {
                     return (
                       <tr key={inv.id}>
                         <Td>{inv.merchant || inv.file_name || "—"}</Td>
+                        <Td>
+                          {(() => {
+                            const extracted = inv.extracted_data as any;
+                            const vat = (inv as any).vat_number || (extracted?.tax_id) || (extracted?.seller_vat) || (extracted?.buyer_vat);
+                            return vat ? <span className="font-mono text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{vat}</span> : <span className="text-gray-300">—</span>;
+                          })()}
+                        </Td>
                         <Td>{CATEGORY_LABELS[inv.category] || inv.category}</Td>
                         <Td>{fmtDate(inv.invoice_date)}</Td>
                         <Td>
@@ -516,7 +556,7 @@ export default function AccountantPortal() {
                 </tbody>
                 <tfoot className="bg-green-50">
                   <tr>
-                    <td colSpan={4} className="p-3 text-sm font-semibold text-green-700">Σύνολο Γενικών Εσόδων</td>
+                    <td colSpan={5} className="p-3 text-sm font-semibold text-green-700">Σύνολο Γενικών Εσόδων</td>
                     <td className="p-3 text-sm font-bold text-right text-green-700">
                       {eur(generalIncomeInvoices.reduce((s, i) => s + (i.amount || 0), 0))}
                     </td>
@@ -543,9 +583,10 @@ export default function AccountantPortal() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <Th>Προμηθευτής</Th>
+                    <Th>ΑΦΜ</Th>
                     <Th>Κατηγορία</Th>
                     <Th>Ημερομηνία</Th>
-                    <Th>Αντιστοιχεί σε</Th>
+                    <Th>Αντιστοιχεί σε (Συναλλαγή)</Th>
                     <Th right>Ποσό</Th>
                     <Th>Αρχείο</Th>
                   </tr>
@@ -558,6 +599,13 @@ export default function AccountantPortal() {
                       return (
                         <tr key={inv.id}>
                           <Td>{inv.merchant || inv.file_name || "—"}</Td>
+                          <Td>
+                            {(() => {
+                              const extracted = inv.extracted_data as any;
+                              const vat = (inv as any).vat_number || (extracted?.tax_id) || (extracted?.seller_vat) || (extracted?.buyer_vat);
+                              return vat ? <span className="font-mono text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{vat}</span> : <span className="text-gray-300">—</span>;
+                            })()}
+                          </Td>
                           <Td>
                             <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
                               {CATEGORY_LABELS[inv.category] || inv.category}
@@ -583,7 +631,7 @@ export default function AccountantPortal() {
                 </tbody>
                 <tfoot className="bg-red-50">
                   <tr>
-                    <td colSpan={4} className="p-3 text-sm font-semibold text-red-700">Σύνολο Γενικών Εξόδων</td>
+                    <td colSpan={5} className="p-3 text-sm font-semibold text-red-700">Σύνολο Γενικών Εξόδων</td>
                     <td className="p-3 text-sm font-bold text-right text-red-700">
                       {eur(generalExpenseInvoices.reduce((s, i) => s + (i.amount || 0), 0))}
                     </td>
@@ -676,52 +724,62 @@ export default function AccountantPortal() {
         {/* ═══════════════════════════════════════════ */}
         {transactions.length > 0 && (
           <>
-            <SectionTitle num={++secNum}>Τραπεζικές Κινήσεις</SectionTitle>
-            <p className="text-sm text-gray-500 mb-3 -mt-2">
-              {transactions.length} κινήσεις — στήλη «Αντιστοιχεί σε» δείχνει σε ποιο έσοδο, έξοδο ή φάκελο ανήκει η κάθε κίνηση.
+            <SectionTitle num={++secNum}>Τραπεζικές Κινήσεις ανά Τράπεζα</SectionTitle>
+            <p className="text-sm text-gray-500 mb-6 -mt-2">
+              Οι τραπεζικές κινήσεις από το XML είναι οργανωμένες εδώ ανά τράπεζα. Η στήλη «Αντιστοιχεί σε» σας δείχνει "ξεκάθαρα" εάν μια κίνηση έχει βρει το παραστατικό της. Αν π.χ αφορά προηγούμενο μήνα αναφέρεται ρητά.
             </p>
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <Th>Ημερομηνία</Th>
-                    <Th>Περιγραφή</Th>
-                    <Th>Τράπεζα</Th>
-                    <Th>Αντιστοιχεί σε</Th>
-                    <Th right>Ποσό</Th>
-                    <Th>Τύπος</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {transactions.map(txn => {
-                    const match = getTransactionMatchLabel(txn);
-                    return (
-                      <tr key={txn.id}>
-                        <Td>{fmtDate(txn.transaction_date)}</Td>
-                        <Td>{txn.description}</Td>
-                        <Td className="text-xs text-gray-500">{txn.bank_name || "—"}</Td>
-                        <Td>
-                          <MatchBadge text={match.label} color={match.color} />
-                        </Td>
-                        <Td right mono bold>{eur(Math.abs(txn.amount))}</Td>
-                        <Td>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${txn.amount >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {txn.amount >= 0 ? "Πίστωση" : "Χρέωση"}
-                          </span>
-                        </Td>
+
+            {Object.entries(txnsByBank).map(([bankName, bankTxns]) => (
+              <div key={bankName} className="mb-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="font-bold text-gray-900 border-b-2 border-slate-300 pb-1">{bankName}</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{bankTxns.length} κινήσεις</span>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <Th>Ημερομηνία</Th>
+                        <Th>Περιγραφή Συναλλαγής</Th>
+                        <Th>Τύπος</Th>
+                        <Th>Ξεκάθαρη Αντιστοιχία (Με τι συνδέεται;)</Th>
+                        <Th right>Ποσό</Th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t border-gray-200">
-                  <tr>
-                    <td colSpan={4} className="p-3 text-sm font-semibold">Σύνολο</td>
-                    <td className="p-3 text-sm font-bold text-right font-mono">{eur(transactions.reduce((s, t) => s + t.amount, 0))}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {bankTxns.map(txn => {
+                        const match = getTransactionMatchLabel(txn);
+                        return (
+                          <tr key={txn.id}>
+                            <Td>{fmtDate(txn.transaction_date)}</Td>
+                            <Td className="max-w-xs truncate" title={txn.description}>{txn.description}</Td>
+                            <Td>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${txn.amount >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                {txn.amount >= 0 ? "Εσοδο (Πιστ.)" : "Εξοδο (Χρεω.)"}
+                              </span>
+                            </Td>
+                            <Td>
+                              <MatchBadge text={match.label} color={match.color} />
+                              {(match.color === "gray" || match.color === "amber") && (
+                                <p className="text-[10px] text-gray-400 mt-1">Αναμένεται απόδειξη / παραστατικό</p>
+                              )}
+                            </Td>
+                            <Td right mono bold>{eur(Math.abs(txn.amount))}</Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50 border-t border-gray-200">
+                      <tr>
+                        <td colSpan={4} className="p-3 text-sm font-semibold text-right">Άθροισμα τράπεζας ({bankName}):</td>
+                        <td className="p-3 text-sm font-bold text-right font-mono text-slate-700">{eur(bankTxns.reduce((s, t) => s + t.amount, 0))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            ))}
           </>
         )}
 
@@ -732,6 +790,6 @@ export default function AccountantPortal() {
           <p className="mt-1">© {new Date().getFullYear()} · Αυτό το έγγραφο δημιουργήθηκε αυτόματα</p>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

@@ -181,6 +181,15 @@ Deno.serve(async (req) => {
         items: invoiceListItems.filter(item => item.import_id === imp.id)
       }));
 
+      // Fetch bank statements for this month
+      const { data: bankStatementsData } = await supabase
+        .from('bank_statements')
+        .select('*')
+        .eq('period_month', monthYear)
+        .order('upload_date', { ascending: false });
+
+      const bankStatements = bankStatementsData || [];
+
       return new Response(
         JSON.stringify({
           authorized: true,
@@ -188,7 +197,8 @@ Deno.serve(async (req) => {
           packages: packagesWithInvoices,
           transactions,
           generalInvoices,
-          invoiceListImports: invoiceListImportsWithItems
+          invoiceListImports: invoiceListImportsWithItems,
+          bankStatements
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
