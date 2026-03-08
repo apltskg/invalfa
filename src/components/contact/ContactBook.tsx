@@ -367,12 +367,12 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                             : "hover:bg-muted/50 text-foreground"
                                     )}
                                 >
-                                    {/* Avatar */}
+                                     {/* Avatar */}
                                     <div className={cn(
-                                        "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold",
+                                        "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold tracking-tight",
                                         selectedId === entity.id
-                                            ? "bg-white/20"
-                                            : `bg-gradient-to-br ${avatarColor(entity.name)}`
+                                            ? "bg-primary-foreground/20 text-primary-foreground"
+                                            : avatarColor(entity.name)
                                     )}>
                                         {initials(entity.name)}
                                     </div>
