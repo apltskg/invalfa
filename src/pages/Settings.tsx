@@ -161,6 +161,7 @@ export default function Settings() {
     const [saved, setSaved] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [settings, setSettings] = useState<AgencySettings>(DEFAULT_SETTINGS);
+    const { theme, setTheme } = useTheme();
 
     useEffect(() => { fetchSettings(); }, []);
 
