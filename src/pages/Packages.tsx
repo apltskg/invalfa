@@ -279,10 +279,10 @@ export default function Packages() {
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full sm:w-auto p-1 bg-muted/50 rounded-2xl border border-white/10">
-          <TabsTrigger value="all" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
-          <TabsTrigger value="active" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρωμένα</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 p-1 bg-muted/50 rounded-2xl border border-white/10 h-auto">
+          <TabsTrigger value="all" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρ.</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
