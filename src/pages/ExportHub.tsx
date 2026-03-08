@@ -429,7 +429,7 @@ export default function ExportHub() {
                 exit={{ y: -20, opacity: 0 }}
                 className="flex items-center"
               >
-                <Send className="h-4 w-4 mr-2" /> Mark as Sent
+                <Send className="h-4 w-4 mr-2" /> Σήμανση ως Απεσταλμένο
               </motion.span>
             )}
           </AnimatePresence>
