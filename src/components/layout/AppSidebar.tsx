@@ -155,7 +155,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-border bg-card w-56">
+    <Sidebar className="border-r border-border bg-card">
       {/* Brand Header */}
       <SidebarHeader className="px-4 py-4 border-b border-border">
         <div className="flex items-center gap-2.5">
