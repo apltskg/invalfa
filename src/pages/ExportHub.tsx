@@ -73,15 +73,9 @@ export default function ExportHub() {
     setLoading(false);
   }
 
-  const filteredPackages = packages.filter((pkg) => {
-    const pkgMonth = format(new Date(pkg.start_date), "yyyy-MM");
-    return pkgMonth === selectedMonth;
-  });
+  const filteredPackages = packages;
 
-  const filteredGeneralInvoices = generalInvoices.filter(inv => {
-    const invDate = inv.invoice_date || inv.created_at;
-    return format(new Date(invDate), "yyyy-MM") === selectedMonth;
-  });
+  const filteredGeneralInvoices = generalInvoices;
 
   // Get match info for an invoice
   function getMatchInfo(invoiceId: string) {
