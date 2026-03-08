@@ -223,8 +223,9 @@ export function GlobalSearch() {
           )}
           {query.length >= 2 && !loading && results.length === 0 ? (
             <CommandEmpty>Αναζήτηση...</CommandEmpty>
-          ) : results.length === 0 ? (
             <CommandEmpty>Δεν βρέθηκαν αποτελέσματα</CommandEmpty>
+          ) : loading ? (
+            <CommandEmpty>Αναζήτηση...</CommandEmpty>
           ) : (
             Object.entries(grouped).map(([type, items], idx) => {
               const config = typeConfig[type as keyof typeof typeConfig];
