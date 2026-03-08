@@ -189,6 +189,14 @@ export default function AccountantPortal() {
       setTransactions(data.transactions || []);
       setInvoiceListImports(data.invoiceListImports || []);
       setBankStatements(data.bankStatements || []);
+      const allComments = (data.comments || []) as InvoiceComment[];
+      setComments(allComments);
+      // Mark invoices as reviewed if they have a non-doubt comment with ✓
+      const reviewed = new Set<string>();
+      allComments.forEach(c => {
+        if (!c.is_doubt && c.comment_text.startsWith('✓')) reviewed.add(c.invoice_id);
+      });
+      setReviewedIds(reviewed);
     } catch {
       setAuthorized(false);
     } finally {
