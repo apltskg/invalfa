@@ -89,14 +89,14 @@ export function AppSidebar() {
           isActive={isActive}
           className={cn(
             "h-9 rounded-lg px-3 text-sm font-medium transition-all duration-150",
-            "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-            isActive && "bg-slate-100 text-slate-900 font-semibold"
+            "text-muted-foreground hover:text-foreground hover:bg-accent",
+            isActive && "bg-accent text-foreground font-semibold"
           )}
         >
           <Link to={item.url} className="flex items-center gap-2.5">
-            <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-blue-600" : "text-slate-400")} />
+            <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
             <span>{item.title}</span>
-            {isActive && <ChevronRight className="h-3 w-3 ml-auto text-blue-600" />}
+            {isActive && <ChevronRight className="h-3 w-3 ml-auto text-primary" />}
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
