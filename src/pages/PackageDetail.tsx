@@ -263,7 +263,7 @@ export default function PackageDetail() {
     <div className="space-y-6 animate-in fade-in pb-20">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-slate-600 hover:bg-slate-100 h-9 text-sm">
+        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-muted-foreground hover:bg-muted h-9 text-sm">
           <ArrowLeft className="h-4 w-4" />
           Πίσω στους Φακέλους
         </Button>
