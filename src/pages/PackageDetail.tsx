@@ -358,28 +358,28 @@ export default function PackageDetail() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Financials
+              Οικονομικά
             </h2>
 
             <Dialog open={linkInvoiceOpen} onOpenChange={setLinkInvoiceOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="rounded-xl">
-                  <LinkIcon className="h-4 w-4 mr-2" /> Link Existing
+                  <LinkIcon className="h-4 w-4 mr-2" /> Σύνδεση Υπάρχοντος
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Link Existing Invoice</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Σύνδεση Υπάρχοντος Παραστατικού</DialogTitle></DialogHeader>
                 <div className="max-h-[300px] overflow-auto space-y-2">
                   {unassignedInvoices.map(inv => (
                     <div key={inv.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted cursor-pointer" onClick={() => handleLinkInvoice(inv.id)}>
                       <div>
-                        <p className="font-medium">{inv.merchant || "Unknown"}</p>
+                        <p className="font-medium">{inv.merchant || "Άγνωστος"}</p>
                         <p className="text-xs text-muted-foreground">€{inv.amount} • {inv.invoice_date}</p>
                       </div>
                       <Plus className="h-4 w-4" />
                     </div>
                   ))}
-                  {unassignedInvoices.length === 0 && <p className="text-center py-4 text-muted-foreground">No unassigned invoices found.</p>}
+                  {unassignedInvoices.length === 0 && <p className="text-center py-4 text-muted-foreground">Δεν βρέθηκαν ασύνδετα παραστατικά.</p>}
                 </div>
               </DialogContent>
             </Dialog>
