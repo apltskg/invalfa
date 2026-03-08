@@ -175,49 +175,69 @@ export default function MonthlyClosing() {
         },
         {
             id: "matching",
-            title: "Αντιστοίχιση Συναλλαγών",
-            description: "Αντιστοιχίστε τιμολόγια ↔ τραπεζικές κινήσεις ↔ φακέλους",
+            title: "Αντιστοίχιση Τιμολογίων",
+            description: "Αντιστοιχίστε τιμολόγια τιμολογιέρας ↔ έσοδα ↔ φακέλους",
             icon: ArrowLeftRight,
             color: "text-violet-600",
             bgColor: "bg-violet-50",
             route: "/invoice-list",
             checkFn: async () => {
+                const { data: imports } = await supabase
+                    .from("invoice_list_imports")
+                    .select("id")
+                    .gte("upload_date", period.start)
+                    .lte("upload_date", period.end + "T23:59:59");
+                const importIds = imports?.map(i => i.id) || [];
+                if (importIds.length === 0) {
+                    return { done: false, count: 0, total: 0, detail: "Χρειάζεται πρώτα η τιμολογιέρα" };
+                }
                 const { count: total } = await supabase
                     .from("invoice_list_items")
                     .select("*", { count: "exact", head: true })
-                    .in("import_id",
-                        (await supabase
-                            .from("invoice_list_imports")
-                            .select("id")
-                            .gte("upload_date", period.start)
-                            .lte("upload_date", period.end + "T23:59:59")
-                        ).data?.map(i => i.id) || []
-                    );
-
+                    .in("import_id", importIds);
                 const { count: matched } = await supabase
                     .from("invoice_list_items")
                     .select("*", { count: "exact", head: true })
                     .eq("match_status", "matched")
-                    .in("import_id",
-                        (await supabase
-                            .from("invoice_list_imports")
-                            .select("id")
-                            .gte("upload_date", period.start)
-                            .lte("upload_date", period.end + "T23:59:59")
-                        ).data?.map(i => i.id) || []
-                    );
-
+                    .in("import_id", importIds);
                 const pct = total ? Math.round(((matched || 0) / total) * 100) : 0;
                 return {
                     done: pct >= 80,
                     count: matched || 0,
                     total: total || 0,
-                    detail: total
-                        ? `${matched || 0}/${total} αντιστοιχισμένα (${pct}%)`
-                        : "Χρειάζεται πρώτα η τιμολογιέρα",
-                    warning: total && pct < 80
-                        ? `${(total || 0) - (matched || 0)} ανοιχτά τιμολόγια`
-                        : undefined,
+                    detail: `${matched || 0}/${total || 0} αντιστοιχισμένα (${pct}%)`,
+                    warning: total && pct < 80 ? `${(total || 0) - (matched || 0)} ανοιχτά τιμολόγια` : undefined,
+                };
+            },
+        },
+        {
+            id: "bank_reconciliation",
+            title: "Τραπεζική Συμφωνία",
+            description: "Ελέγξτε ότι όλες οι τραπεζικές κινήσεις έχουν αντιστοιχιστεί με παραστατικά",
+            icon: CreditCard,
+            color: "text-teal-600",
+            bgColor: "bg-teal-50",
+            route: "/bank-sync",
+            checkFn: async () => {
+                const { count: total } = await supabase
+                    .from("bank_transactions")
+                    .select("*", { count: "exact", head: true })
+                    .gte("transaction_date", period.start)
+                    .lte("transaction_date", period.end);
+                const { count: matched } = await supabase
+                    .from("bank_transactions")
+                    .select("*", { count: "exact", head: true })
+                    .eq("match_status", "matched")
+                    .gte("transaction_date", period.start)
+                    .lte("transaction_date", period.end);
+                if (!total) return { done: false, count: 0, total: 0, detail: "Δεν υπάρχουν κινήσεις τράπεζας" };
+                const pct = Math.round(((matched || 0) / total) * 100);
+                return {
+                    done: pct >= 70,
+                    count: matched || 0,
+                    total: total || 0,
+                    detail: `${matched || 0}/${total} συμφωνημένες (${pct}%)`,
+                    warning: pct < 70 ? `${total - (matched || 0)} κινήσεις χωρίς αντιστοίχιση` : undefined,
                 };
             },
         },
@@ -230,7 +250,6 @@ export default function MonthlyClosing() {
             bgColor: "bg-amber-50",
             route: "/general-expenses",
             checkFn: async () => {
-                // Check expenses with payroll category
                 const { count: payrollExpenses } = await supabase
                     .from("invoices")
                     .select("*", { count: "exact", head: true })
@@ -238,15 +257,12 @@ export default function MonthlyClosing() {
                     .eq("category", "payroll")
                     .gte("invoice_date", period.start)
                     .lte("invoice_date", period.end);
-
-                // Also check bank transactions with μισθ/payroll keywords
                 const { count: payrollTxns } = await supabase
                     .from("bank_transactions")
                     .select("*", { count: "exact", head: true })
                     .ilike("description", "%μισθ%")
                     .gte("transaction_date", period.start)
                     .lte("transaction_date", period.end);
-
                 const found = (payrollExpenses || 0) + (payrollTxns || 0);
                 return {
                     done: found > 0,
@@ -258,15 +274,34 @@ export default function MonthlyClosing() {
             },
         },
         {
+            id: "export",
+            title: "Εξαγωγή Αναφοράς",
+            description: "Δημιουργήστε την μηνιαία αναφορά XLSX με όλα τα παραστατικά και κινήσεις",
+            icon: FileText,
+            color: "text-cyan-600",
+            bgColor: "bg-cyan-50",
+            route: "/export-hub",
+            checkFn: async () => {
+                const { count } = await supabase
+                    .from("export_logs")
+                    .select("*", { count: "exact", head: true })
+                    .eq("month_year", period.monthKey);
+                return {
+                    done: (count || 0) > 0,
+                    count: count || 0,
+                    detail: count ? `${count} εξαγωγή(ές) ολοκληρωμένες` : "Δεν έχει γίνει εξαγωγή ακόμα",
+                };
+            },
+        },
+        {
             id: "send_accountant",
             title: "Αποστολή στον Λογιστή",
             description: "Δημιουργήστε και στείλτε τον μαγικό σύνδεσμο στον λογιστή σας",
             icon: Send,
             color: "text-emerald-600",
             bgColor: "bg-emerald-50",
-            route: "/settings",
+            route: "/export-hub",
             checkFn: async () => {
-                // Check if accountant magic link was generated for this period
                 const { count } = await supabase
                     .from("accountant_magic_links")
                     .select("*", { count: "exact", head: true })
@@ -274,9 +309,7 @@ export default function MonthlyClosing() {
                 return {
                     done: (count || 0) > 0,
                     count: count || 0,
-                    detail: count
-                        ? `${count} σύνδεσμος(οι) δημιουργήθηκαν`
-                        : "Δεν έχει σταλεί ακόμα",
+                    detail: count ? `${count} σύνδεσμος(οι) δημιουργήθηκαν` : "Δεν έχει σταλεί ακόμα",
                 };
             },
         },
@@ -383,8 +416,8 @@ export default function MonthlyClosing() {
             {/* Steps */}
             <div className="space-y-3">
                 {loading ? (
-                    <div className="flex items-center justify-center p-16">
-                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                     <div className="flex items-center justify-center p-16">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                 ) : (
                     steps.map((step, idx) => {
@@ -422,7 +455,7 @@ export default function MonthlyClosing() {
                                                     : <StepIcon className={cn("h-5 w-5", step.color)} />
                                                 }
                                             </div>
-                                            <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                            <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-card border border-border flex items-center justify-center text-[10px] font-bold text-muted-foreground">
                                                 {idx + 1}
                                             </span>
                                         </div>
@@ -453,8 +486,8 @@ export default function MonthlyClosing() {
 
                                         {/* Expand arrow */}
                                         {isExpanded
-                                            ? <ChevronUp className="h-4 w-4 text-slate-300 shrink-0" />
-                                            : <ChevronDown className="h-4 w-4 text-slate-300 shrink-0" />
+                                            ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                                            : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                                         }
                                     </button>
 
