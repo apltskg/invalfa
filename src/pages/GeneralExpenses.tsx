@@ -35,7 +35,6 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-// Invoice list entry for matching
 interface InvoiceListEntry {
     id: string;
     invoice_date: string | null;
@@ -70,7 +69,6 @@ export default function GeneralExpenses() {
     const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-    // Bulk selection state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -80,8 +78,6 @@ export default function GeneralExpenses() {
     const isSelecting = selectedIds.size > 0;
 
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
-
-    // Clear selection when data changes
     useEffect(() => { setSelectedIds(new Set()); }, [monthKey]);
 
     async function fetchCategories() {
@@ -117,7 +113,6 @@ export default function GeneralExpenses() {
         }
     }
 
-    // Find best matching invoice list entry for an expense
     const findInvoiceListMatch = useCallback((inv: Invoice): InvoiceListEntry | null => {
         if (!inv.amount || !invoiceListEntries.length) return null;
         const invDate = inv.invoice_date ? new Date(inv.invoice_date).getTime() : null;
@@ -208,7 +203,6 @@ export default function GeneralExpenses() {
         finally { setDeleteDialogOpen(false); setSelectedInvoice(null); }
     };
 
-    // ── Bulk actions ──
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -250,7 +244,6 @@ export default function GeneralExpenses() {
         setBulkProcessing(true);
         try {
             const ids = Array.from(selectedIds);
-            // Delete files from storage
             const toDelete = invoices.filter(i => ids.includes(i.id) && i.file_path && !i.file_path.startsWith("manual/"));
             if (toDelete.length > 0) {
                 await supabase.storage.from("invoices").remove(toDelete.map(i => i.file_path));
@@ -290,14 +283,14 @@ export default function GeneralExpenses() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Γενικά Έξοδα</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Λειτουργικά έξοδα εκτός φακέλων</p>
+                    <h1 className="text-2xl font-bold text-foreground">Γενικά Έξοδα</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Λειτουργικά έξοδα εκτός φακέλων</p>
                 </div>
                 <div className="flex gap-2">
                     <Button
                         variant="outline"
                         onClick={() => setBulkUploadOpen(true)}
-                        className="rounded-xl gap-2 h-9 text-sm border-slate-200"
+                        className="rounded-xl gap-2 h-9 text-sm"
                     >
                         <FileText className="h-4 w-4" />
                         Μαζική Εισαγωγή
@@ -314,11 +307,11 @@ export default function GeneralExpenses() {
 
             {/* Stats row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-rose-500">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-rose-500">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Σύνολο Εξόδων</p>
+                        <p className="text-xs font-medium text-muted-foreground">Σύνολο Εξόδων</p>
                         <p className="text-2xl font-bold text-rose-600 mt-0.5">€{totalAmount.toFixed(2)}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{invoices.length} καταχωρήσεις</p>
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">{invoices.length} καταχωρήσεις</p>
                     </CardContent>
                 </Card>
                 {categories
@@ -327,13 +320,13 @@ export default function GeneralExpenses() {
                     .map(cat => (
                         <Card
                             key={cat.id}
-                            className="rounded-xl border-slate-200 bg-white cursor-pointer hover:shadow-sm transition-shadow"
+                            className="rounded-xl border-border bg-card cursor-pointer hover:shadow-sm transition-shadow"
                             style={{ borderLeftWidth: 4, borderLeftColor: cat.color || "#e11d48" }}
                             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
                         >
                             <CardContent className="p-4">
-                                <p className="text-xs font-medium text-slate-500 truncate">{cat.name_el}</p>
-                                <p className="text-lg font-bold text-slate-700 mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
+                                <p className="text-xs font-medium text-muted-foreground truncate">{cat.name_el}</p>
+                                <p className="text-lg font-bold text-foreground mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
                             </CardContent>
                         </Card>
                     ))}
@@ -346,7 +339,7 @@ export default function GeneralExpenses() {
                         onClick={() => setActiveCategory(null)}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${!activeCategory
                             ? "bg-rose-600 text-white border-rose-600"
-                            : "border-slate-200 text-slate-500 hover:border-slate-400"
+                            : "border-border text-muted-foreground hover:border-foreground/30"
                             }`}
                     >
                         Όλα
@@ -357,7 +350,7 @@ export default function GeneralExpenses() {
                             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
                             className={`text-xs px-3 py-1 rounded-full border transition-colors ${activeCategory === cat.id
                                 ? "text-white border-transparent"
-                                : "border-slate-200 text-slate-500 hover:border-slate-400"
+                                : "border-border text-muted-foreground hover:border-foreground/30"
                                 }`}
                             style={activeCategory === cat.id ? { backgroundColor: cat.color || "#e11d48", borderColor: cat.color || "#e11d48" } : {}}
                         >
@@ -370,24 +363,24 @@ export default function GeneralExpenses() {
             {/* Search + Bulk Actions Bar */}
             <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative max-w-sm flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Αναζήτηση..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                        className="pl-9 rounded-xl text-sm h-9"
                     />
                 </div>
 
                 {isSelecting && (
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
-                        <Badge className="bg-blue-600 text-white border-0 text-xs">{selectedIds.size}</Badge>
-                        <span className="text-xs text-blue-700 font-medium">επιλεγμένα</span>
-                        <div className="w-px h-4 bg-blue-200 mx-1" />
+                    <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
+                        <Badge className="bg-primary text-primary-foreground border-0 text-xs">{selectedIds.size}</Badge>
+                        <span className="text-xs text-primary font-medium">επιλεγμένα</span>
+                        <div className="w-px h-4 bg-primary/20 mx-1" />
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs gap-1.5 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded-lg px-2"
+                            className="h-7 text-xs gap-1.5 text-primary hover:text-primary hover:bg-primary/10 rounded-lg px-2"
                             onClick={() => setBulkCategoryDialogOpen(true)}
                         >
                             <Tag className="h-3.5 w-3.5" />
@@ -396,7 +389,7 @@ export default function GeneralExpenses() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg px-2"
+                            className="h-7 text-xs gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-lg px-2"
                             onClick={() => setBulkDeleteDialogOpen(true)}
                         >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -405,7 +398,7 @@ export default function GeneralExpenses() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 rounded-lg"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
                             onClick={() => setSelectedIds(new Set())}
                         >
                             <X className="h-3.5 w-3.5" />
@@ -415,16 +408,16 @@ export default function GeneralExpenses() {
             </div>
 
             {/* Table */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide items-center">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide items-center">
                     <button
                         onClick={toggleSelectAll}
                         className="flex items-center justify-center"
                         title={selectedIds.size === filtered.length ? "Αποεπιλογή όλων" : "Επιλογή όλων"}
                     >
                         {filtered.length > 0 && selectedIds.size === filtered.length
-                            ? <CheckSquare className="h-4 w-4 text-blue-600" />
-                            : <Square className="h-4 w-4 text-slate-300" />}
+                            ? <CheckSquare className="h-4 w-4 text-primary" />
+                            : <Square className="h-4 w-4 text-muted-foreground/40" />}
                     </button>
                     <span>Πληρωμή / Προμηθευτής</span>
                     <span>Κατηγορία</span>
@@ -435,17 +428,17 @@ export default function GeneralExpenses() {
 
                 {loading ? (
                     <div className="flex items-center justify-center p-16">
-                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="p-16 text-center">
-                        <TrendingDown className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                        <p className="text-slate-400 text-sm">
+                        <TrendingDown className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                        <p className="text-muted-foreground text-sm">
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν υπάρχουν καταχωρίσεις"}
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-border">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
                             const cat = getCategoryById((inv as any).expense_category_id);
@@ -453,7 +446,7 @@ export default function GeneralExpenses() {
                             return (
                                 <div
                                     key={inv.id}
-                                    className={`grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group ${isSelected ? "bg-blue-50/50" : ""}`}
+                                    className={`grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-muted/50 transition-colors group ${isSelected ? "bg-primary/5" : ""}`}
                                 >
                                     {/* Checkbox */}
                                     <div className="flex items-center justify-center">
@@ -465,18 +458,18 @@ export default function GeneralExpenses() {
                                     </div>
 
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-8 w-8 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
+                                        <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
                                             {hasFile
                                                 ? <FileText className="h-4 w-4 text-rose-600" />
-                                                : <FileUp className="h-4 w-4 text-slate-300" />}
+                                                : <FileUp className="h-4 w-4 text-muted-foreground/40" />}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-medium text-slate-800 truncate">
+                                            <p className="text-sm font-medium text-foreground truncate">
                                                 {inv.merchant || "Άγνωστος Προμηθευτής"}
                                             </p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 {!hasFile && (
-                                                    <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 py-0">
+                                                    <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 py-0">
                                                         Χωρίς αρχείο
                                                     </Badge>
                                                 )}
@@ -486,7 +479,7 @@ export default function GeneralExpenses() {
                                                     return (
                                                         <button
                                                             onClick={() => navigate(`/invoice-list?highlight=${match.id}`)}
-                                                            className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0 hover:bg-emerald-100 transition-colors"
+                                                            className="inline-flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0 hover:bg-emerald-500/20 transition-colors"
                                                         >
                                                             <ExternalLink className="h-2.5 w-2.5" />
                                                             Λίστα #{match.invoice_number || match.id.slice(0, 6)}
@@ -511,7 +504,7 @@ export default function GeneralExpenses() {
                                                             {cat.name_el}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 border-dashed hover:bg-slate-200 transition-colors">
+                                                        <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full border border-border border-dashed hover:bg-accent transition-colors">
                                                             {inv.category && inv.category !== 'other' ? (
                                                                 <span className="capitalize">{inv.category}</span>
                                                             ) : "+ Κατηγορία"}
@@ -520,7 +513,7 @@ export default function GeneralExpenses() {
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto rounded-xl">
-                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-slate-500 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-muted-foreground cursor-pointer">
                                                     Χωρίς κατηγορία
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -538,8 +531,8 @@ export default function GeneralExpenses() {
                                         </DropdownMenu>
                                     </div>
 
-                                    <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                                        <Calendar className="h-3.5 w-3.5 text-slate-300" />
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/50" />
                                         {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "—"}
                                     </p>
 
@@ -576,10 +569,9 @@ export default function GeneralExpenses() {
                         })}
                     </div>
                 )}
-
                 {filtered.length > 0 && (
-                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-xs text-slate-400">{filtered.length} εγγραφές</span>
+                    <div className="px-5 py-3 bg-muted/50 border-t border-border flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">{filtered.length} εγγραφές</span>
                         <span className="text-sm font-bold text-rose-600">
                             Σύνολο: €{filtered.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
                         </span>
@@ -600,15 +592,15 @@ export default function GeneralExpenses() {
                     {editingInvoice && (
                         <div className="space-y-4 py-2">
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-500">Προμηθευτής</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Προμηθευτής</Label>
                                 <Input
                                     value={editingInvoice.merchant || ""}
                                     onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
-                                    className="rounded-xl border-slate-200 text-sm"
+                                    className="rounded-xl text-sm"
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-500">Κατηγορία Εξόδου</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Κατηγορία Εξόδου</Label>
                                 <Select
                                     value={(editingInvoice as any).expense_category_id || "none"}
                                     onValueChange={v => setEditingInvoice({
@@ -617,7 +609,7 @@ export default function GeneralExpenses() {
                                         } as any)
                                     })}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                    <SelectTrigger className="rounded-xl text-sm h-9">
                                         <SelectValue placeholder="Επιλέξτε κατηγορία..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -630,29 +622,29 @@ export default function GeneralExpenses() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-500">Ποσό (€)</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Ποσό (€)</Label>
                                     <Input
                                         type="number"
                                         value={editingInvoice.amount || 0}
                                         onChange={e => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
-                                        className="rounded-xl border-slate-200 text-sm"
+                                        className="rounded-xl text-sm"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-500">Ημερομηνία</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Ημερομηνία</Label>
                                     <Input
                                         type="date"
                                         value={editingInvoice.invoice_date || ""}
                                         onChange={e => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
-                                        className="rounded-xl border-slate-200 text-sm"
+                                        className="rounded-xl text-sm"
                                     />
                                 </div>
                             </div>
                         </div>
                     )}
                     <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm border-slate-200">Ακύρωση</Button>
-                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700">
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm">Ακύρωση</Button>
+                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl text-sm">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                             Αποθήκευση
                         </Button>
@@ -671,7 +663,7 @@ export default function GeneralExpenses() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl">Ακύρωση</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">Διαγραφή</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -683,11 +675,11 @@ export default function GeneralExpenses() {
                     <DialogHeader>
                         <DialogTitle className="text-base">Μαζική Αλλαγή Κατηγορίας</DialogTitle>
                     </DialogHeader>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                         Αλλαγή κατηγορίας για <strong>{selectedIds.size}</strong> επιλεγμένες εγγραφές.
                     </p>
                     <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
-                        <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                        <SelectTrigger className="rounded-xl text-sm h-9">
                             <SelectValue placeholder="Επιλέξτε κατηγορία..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -703,8 +695,8 @@ export default function GeneralExpenses() {
                         </SelectContent>
                     </Select>
                     <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setBulkCategoryDialogOpen(false)} className="rounded-xl text-sm border-slate-200">Ακύρωση</Button>
-                        <Button onClick={handleBulkCategoryChange} disabled={bulkProcessing} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700">
+                        <Button variant="outline" onClick={() => setBulkCategoryDialogOpen(false)} className="rounded-xl text-sm">Ακύρωση</Button>
+                        <Button onClick={handleBulkCategoryChange} disabled={bulkProcessing} className="rounded-xl text-sm">
                             {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                             Εφαρμογή
                         </Button>
@@ -722,7 +714,7 @@ export default function GeneralExpenses() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl">Ακύρωση</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleBulkDelete}
                             disabled={bulkProcessing}
