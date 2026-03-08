@@ -314,25 +314,25 @@ export default function InvoiceExchange() {
                             return (
                                 <div key={share.id} className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 items-center px-5 py-3.5 hover:bg-muted/50 transition-colors group">
                                     {/* Recipient */}
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                                            <Building2 className="h-4 w-4 text-blue-400" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {share.customer_name || share.customer_email}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate">{share.customer_email}</p>
-                                        </div>
-                                    </div>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                                    <Building2 className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">
+                                                        {share.customer_name || share.customer_email}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground truncate">{share.customer_email}</p>
+                                                </div>
+                                            </div>
 
-                                    {/* Invoice ref */}
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                        <FileText className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {share.invoice_id.slice(0, 8)}…
-                                        </span>
-                                    </div>
+                                            {/* Invoice ref */}
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <FileText className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                                                <span className="text-xs text-muted-foreground truncate">
+                                                    {invoices.find(i => i.id === share.invoice_id)?.merchant || share.invoice_id.slice(0, 8) + "…"}
+                                                </span>
+                                            </div>
 
                                     {/* Date */}
                                     <p className="text-sm text-muted-foreground">
