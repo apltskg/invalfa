@@ -400,10 +400,10 @@ export default function GeneralIncome() {
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold text-slate-500">Κατηγορία</Label>
                                 <Select
-                                    value={(editingInvoice as any).income_category_id || "none"}
+                                    value={(editingInvoice as any).expense_category_id || "none"}
                                     onValueChange={v => setEditingInvoice({
                                         ...editingInvoice, ...({
-                                            income_category_id: v === "none" ? null : v
+                                            expense_category_id: v === "none" ? null : v
                                         } as any)
                                     })}
                                 >
