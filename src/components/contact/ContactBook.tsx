@@ -115,8 +115,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
         const [entResult, invResult, catResult] = await Promise.all([
             supabase.from(table).select("*").order("name"),
             supabase.from("invoices")
-                .select("id,merchant,amount,invoice_date,category,type,file_path," + (isCustomers ? "customer_id" : "supplier_id"))
-                .eq("type", isCustomers ? "income" : "expense"),
+                .select("id,merchant,amount,invoice_date,category,type,file_path,customer_id,supplier_id,extracted_data"),
             isCustomers ? Promise.resolve({ data: [] }) :
                 supabase.from("expense_categories").select("id,name_el,color").order("sort_order"),
         ]);
