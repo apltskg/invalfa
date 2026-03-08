@@ -55,7 +55,6 @@ export default function GeneralIncome() {
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
 
     async function fetchCategories() {
-        // income_categories table not yet available
         setCategories([]);
     }
 
@@ -135,7 +134,6 @@ export default function GeneralIncome() {
 
     const totalAmount = invoices.reduce((s, i) => s + (i.amount || 0), 0);
 
-    // Per-category breakdown
     const byCategory = invoices.reduce((acc, inv) => {
         const catId = (inv as any).expense_category_id || "__none";
         acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
@@ -156,8 +154,8 @@ export default function GeneralIncome() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Γενικά Έσοδα</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Έσοδα εκτός φακέλων</p>
+                    <h1 className="text-2xl font-bold text-foreground">Γενικά Έσοδα</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Έσοδα εκτός φακέλων</p>
                 </div>
                 <Button
                     onClick={() => setUploadModalOpen(true)}
@@ -170,11 +168,11 @@ export default function GeneralIncome() {
 
             {/* Stats row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-emerald-500">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-emerald-500">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Σύνολο Εσόδων</p>
+                        <p className="text-xs font-medium text-muted-foreground">Σύνολο Εσόδων</p>
                         <p className="text-2xl font-bold text-emerald-600 mt-0.5">€{totalAmount.toFixed(2)}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{invoices.length} καταχωρήσεις</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{invoices.length} καταχωρήσεις</p>
                     </CardContent>
                 </Card>
                 {categories
@@ -183,13 +181,13 @@ export default function GeneralIncome() {
                     .map(cat => (
                         <Card
                             key={cat.id}
-                            className="rounded-xl border-slate-200 bg-white cursor-pointer hover:shadow-sm transition-shadow"
+                            className="rounded-xl border-border bg-card cursor-pointer hover:shadow-sm transition-shadow"
                             style={{ borderLeftWidth: 4, borderLeftColor: cat.color || "#10b981" }}
                             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
                         >
                             <CardContent className="p-4">
-                                <p className="text-xs font-medium text-slate-500 truncate">{cat.name_el}</p>
-                                <p className="text-lg font-bold text-slate-700 mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
+                                <p className="text-xs font-medium text-muted-foreground truncate">{cat.name_el}</p>
+                                <p className="text-lg font-bold text-foreground mt-0.5">€{(byCategory[cat.id] || 0).toFixed(2)}</p>
                             </CardContent>
                         </Card>
                     ))}
@@ -202,7 +200,7 @@ export default function GeneralIncome() {
                         onClick={() => setActiveCategory(null)}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${!activeCategory
                             ? "bg-emerald-600 text-white border-emerald-600"
-                            : "border-slate-200 text-slate-500 hover:border-slate-400"
+                            : "border-border text-muted-foreground hover:border-foreground/30"
                             }`}
                     >
                         Όλα
@@ -213,7 +211,7 @@ export default function GeneralIncome() {
                             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
                             className={`text-xs px-3 py-1 rounded-full border transition-colors ${activeCategory === cat.id
                                 ? "text-white border-transparent"
-                                : "border-slate-200 text-slate-500 hover:border-slate-400"
+                                : "border-border text-muted-foreground hover:border-foreground/30"
                                 }`}
                             style={activeCategory === cat.id ? { backgroundColor: cat.color || "#10b981", borderColor: cat.color || "#10b981" } : {}}
                         >
@@ -225,19 +223,19 @@ export default function GeneralIncome() {
 
             {/* Search */}
             <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Αναζήτηση πελάτη..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                    className="pl-9 rounded-xl border-border bg-card text-sm h-9"
                 />
             </div>
 
             {/* Table */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
                 {/* Table header */}
-                <div className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     <span>Πελάτης / Πηγή</span>
                     <span>Κατηγορία</span>
                     <span>Ημερομηνία</span>
@@ -247,31 +245,31 @@ export default function GeneralIncome() {
 
                 {loading ? (
                     <div className="flex items-center justify-center p-16">
-                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="p-16 text-center">
-                        <TrendingUp className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                        <p className="text-slate-400 text-sm">
+                        <TrendingUp className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-muted-foreground text-sm">
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν υπάρχουν καταχωρίσεις"}
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-border">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
                             const cat = getCategoryById((inv as any).expense_category_id);
                             return (
-                                <div key={inv.id} className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                <div key={inv.id} className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-muted/50 transition-colors group">
                                     {/* Name */}
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                                        <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center shrink-0">
                                             {hasFile
                                                 ? <FileText className="h-4 w-4 text-emerald-600" />
-                                                : <FileUp className="h-4 w-4 text-slate-300" />}
+                                                : <FileUp className="h-4 w-4 text-muted-foreground/50" />}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-medium text-slate-800 truncate">
+                                            <p className="text-sm font-medium text-foreground truncate">
                                                 {inv.merchant || "Άγνωστος"}
                                             </p>
                                             {!hasFile && (
@@ -296,14 +294,14 @@ export default function GeneralIncome() {
                                                             {cat.name_el}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 border-dashed hover:bg-slate-200 transition-colors">
+                                                        <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full border border-border border-dashed hover:bg-muted/80 transition-colors">
                                                             + Κατηγορία
                                                         </span>
                                                     )}
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto rounded-xl">
-                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-slate-500 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => updateCategory(inv.id, null)} className="text-xs text-muted-foreground cursor-pointer">
                                                     Χωρίς κατηγορία
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -322,8 +320,8 @@ export default function GeneralIncome() {
                                     </div>
 
                                     {/* Date */}
-                                    <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                                        <Calendar className="h-3.5 w-3.5 text-slate-300" />
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/50" />
                                         {inv.invoice_date ? format(new Date(inv.invoice_date), "dd/MM/yyyy") : "—"}
                                     </p>
 
@@ -365,8 +363,8 @@ export default function GeneralIncome() {
 
                 {/* Table footer summary */}
                 {filtered.length > 0 && (
-                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-xs text-slate-400">{filtered.length} εγγραφές</span>
+                    <div className="px-5 py-3 bg-muted/50 border-t border-border flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">{filtered.length} εγγραφές</span>
                         <span className="text-sm font-bold text-emerald-600">
                             Σύνολο: €{filtered.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
                         </span>
@@ -390,15 +388,15 @@ export default function GeneralIncome() {
                     {editingInvoice && (
                         <div className="space-y-4 py-2">
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-500">Πελάτης / Πηγή</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Πελάτης / Πηγή</Label>
                                 <Input
                                     value={editingInvoice.merchant || ""}
                                     onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
-                                    className="rounded-xl border-slate-200 text-sm"
+                                    className="rounded-xl border-border text-sm"
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-500">Κατηγορία</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Κατηγορία</Label>
                                 <Select
                                     value={(editingInvoice as any).expense_category_id || "none"}
                                     onValueChange={v => setEditingInvoice({
@@ -407,7 +405,7 @@ export default function GeneralIncome() {
                                         } as any)
                                     })}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                    <SelectTrigger className="rounded-xl border-border text-sm h-9">
                                         <SelectValue placeholder="Επιλέξτε κατηγορία..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -420,28 +418,28 @@ export default function GeneralIncome() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-500">Ποσό (€)</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Ποσό (€)</Label>
                                     <Input
                                         type="number"
                                         value={editingInvoice.amount || 0}
                                         onChange={e => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
-                                        className="rounded-xl border-slate-200 text-sm"
+                                        className="rounded-xl border-border text-sm"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-500">Ημερομηνία</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Ημερομηνία</Label>
                                     <Input
                                         type="date"
                                         value={editingInvoice.invoice_date || ""}
                                         onChange={e => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
-                                        className="rounded-xl border-slate-200 text-sm"
+                                        className="rounded-xl border-border text-sm"
                                     />
                                 </div>
                             </div>
                         </div>
                     )}
                     <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm border-slate-200">
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm border-border">
                             Ακύρωση
                         </Button>
                         <Button onClick={handleUpdate} disabled={saving} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700">
@@ -462,7 +460,7 @@ export default function GeneralIncome() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl border-border">Ακύρωση</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">
                             Διαγραφή
                         </AlertDialogAction>
