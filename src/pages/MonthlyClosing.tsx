@@ -69,8 +69,12 @@ export default function MonthlyClosing() {
             return cached ? JSON.parse(cached) : {};
         } catch { return {}; }
     });
-    const hasCached = Object.keys(statuses).length > 0;
-    const [loading, setLoading] = useState(!hasCached); // skip loading spinner if we have cache
+    const [loading, setLoading] = useState(() => {
+        try {
+            return !localStorage.getItem(cacheKey);
+        } catch { return true; }
+    });
+    const [refreshing, setRefreshing] = useState(false);
     const [expandedStep, setExpandedStep] = useState<string | null>(null);
 
     // ── Step definitions ──
@@ -284,7 +288,9 @@ export default function MonthlyClosing() {
     }, []);
 
     async function checkAllSteps() {
-        setLoading(true);
+        const hasExisting = Object.keys(statuses).length > 0;
+        if (!hasExisting) setLoading(true);
+        setRefreshing(true);
         const results: Record<string, StepStatus> = {};
         for (const step of steps) {
             try {
@@ -295,9 +301,9 @@ export default function MonthlyClosing() {
             }
         }
         setStatuses(results);
-        // Persist to localStorage
         try { localStorage.setItem(cacheKey, JSON.stringify(results)); } catch {}
         setLoading(false);
+        setRefreshing(false);
     }
 
     const completedCount = Object.values(statuses).filter(s => s.done).length;
@@ -320,11 +326,11 @@ export default function MonthlyClosing() {
                     variant="outline"
                     size="sm"
                     onClick={checkAllSteps}
-                    disabled={loading}
+                    disabled={refreshing}
                     className="rounded-xl gap-1.5 text-xs"
                 >
-                    {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    {loading && hasCached ? "Ενημέρωση..." : "Ανανέωση"}
+                    {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {refreshing ? "Ενημέρωση..." : "Ανανέωση"}
                 </Button>
             </div>
 
@@ -376,7 +382,7 @@ export default function MonthlyClosing() {
 
             {/* Steps */}
             <div className="space-y-3">
-                {loading && !hasCached ? (
+                {loading ? (
                     <div className="flex items-center justify-center p-16">
                         <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
                     </div>
