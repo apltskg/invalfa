@@ -138,6 +138,19 @@ export function FormInput({
   icon: Icon,
   className,
 }: FormInputProps) {
+  // Use custom DatePickerInput for date fields
+  if (type === "date") {
+    return (
+      <FormField label={label} hint={hint} className={className}>
+        <DatePickerInput
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder || "Επιλέξτε ημερομηνία"}
+        />
+      </FormField>
+    );
+  }
+
   return (
     <FormField label={label} hint={hint} className={className}>
       <div className="relative">
