@@ -10,8 +10,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
-  Package, Truck, Users, Receipt, Building2, CreditCard,
-  FileText, Search, ArrowRight
+  Package, Truck, Users, Receipt, CreditCard,
+  Search, ArrowRight, LayoutDashboard, Banknote, FileDown,
+  Settings, TrendingDown, TrendingUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
