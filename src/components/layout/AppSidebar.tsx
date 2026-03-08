@@ -162,7 +162,7 @@ export function AppSidebar() {
 
         {/* Platform Suite */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Globe className="h-3 w-3" />
             Platform Suite
           </SidebarGroupLabel>
