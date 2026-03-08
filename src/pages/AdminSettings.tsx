@@ -161,28 +161,28 @@ export default function AdminSettings() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Διαχείριση Χρηστών</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Χρήστες και δικαιώματα &mdash; {profiles?.length || 0} σύνολο</p>
+                    <h1 className="text-2xl font-bold text-foreground">Διαχείριση Χρηστών</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Χρήστες και δικαιώματα &mdash; {profiles?.length || 0} σύνολο</p>
                 </div>
-                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl h-9 text-sm bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl h-9 text-sm">
                     <UserPlus className="h-4 w-4" />
                     Προσθήκη Χρήστη
                 </Button>
             </div>
 
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-semibold text-slate-700">Χρήστες Συστήματος</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες</p>
+                        <p className="text-sm font-semibold text-foreground">Χρήστες Συστήματος</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες</p>
                     </div>
                     <div className="relative w-64">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Αναζήτηση email ή ονόμα..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 h-9 text-sm rounded-xl border-slate-200"
+                            className="pl-9 h-9 text-sm rounded-xl border-border"
                         />
                     </div>
                 </div>

@@ -263,21 +263,21 @@ export default function PackageDetail() {
     <div className="space-y-6 animate-in fade-in pb-20">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-slate-600 hover:bg-slate-100 h-9 text-sm">
+        <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-muted-foreground hover:bg-muted h-9 text-sm">
           <ArrowLeft className="h-4 w-4" />
           Πίσω στους Φακέλους
         </Button>
 
         <div className="grid gap-4 md:grid-cols-3">
           {/* Main Info Card */}
-          <Card className="md:col-span-2 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+          <Card className="md:col-span-2 rounded-2xl border border-border bg-card px-6 py-5">
             <div className="flex justify-between items-start">
               <div>
                 <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg text-xs">
                   {pkg.status === 'active' ? 'Ενεργό' : 'Ολοκληρωμένο'}
                 </Badge>
-                <h1 className="text-2xl font-bold text-slate-900">{pkg.client_name}</h1>
-                <p className="text-slate-400 mt-1 text-sm flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">{pkg.client_name}</h1>
+                <p className="text-muted-foreground mt-1 text-sm flex items-center gap-2">
                   {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"}
                   {" - "}
                   {pkg.end_date ? format(new Date(pkg.end_date), "dd MMM yyyy") : "?"}
@@ -291,22 +291,22 @@ export default function PackageDetail() {
           {/* Summary Dashboard */}
           <div className="grid gap-3 md:grid-cols-2 lg:col-span-1">
             {/* Stat mini-cards */}
-            <Card className="rounded-2xl border border-slate-200 bg-white border-l-4 border-l-emerald-500 overflow-hidden">
+            <Card className="rounded-2xl border border-border bg-card border-l-4 border-l-emerald-500 overflow-hidden">
               <div className="p-4">
-                <p className="text-xs text-slate-500">Έσοδα (αξία)</p>
+                <p className="text-xs text-muted-foreground">Έσοδα (αξία)</p>
                 <p className="text-2xl font-bold text-emerald-600 tabular-nums mt-0.5">€{totalIncome.toFixed(0)}</p>
               </div>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white border-l-4 border-l-rose-400 overflow-hidden">
+            <Card className="rounded-2xl border border-border bg-card border-l-4 border-l-rose-400 overflow-hidden">
               <div className="p-4">
-                <p className="text-xs text-slate-500">Έξοδα</p>
+                <p className="text-xs text-muted-foreground">Έξοδα</p>
                 <p className="text-2xl font-bold text-rose-500 tabular-nums mt-0.5">€{totalExpenses.toFixed(0)}</p>
               </div>
             </Card>
-            <Card className={`rounded-2xl border bg-white overflow-hidden col-span-2 border-l-4 ${netProfit >= 0 ? 'border-l-blue-500' : 'border-l-rose-500'}`}>
+            <Card className={`rounded-2xl border border-border bg-card overflow-hidden col-span-2 border-l-4 ${netProfit >= 0 ? 'border-l-blue-500' : 'border-l-rose-500'}`}>
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Καθαρό Κέρδος</p>
+                  <p className="text-xs text-muted-foreground">Καθαρό Κέρδος</p>
                   <p className={`text-2xl font-bold tabular-nums mt-0.5 ${netProfit >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
                     {netProfit >= 0 ? '+' : ''}€{netProfit.toFixed(2)}
                   </p>
@@ -315,30 +315,30 @@ export default function PackageDetail() {
               </div>
             </Card>
 
-            <Card className="rounded-2xl border border-slate-200 bg-white col-span-2">
+            <Card className="rounded-2xl border border-border bg-card col-span-2">
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-slate-600">Είσπραξη</p>
-                  <p className="text-xs text-slate-400">€{totalPaid.toFixed(0)} / €{totalIncome.toFixed(0)}</p>
+                  <p className="text-xs font-semibold text-foreground">Είσπραξη</p>
+                  <p className="text-xs text-muted-foreground">€{totalPaid.toFixed(0)} / €{totalIncome.toFixed(0)}</p>
                 </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all"
                     style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>Εισπραγμένα: €{totalPaid.toFixed(2)}</span>
                   <span>{totalIncome > 0 ? ((totalPaid / totalIncome) * 100).toFixed(0) : 0}%</span>
                 </div>
 
                 {recentPayments.length > 0 && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Τελευταίες Πληρωμές</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Τελευταίες Πληρωμές</p>
                     <div className="space-y-1">
                       {recentPayments.slice(0, 3).map((p, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-slate-400">{format(new Date(p.date), 'dd MMM yyyy')}</span>
+                          <span className="text-muted-foreground">{format(new Date(p.date), 'dd MMM yyyy')}</span>
                           <span className="font-medium text-emerald-600">+€{p.amount.toFixed(2)}</span>
                         </div>
                       ))}

@@ -316,8 +316,8 @@ export default function MonthlyClosing() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Μηνιαίο Κλείσιμο</h1>
-                    <p className="text-sm text-slate-500 mt-0.5 capitalize flex items-center gap-1.5">
+                <h1 className="text-2xl font-bold text-foreground">Μηνιαίο Κλείσιμο</h1>
+                <p className="text-sm text-muted-foreground mt-0.5 capitalize flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
                         Περίοδος: {period.label}
                     </p>
@@ -337,7 +337,7 @@ export default function MonthlyClosing() {
             {/* Progress Card */}
             <Card className={cn(
                 "rounded-2xl border-2 overflow-hidden transition-all",
-                allDone ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"
+                allDone ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800" : "border-border bg-card"
             )}>
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-3">
@@ -354,11 +354,11 @@ export default function MonthlyClosing() {
                             <div>
                                 <p className={cn(
                                     "text-lg font-bold",
-                                    allDone ? "text-emerald-700" : "text-slate-900"
+                                    allDone ? "text-emerald-700 dark:text-emerald-400" : "text-foreground"
                                 )}>
                                     {allDone ? "Κλείσιμο Ολοκληρώθηκε! 🎉" : `${completedCount} / ${totalSteps} Βήματα`}
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-muted-foreground">
                                     {allDone
                                         ? "Όλα τα βήματα ολοκληρώθηκαν — ο λογιστής μπορεί να δουλέψει"
                                         : "Ακολουθήστε τα βήματα παρακάτω για να ολοκληρώσετε"
@@ -368,7 +368,7 @@ export default function MonthlyClosing() {
                         </div>
                         <span className={cn(
                             "text-3xl font-black tabular-nums",
-                            allDone ? "text-emerald-600" : progressPct >= 50 ? "text-blue-600" : "text-slate-400"
+                            allDone ? "text-emerald-600" : progressPct >= 50 ? "text-blue-600" : "text-muted-foreground"
                         )}>
                             {progressPct}%
                         </span>
@@ -403,8 +403,8 @@ export default function MonthlyClosing() {
                                 <Card className={cn(
                                     "rounded-2xl border transition-all overflow-hidden",
                                     status.done
-                                        ? "border-emerald-200 bg-emerald-50/50"
-                                        : "border-slate-200 bg-white hover:border-slate-300"
+                                        ? "border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800"
+                                        : "border-border bg-card hover:border-border/80"
                                 )}>
                                     {/* Main row */}
                                     <button
@@ -432,7 +432,7 @@ export default function MonthlyClosing() {
                                             <div className="flex items-center gap-2">
                                                 <p className={cn(
                                                     "text-sm font-semibold",
-                                                    status.done ? "text-emerald-700" : "text-slate-800"
+                                                    status.done ? "text-emerald-700 dark:text-emerald-400" : "text-foreground"
                                                 )}>
                                                     {step.title}
                                                 </p>
@@ -448,7 +448,7 @@ export default function MonthlyClosing() {
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-slate-400 mt-0.5">{status.detail || step.description}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{status.detail || step.description}</p>
                                         </div>
 
                                         {/* Expand arrow */}
@@ -468,9 +468,9 @@ export default function MonthlyClosing() {
                                                 transition={{ duration: 0.2 }}
                                                 className="overflow-hidden"
                                             >
-                                                <div className="px-5 pb-4 pt-0 border-t border-slate-100">
+                                                <div className="px-5 pb-4 pt-0 border-t border-border">
                                                     <div className="pt-3 space-y-3">
-                                                        <p className="text-sm text-slate-600">{step.description}</p>
+                                                        <p className="text-sm text-muted-foreground">{step.description}</p>
 
                                                         {status.warning && (
                                                             <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
@@ -481,7 +481,7 @@ export default function MonthlyClosing() {
 
                                                         {status.count !== undefined && status.total !== undefined && (
                                                             <div className="space-y-1">
-                                                                <div className="flex justify-between text-xs text-slate-500">
+                                                                <div className="flex justify-between text-xs text-muted-foreground">
                                                                     <span>{status.count} / {status.total}</span>
                                                                     <span>{status.total > 0 ? Math.round((status.count / status.total) * 100) : 0}%</span>
                                                                 </div>
@@ -495,7 +495,7 @@ export default function MonthlyClosing() {
                                                         {/* External quick-access links */}
                                                         {step.links && step.links.length > 0 && (
                                                             <div>
-                                                                <p className="text-xs font-medium text-slate-500 mb-2">Γρήγορη πρόσβαση:</p>
+                                                                <p className="text-xs font-medium text-muted-foreground mb-2">Γρήγορη πρόσβαση:</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {step.links.map((link, li) => (
                                                                         <a
@@ -505,7 +505,7 @@ export default function MonthlyClosing() {
                                                                             rel="noopener noreferrer"
                                                                             className={cn(
                                                                                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                                                                                link.color || "text-slate-600 bg-slate-50 border-slate-200 hover:bg-slate-100"
+                                                                                link.color || "text-muted-foreground bg-muted border-border hover:bg-muted/80"
                                                                             )}
                                                                         >
                                                                             <ExternalLink className="h-3 w-3" />
@@ -545,13 +545,13 @@ export default function MonthlyClosing() {
 
             {/* Quick Tips */}
             {!loading && !allDone && (
-                <Card className="rounded-2xl border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+                <Card className="rounded-2xl border-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-100 dark:border-blue-900">
                     <CardContent className="p-5">
                         <div className="flex items-start gap-3">
                             <Sparkles className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-sm font-medium text-blue-800">Συμβουλή</p>
-                                <p className="text-xs text-blue-600 mt-0.5">
+                                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Συμβουλή</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                                     Ακολουθήστε τα βήματα με τη σειρά. Πρώτα ανεβάστε την τιμολογιέρα,
                                     μετά τα έξοδα, μετά τις κινήσεις τράπεζας, κάντε τις αντιστοιχίσεις
                                     και τέλος στείλτε τον σύνδεσμο στον λογιστή.

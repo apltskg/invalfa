@@ -140,7 +140,6 @@ export default function Travellers() {
         }
 
         if (form.id) {
-            // Update
             const { error } = await (supabase as any)
                 .from("travellers")
                 .update(payload)
@@ -148,7 +147,6 @@ export default function Travellers() {
             if (error) { toast.error("Αποτυχία ενημέρωσης"); console.error(error); }
             else { toast.success("Ενημερώθηκε!"); setEditing(false); }
         } else {
-            // Insert
             const { error } = await (supabase as any)
                 .from("travellers")
                 .insert(payload);
@@ -173,15 +171,15 @@ export default function Travellers() {
         return (
             <div className="flex items-center justify-between py-2.5 px-1 group">
                 <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-                    <p className={`text-sm text-slate-800 font-medium ${mono ? "font-mono tracking-wide" : ""}`}>{value}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
+                    <p className={`text-sm text-foreground font-medium ${mono ? "font-mono tracking-wide" : ""}`}>{value}</p>
                 </div>
                 <button
                     onClick={() => copyText(value)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-slate-100"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-muted"
                     title="Copy"
                 >
-                    <Copy className="h-3.5 w-3.5 text-slate-400" />
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
             </div>
         );
@@ -190,7 +188,7 @@ export default function Travellers() {
     // ── Form Field ──
     const FormField = ({ label, field, type = "text" }: { label: string; field: keyof Traveller; type?: string }) => (
         <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">{label}</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
             <Input
                 type={type}
                 value={(form[field] as string) || ""}
@@ -203,7 +201,7 @@ export default function Travellers() {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
-                <div className="h-8 w-8 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+                <div className="h-8 w-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
             </div>
         );
     }
@@ -211,34 +209,34 @@ export default function Travellers() {
     return (
         <div className="flex h-[calc(100vh-4rem)]">
             {/* ── Left: List ── */}
-            <div className="w-[380px] border-r border-slate-100 flex flex-col bg-white">
+            <div className="w-[380px] border-r border-border flex flex-col bg-card">
                 {/* Header */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-border">
                     <div className="flex items-center justify-between mb-3">
                         <div>
-                            <h1 className="text-lg font-bold text-slate-900">Ταξιδιώτες</h1>
-                            <p className="text-xs text-slate-400">{travellers.length} καταχωρήσεις</p>
+                            <h1 className="text-lg font-bold text-foreground">Ταξιδιώτες</h1>
+                            <p className="text-xs text-muted-foreground">{travellers.length} καταχωρήσεις</p>
                         </div>
                         <Button
                             size="sm"
                             onClick={() => { setForm(EMPTY); setShowAdd(true); }}
-                            className="rounded-xl h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700"
+                            className="rounded-xl h-8 px-3 text-xs"
                         >
                             <Plus className="h-3.5 w-3.5 mr-1" />
                             Νέος
                         </Button>
                     </div>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                         <Input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Αναζήτηση ονόματος, passport, τηλ..."
-                            className="pl-9 rounded-xl h-9 text-sm bg-slate-50 border-slate-100 focus:bg-white"
+                            className="pl-9 rounded-xl h-9 text-sm bg-muted/50 border-border focus:bg-background"
                         />
                         {search && (
                             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <X className="h-3.5 w-3.5 text-slate-300" />
+                                <X className="h-3.5 w-3.5 text-muted-foreground/50" />
                             </button>
                         )}
                     </div>
@@ -247,7 +245,7 @@ export default function Travellers() {
                 {/* List */}
                 <div className="flex-1 overflow-y-auto">
                     {filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-slate-400 text-sm">
+                        <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-sm">
                             <User className="h-8 w-8 mb-2 opacity-30" />
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Κανένας ταξιδιώτης"}
                         </div>
@@ -259,28 +257,28 @@ export default function Travellers() {
                                 <button
                                     key={t.id}
                                     onClick={() => { setSelected(t); setEditing(false); }}
-                                    className={`w-full text-left px-4 py-3 border-b border-slate-50 transition-all duration-150 flex items-center gap-3 ${isSelected
-                                            ? "bg-blue-50 border-l-2 border-l-blue-500"
-                                            : "hover:bg-slate-50 border-l-2 border-l-transparent"
+                                    className={`w-full text-left px-4 py-3 border-b border-border/50 transition-all duration-150 flex items-center gap-3 ${isSelected
+                                            ? "bg-primary/5 border-l-2 border-l-primary"
+                                            : "hover:bg-muted/50 border-l-2 border-l-transparent"
                                         }`}
                                 >
                                     <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${avatarColor(t.id)} flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm`}>
                                         {getInitials(t)}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-semibold truncate ${isSelected ? "text-blue-700" : "text-slate-800"}`}>
+                                        <p className={`text-sm font-semibold truncate ${isSelected ? "text-primary" : "text-foreground"}`}>
                                             {t.first_name} {t.last_name}
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             {t.passport_number && (
-                                                <span className="text-[11px] text-slate-400 font-mono">{t.passport_number}</span>
+                                                <span className="text-[11px] text-muted-foreground font-mono">{t.passport_number}</span>
                                             )}
                                             {age !== null && (
-                                                <span className="text-[11px] text-slate-300">• {age} ετών</span>
+                                                <span className="text-[11px] text-muted-foreground/60">• {age} ετών</span>
                                             )}
                                         </div>
                                     </div>
-                                    <ChevronRight className={`h-4 w-4 shrink-0 ${isSelected ? "text-blue-400" : "text-slate-200"}`} />
+                                    <ChevronRight className={`h-4 w-4 shrink-0 ${isSelected ? "text-primary/60" : "text-muted-foreground/30"}`} />
                                 </button>
                             );
                         })
@@ -289,9 +287,9 @@ export default function Travellers() {
             </div>
 
             {/* ── Right: Detail ── */}
-            <div className="flex-1 bg-slate-50 overflow-y-auto">
+            <div className="flex-1 bg-muted/30 overflow-y-auto">
                 {!selected ? (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-300">
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40">
                         <User className="h-16 w-16 mb-4 opacity-20" />
                         <p className="text-sm">Επιλέξτε ταξιδιώτη</p>
                     </div>
@@ -299,12 +297,12 @@ export default function Travellers() {
                     /* ── Edit Mode ── */
                     <div className="max-w-lg mx-auto p-8">
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-bold text-slate-800">Επεξεργασία</h2>
+                            <h2 className="text-lg font-bold text-foreground">Επεξεργασία</h2>
                             <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="rounded-xl h-8">
                                     <X className="h-3.5 w-3.5 mr-1" /> Ακύρωση
                                 </Button>
-                                <Button size="sm" onClick={handleSave} disabled={saving} className="rounded-xl h-8 bg-blue-600 hover:bg-blue-700">
+                                <Button size="sm" onClick={handleSave} disabled={saving} className="rounded-xl h-8">
                                     <Save className="h-3.5 w-3.5 mr-1" /> {saving ? "..." : "Αποθήκευση"}
                                 </Button>
                             </div>
@@ -329,11 +327,11 @@ export default function Travellers() {
                                 <FormField label="Email" field="email" type="email" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 mb-1 block">Σημειώσεις</label>
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Σημειώσεις</label>
                                 <textarea
                                     value={form.notes || ""}
                                     onChange={e => setForm(prev => ({ ...prev, notes: e.target.value || null }))}
-                                    className="w-full rounded-xl border border-slate-200 p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-xl border border-border bg-background p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
                         </div>
@@ -348,11 +346,11 @@ export default function Travellers() {
                                     {getInitials(selected)}
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-900">
+                                    <h2 className="text-xl font-bold text-foreground">
                                         {selected.first_name} {selected.last_name}
                                     </h2>
                                     {selected.birth_date && (
-                                        <p className="text-sm text-slate-400 mt-0.5">
+                                        <p className="text-sm text-muted-foreground mt-0.5">
                                             {fmtDate(selected.birth_date)} • {getAge(selected.birth_date)} ετών
                                         </p>
                                     )}
@@ -377,7 +375,7 @@ export default function Travellers() {
                                 <Button
                                     variant="outline" size="sm"
                                     onClick={() => handleDelete(selected.id)}
-                                    className="rounded-xl h-8 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    className="rounded-xl h-8 px-3 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -387,12 +385,12 @@ export default function Travellers() {
                         {/* Sections */}
                         <div className="space-y-1">
                             {/* Travel Documents */}
-                            <div className="bg-white rounded-2xl border border-slate-100 p-4 mb-4">
+                            <div className="bg-card rounded-2xl border border-border p-4 mb-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Plane className="h-4 w-4 text-blue-500" />
-                                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ταξιδιωτικά Έγγραφα</h3>
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ταξιδιωτικά Έγγραφα</h3>
                                 </div>
-                                <div className="divide-y divide-slate-50">
+                                <div className="divide-y divide-border/50">
                                     <Field label="Αρ. Διαβατηρίου" value={selected.passport_number} mono />
                                     {selected.passport_expiry && (
                                         <Field label="Λήξη Διαβατηρίου" value={fmtDate(selected.passport_expiry)} />
@@ -403,16 +401,16 @@ export default function Travellers() {
                                     )}
                                 </div>
                                 {!selected.passport_number && !selected.id_number && (
-                                    <p className="text-xs text-slate-300 italic py-2">Κανένα έγγραφο</p>
+                                    <p className="text-xs text-muted-foreground/50 italic py-2">Κανένα έγγραφο</p>
                                 )}
                             </div>
 
                             {/* Miles & Bonus */}
                             {selected.miles_bonus_card && (
-                                <div className="bg-white rounded-2xl border border-slate-100 p-4 mb-4">
+                                <div className="bg-card rounded-2xl border border-border p-4 mb-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <CreditCard className="h-4 w-4 text-amber-500" />
-                                        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Miles & Bonus</h3>
+                                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Miles & Bonus</h3>
                                     </div>
                                     <Field label="Αρ. Κάρτας" value={selected.miles_bonus_card} mono />
                                 </div>
@@ -420,12 +418,12 @@ export default function Travellers() {
 
                             {/* Contact */}
                             {(selected.phone || selected.email) && (
-                                <div className="bg-white rounded-2xl border border-slate-100 p-4 mb-4">
+                                <div className="bg-card rounded-2xl border border-border p-4 mb-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Phone className="h-4 w-4 text-emerald-500" />
-                                        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Επικοινωνία</h3>
+                                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Επικοινωνία</h3>
                                     </div>
-                                    <div className="divide-y divide-slate-50">
+                                    <div className="divide-y divide-border/50">
                                         <Field label="Τηλέφωνο" value={selected.phone} />
                                         <Field label="Email" value={selected.email} />
                                     </div>
@@ -434,9 +432,9 @@ export default function Travellers() {
 
                             {/* Notes */}
                             {selected.notes && (
-                                <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Σημειώσεις</h3>
-                                    <p className="text-sm text-slate-600">{selected.notes}</p>
+                                <div className="bg-card rounded-2xl border border-border p-4">
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Σημειώσεις</h3>
+                                    <p className="text-sm text-muted-foreground">{selected.notes}</p>
                                 </div>
                             )}
                         </div>
@@ -473,7 +471,7 @@ export default function Travellers() {
                             <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowAdd(false)}>
                                 Ακύρωση
                             </Button>
-                            <Button className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700" onClick={handleSave} disabled={saving}>
+                            <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving}>
                                 {saving ? "Αποθήκευση..." : "Αποθήκευση"}
                             </Button>
                         </div>

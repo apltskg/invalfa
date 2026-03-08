@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { useMonth } from "@/contexts/MonthContext";
 import { BankLogo, SUPPORTED_BANKS, getBankBorderColor } from "@/components/bank/BankLogo";
 import { BankPDFUploadModal } from "@/components/bank/BankPDFUploadModal";
+import { BankCSVUploadModal } from "@/components/bank/BankCSVUploadModal";
 import { TransactionRow } from "@/components/bank/TransactionRow";
 import { BulkMatchingView } from "@/components/bank/BulkMatchingView";
 import { useMatchingSuggestions } from "@/hooks/useMatchingSuggestions";
@@ -64,6 +65,7 @@ export default function BankSync() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [invoiceSelectorOpen, setInvoiceSelectorOpen] = useState(false);
   const [selectedTransactionForInvoice, setSelectedTransactionForInvoice] = useState<string | null>(null);
@@ -385,7 +387,15 @@ export default function BankSync() {
           )}
           <Button
             onClick={() => setUploadModalOpen(true)}
-            className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700"
+            className="rounded-xl gap-2 h-9 text-sm"
+          >
+            <FileText className="h-4 w-4" />
+            Εισαγωγή PDF
+          </Button>
+          <Button
+            onClick={() => setCsvModalOpen(true)}
+            variant="outline"
+            className="rounded-xl gap-2 h-9 text-sm"
           >
             <FileText className="h-4 w-4" />
             Εισαγωγή PDF
@@ -652,6 +662,11 @@ export default function BankSync() {
       <BankPDFUploadModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
+        onSuccess={fetchData}
+      />
+      <BankCSVUploadModal
+        open={csvModalOpen}
+        onOpenChange={setCsvModalOpen}
         onSuccess={fetchData}
       />
 

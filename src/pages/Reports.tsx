@@ -193,14 +193,14 @@ export default function Reports() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">Αναφορές</h1>
-                <p className="text-slate-500 text-sm mt-1">
+                <h1 className="text-2xl font-bold text-foreground">Αναφορές</h1>
+                <p className="text-muted-foreground text-sm mt-1">
                     Οικονομικές αναφορές και στατιστικά πληρωμών
                 </p>
             </div>
 
             <Tabs defaultValue="aged" className="space-y-6">
-                <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
+                <TabsList className="bg-muted p-1 rounded-xl h-10">
                     <TabsTrigger value="aged" className="rounded-lg gap-2 text-sm">
                         <Clock className="h-4 w-4" />
                         Ηλικιακή Ανάλυση
