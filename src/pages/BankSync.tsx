@@ -73,6 +73,8 @@ export default function BankSync() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [amountMin, setAmountMin] = useState<string>("");
+  const [amountMax, setAmountMax] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
