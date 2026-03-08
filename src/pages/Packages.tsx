@@ -285,11 +285,11 @@ export default function Packages() {
           <TabsTrigger value="completed" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρ.</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
+        <TabsContent value={activeTab} className="space-y-4 mt-4">
           {loading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-64 animate-pulse rounded-3xl bg-muted/50 border-none" />
+                <Card key={i} className="h-56 sm:h-64 animate-pulse rounded-2xl sm:rounded-3xl bg-muted/50 border-none" />
               ))}
             </div>
           ) : filteredPackages.length === 0 ? (
