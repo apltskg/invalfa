@@ -260,7 +260,7 @@ export default function GeneralIncome() {
                     <div className="divide-y divide-slate-100">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
-                            const cat = getCategoryById((inv as any).income_category_id);
+                            const cat = getCategoryById((inv as any).expense_category_id);
                             return (
                                 <div key={inv.id} className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
                                     {/* Name */}
