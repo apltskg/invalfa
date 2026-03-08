@@ -3,6 +3,7 @@ import { Camera, Upload, ArrowLeft, Loader2, Check, RotateCw, Zap, FileText } fr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveContactIds } from "@/lib/auto-link-contact";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
