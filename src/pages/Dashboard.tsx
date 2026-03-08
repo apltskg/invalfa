@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend, Area, AreaChart } from "recharts";
 import { RecurringExpensesWidget } from "@/components/dashboard/RecurringExpensesWidget";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 interface TimelineItem {
     id: string;
