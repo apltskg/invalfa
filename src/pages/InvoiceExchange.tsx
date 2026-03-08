@@ -430,22 +430,22 @@ export default function InvoiceExchange() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-slate-400">Όνομα</Label>
+                                    <Label className="text-xs text-muted-foreground">Όνομα</Label>
                                     <Input
                                         value={form.customer_name}
                                         onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
                                         placeholder="Ονοματεπώνυμο"
-                                        className="rounded-xl border-slate-200 text-sm h-9"
+                                        className="rounded-xl border-border text-sm h-9"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-slate-400">Email *</Label>
+                                    <Label className="text-xs text-muted-foreground">Email *</Label>
                                     <Input
                                         type="email"
                                         value={form.customer_email}
                                         onChange={e => setForm(f => ({ ...f, customer_email: e.target.value }))}
                                         placeholder="customer@example.com"
-                                        className="rounded-xl border-slate-200 text-sm h-9"
+                                        className="rounded-xl border-border text-sm h-9"
                                     />
                                 </div>
                             </div>
