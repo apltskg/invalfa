@@ -16,7 +16,7 @@ import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend, Area, AreaChart } from "recharts";
 
 interface TimelineItem {
     id: string;
@@ -34,6 +34,7 @@ export default function Dashboard() {
     const [unmatchedCount, setUnmatchedCount] = useState(0);
     const [pendingExpenses, setPendingExpenses] = useState(0);
     const [trendData, setTrendData] = useState<{ month: string; income: number; expenses: number }[]>([]);
+    const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
     const { startDate, endDate, displayLabel } = useMonth();
 
     // Show monthly closing banner in the first 10 days of the month
@@ -95,8 +96,9 @@ export default function Dashboard() {
             const pendingExp = (invoices || []).filter((i: any) => i.type === "expense" && !i.supplier_id).length;
             setPendingExpenses(pendingExp);
 
-            // Fetch 6-month trend
+            // Fetch 6-month trend + categories
             fetchTrend();
+            fetchCategories();
         } catch (error) {
             console.error("Dashboard fetch error:", error);
         } finally {
@@ -122,6 +124,40 @@ export default function Dashboard() {
             months.push({ month: label, income, expenses });
         }
         setTrendData(months);
+    }
+
+    async function fetchCategories() {
+        const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+        // Fetch expense invoices with their expense_category for current month
+        const { data: cats } = await supabase
+            .from("invoices")
+            .select("amount, expense_category_id, category")
+            .eq("type", "expense")
+            .gte("invoice_date", startDate)
+            .lte("invoice_date", endDate);
+
+        if (!cats || cats.length === 0) {
+            setCategoryData([]);
+            return;
+        }
+
+        // Fetch category names
+        const { data: expCats } = await supabase.from("expense_categories").select("id, name_el");
+        const catMap = new Map((expCats || []).map(c => [c.id, c.name_el]));
+
+        // Group by category
+        const grouped: Record<string, number> = {};
+        for (const inv of cats) {
+            const name = (inv.expense_category_id && catMap.get(inv.expense_category_id)) || inv.category || "Άλλο";
+            grouped[name] = (grouped[name] || 0) + (inv.amount || 0);
+        }
+
+        const sorted = Object.entries(grouped)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([name, value], i) => ({ name, value: Math.round(value), color: COLORS[i % COLORS.length] }));
+
+        setCategoryData(sorted);
     }
 
     const totalIncome = items
@@ -372,41 +408,102 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* 6-Month Trend Chart */}
-            {trendData.length > 0 && (
-                <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                    <CardHeader className="px-5 py-4 border-b border-slate-100">
-                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-slate-400" />
-                            Τάση 6 Μηνών
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-5">
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={trendData} barGap={4}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
-                                <Tooltip
-                                    formatter={(value: number, name: string) => [`€${value.toFixed(0)}`, name === "income" ? "Έσοδα" : "Έξοδα"]}
-                                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
-                                />
-                                <Bar dataKey="income" fill="#10b981" radius={[6, 6, 0, 0]} name="income" />
-                                <Bar dataKey="expenses" fill="#f43f5e" radius={[6, 6, 0, 0]} name="expenses" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                        <div className="flex items-center justify-center gap-6 mt-2">
-                            <div className="flex items-center gap-1.5">
-                                <div className="h-3 w-3 rounded-sm bg-emerald-500" />
-                                <span className="text-xs text-slate-500">Έσοδα</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="h-3 w-3 rounded-sm bg-rose-500" />
-                                <span className="text-xs text-slate-500">Έξοδα</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Charts Grid */}
+            {(trendData.length > 0 || categoryData.length > 0) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* 6-Month Trend Area Chart */}
+                    {trendData.length > 0 && (
+                        <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                            <CardHeader className="px-5 py-4 border-b border-slate-100">
+                                <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                    <BarChart3 className="h-4 w-4 text-slate-400" />
+                                    Τάση Εσόδων / Εξόδων (6 μήνες)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-5">
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <AreaChart data={trendData}>
+                                        <defs>
+                                            <linearGradient id="gradIncome" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="gradExpense" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                                        <Tooltip
+                                            formatter={(value: number, name: string) => [`€${value.toFixed(0)}`, name === "income" ? "Έσοδα" : "Έξοδα"]}
+                                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                                        />
+                                        <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} fill="url(#gradIncome)" name="income" />
+                                        <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2.5} fill="url(#gradExpense)" name="expenses" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                                <div className="flex items-center justify-center gap-6 mt-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                                        <span className="text-xs text-slate-500">Έσοδα</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-3 w-3 rounded-full bg-rose-500" />
+                                        <span className="text-xs text-slate-500">Έξοδα</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Top Categories Pie Chart */}
+                    {categoryData.length > 0 && (
+                        <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                            <CardHeader className="px-5 py-4 border-b border-slate-100">
+                                <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                    <Receipt className="h-4 w-4 text-slate-400" />
+                                    Κορυφαίες Κατηγορίες Εξόδων
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-5">
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <PieChart>
+                                        <Pie
+                                            data={categoryData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={55}
+                                            outerRadius={90}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            stroke="none"
+                                        >
+                                            {categoryData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value: number) => [`€${value.toLocaleString()}`, ""]}
+                                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
+                                    {categoryData.map((cat) => (
+                                        <div key={cat.name} className="flex items-center gap-1.5">
+                                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                            <span className="text-[11px] text-slate-500">{cat.name}</span>
+                                            <span className="text-[10px] font-medium text-slate-400">€{cat.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             )}
 
             {/* Timeline */}

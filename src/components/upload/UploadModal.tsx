@@ -10,6 +10,7 @@ import { ExtractedData, InvoiceCategory } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { ExtractionProgress } from "./ExtractionProgress";
 import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
+import { runAutoMatching } from "@/lib/auto-matching";
 
 interface UploadedFile {
   file?: File;
@@ -266,6 +267,18 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         });
       } else {
         toast.success("Αποθηκεύτηκε επιτυχώς");
+      }
+
+      // Auto-matching: try to find matching bank transactions
+      try {
+        const result = await runAutoMatching({ minConfidence: 70, dryRun: false });
+        if (result.matched > 0) {
+          toast.success(`🔗 Αυτόματη αντιστοίχιση: ${result.matched} συναλλαγή(-ες) συνδέθηκαν!`, { duration: 5000 });
+        } else if (result.suggested > 0) {
+          toast.info(`💡 Βρέθηκαν ${result.suggested} πιθανές αντιστοιχίσεις στο Bank Sync`, { duration: 5000 });
+        }
+      } catch (e) {
+        console.warn("Auto-matching after upload failed:", e);
       }
 
       onUploadComplete?.();
