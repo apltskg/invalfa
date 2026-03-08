@@ -462,6 +462,7 @@ export type Database = {
           invoice_id: string
           message: string | null
           status: string
+          token: string
           viewed_at: string | null
         }
         Insert: {
@@ -475,6 +476,7 @@ export type Database = {
           invoice_id: string
           message?: string | null
           status?: string
+          token?: string
           viewed_at?: string | null
         }
         Update: {
@@ -488,6 +490,7 @@ export type Database = {
           invoice_id?: string
           message?: string | null
           status?: string
+          token?: string
           viewed_at?: string | null
         }
         Relationships: [
