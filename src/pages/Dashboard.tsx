@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, CreditCard, TrendingUp, TrendingDown,
     ArrowUpRight, ArrowDownRight, Calendar, Building2,
-    Loader2, BarChart3, ClipboardCheck, ChevronRight, X
+    Loader2, BarChart3, ClipboardCheck, ChevronRight, X,
+    AlertCircle, Receipt, ArrowLeftRight
 } from "lucide-react";
-import { format, parseISO, subMonths } from "date-fns";
+import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface TimelineItem {
     id: string;
