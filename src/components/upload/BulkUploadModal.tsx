@@ -31,6 +31,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveContactIds } from "@/lib/auto-link-contact";
 import { toast } from "sonner";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
 
