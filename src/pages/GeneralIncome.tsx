@@ -137,7 +137,7 @@ export default function GeneralIncome() {
 
     // Per-category breakdown
     const byCategory = invoices.reduce((acc, inv) => {
-        const catId = inv.expense_category_id || "__none";
+        const catId = (inv as any).expense_category_id || "__none";
         acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
         return acc;
     }, {} as Record<string, number>);
