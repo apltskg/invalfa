@@ -244,9 +244,9 @@ export default function InvoiceExchange() {
             </div>
 
             {/* Info banner */}
-            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-3">
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 flex items-start gap-3">
                 <Share2 className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                <div className="text-sm text-blue-700">
+                <div className="text-sm text-blue-600 dark:text-blue-400">
                     <strong>Πώς λειτουργεί το Invoice Hub:</strong> Επιλέγεις ένα τιμολόγιο εσόδου, βάζεις το email του πελάτη και το στέλνεις.
                     Ο πελάτης λαμβάνει email με ασφαλές link και βλέπει το τιμολόγιο στο δικό του dashboard —
                     χωρίς να χρειάζεται να εγγραφεί πουθενά.
