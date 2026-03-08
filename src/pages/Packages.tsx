@@ -359,7 +359,7 @@ export default function Packages() {
                         </div>
                         <div>
                           <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Κέρδος</p>
-                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                             {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
                           </p>
                         </div>

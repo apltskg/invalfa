@@ -105,20 +105,32 @@ export default function Dashboard() {
     }
 
     async function fetchTrend() {
-        const months: { month: string; income: number; expenses: number }[] = [];
         const now = new Date();
+        const sixMonthsAgo = subMonths(now, 5);
+        const rangeStart = format(startOfMonth(sixMonthsAgo), "yyyy-MM-dd");
+        const rangeEnd = format(endOfMonth(now), "yyyy-MM-dd");
+
+        // Single query for all 6 months
+        const { data: invs } = await supabase
+            .from("invoices")
+            .select("amount, type, invoice_date")
+            .gte("invoice_date", rangeStart)
+            .lte("invoice_date", rangeEnd);
+
+        const months: { month: string; income: number; expenses: number }[] = [];
         for (let i = 5; i >= 0; i--) {
             const target = subMonths(now, i);
-            const mStart = format(startOfMonth(target), "yyyy-MM-dd");
-            const mEnd = format(endOfMonth(target), "yyyy-MM-dd");
+            const mStart = startOfMonth(target).getTime();
+            const mEnd = endOfMonth(target).getTime();
             const label = format(target, "MMM", { locale: el });
 
-            const [{ data: invs }] = await Promise.all([
-                supabase.from("invoices").select("amount, type").gte("invoice_date", mStart).lte("invoice_date", mEnd),
-            ]);
+            const monthInvs = (invs || []).filter((inv: any) => {
+                const d = new Date(inv.invoice_date).getTime();
+                return d >= mStart && d <= mEnd;
+            });
 
-            const income = (invs || []).filter((i: any) => i.type === "income").reduce((s: number, i: any) => s + (i.amount || 0), 0);
-            const expenses = (invs || []).filter((i: any) => i.type === "expense").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+            const income = monthInvs.filter((i: any) => i.type === "income").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+            const expenses = monthInvs.filter((i: any) => i.type === "expense").reduce((s: number, i: any) => s + (i.amount || 0), 0);
             months.push({ month: label, income, expenses });
         }
         setTrendData(months);
