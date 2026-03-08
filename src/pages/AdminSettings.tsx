@@ -170,19 +170,19 @@ export default function AdminSettings() {
                 </Button>
             </div>
 
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-semibold text-slate-700">Χρήστες Συστήματος</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες</p>
+                        <p className="text-sm font-semibold text-foreground">Χρήστες Συστήματος</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Συνολικά {profiles?.length || 0} εγγεγραμμένοι χρήστες</p>
                     </div>
                     <div className="relative w-64">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Αναζήτηση email ή ονόμα..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 h-9 text-sm rounded-xl border-slate-200"
+                            className="pl-9 h-9 text-sm rounded-xl border-border"
                         />
                     </div>
                 </div>
