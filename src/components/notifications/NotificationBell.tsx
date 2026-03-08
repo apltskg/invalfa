@@ -109,7 +109,7 @@ export function NotificationBell() {
             const { count } = await supabase
                 .from("bank_transactions")
                 .select("*", { count: 'exact', head: true })
-                .is("matched", false);
+                .eq("match_status", "unmatched");
 
             if (count && count > 0) {
                 newAlerts.push({
