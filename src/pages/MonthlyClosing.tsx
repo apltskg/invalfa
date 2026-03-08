@@ -61,8 +61,16 @@ function getTargetPeriod() {
 export default function MonthlyClosing() {
     const navigate = useNavigate();
     const [period] = useState(getTargetPeriod);
-    const [statuses, setStatuses] = useState<Record<string, StepStatus>>({});
-    const [loading, setLoading] = useState(true);
+    // Persistence: load cached statuses from localStorage
+    const cacheKey = `monthly-closing-${period.monthKey}`;
+    const [statuses, setStatuses] = useState<Record<string, StepStatus>>(() => {
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            return cached ? JSON.parse(cached) : {};
+        } catch { return {}; }
+    });
+    const hasCached = Object.keys(statuses).length > 0;
+    const [loading, setLoading] = useState(!hasCached); // skip loading spinner if we have cache
     const [expandedStep, setExpandedStep] = useState<string | null>(null);
 
     // ── Step definitions ──
@@ -287,6 +295,8 @@ export default function MonthlyClosing() {
             }
         }
         setStatuses(results);
+        // Persist to localStorage
+        try { localStorage.setItem(cacheKey, JSON.stringify(results)); } catch {}
         setLoading(false);
     }
 
@@ -314,7 +324,7 @@ export default function MonthlyClosing() {
                     className="rounded-xl gap-1.5 text-xs"
                 >
                     {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    Ανανέωση
+                    {loading && hasCached ? "Ενημέρωση..." : "Ανανέωση"}
                 </Button>
             </div>
 
@@ -366,7 +376,7 @@ export default function MonthlyClosing() {
 
             {/* Steps */}
             <div className="space-y-3">
-                {loading ? (
+                {loading && !hasCached ? (
                     <div className="flex items-center justify-center p-16">
                         <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
                     </div>
