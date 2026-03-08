@@ -242,6 +242,7 @@ export async function runAutoMatching(
             { data: invoiceMatches },
             { data: suppliers },
             { data: customers },
+            { data: invoiceListItems },
         ] = await Promise.all([
             txnQuery,
             supabase.from("invoice_transaction_matches").select("transaction_id"),
@@ -249,6 +250,7 @@ export async function runAutoMatching(
             supabase.from("invoice_transaction_matches").select("invoice_id"),
             supabase.from("suppliers").select("id, name, vat_number"),
             supabase.from("customers").select("id, name, vat_number"),
+            supabase.from("invoice_list_items").select("id, invoice_number, client_name, client_vat, invoice_date, net_amount, total_amount, match_status").neq("match_status", "matched"),
         ]);
 
         if (!transactions || transactions.length === 0) return result;
