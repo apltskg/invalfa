@@ -62,6 +62,7 @@ export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { isAdmin } = useAdmin();
   const [companyName, setCompanyName] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     supabase
