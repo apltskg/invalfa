@@ -168,8 +168,12 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
     /* ── CRUD ──────────────────────────────────────────────────────── */
     function checkDuplicate(vat: string) {
-        if (!vat || vat.length < 9) { setDuplicateWarning(null); return; }
-        const existing = entities.find((e: any) => e.vat_number === vat && e.id !== editingId);
+        const clean = (vat || '').replace(/\D/g, '');
+        if (!clean || clean.length < 9) { setDuplicateWarning(null); return; }
+        const existing = entities.find((e: any) => {
+            const eVat = (e.vat_number || '').replace(/\D/g, '');
+            return eVat === clean && e.id !== editingId;
+        });
         setDuplicateWarning(existing || null);
     }
 
@@ -182,7 +186,11 @@ export default function ContactBook({ mode }: ContactBookProps) {
         const payload: any = {
             name: formData.name, contact_person: formData.contact_person || null,
             email: formData.email || null, phone: formData.phone || null,
-            address: formData.address || null, vat_number: formData.vat_number || null,
+            address: formData.address || null,
+            vat_number: (() => {
+                const clean = (formData.vat_number || '').replace(/\D/g, '');
+                return /^\d{9}$/.test(clean) ? clean : (formData.vat_number?.trim() || null);
+            })(),
             notes: formData.notes || null,
         };
         if (!isCustomers) {

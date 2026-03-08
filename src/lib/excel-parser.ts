@@ -370,12 +370,19 @@ export function parseInvoiceExcel(file: File): Promise<ParsedInvoiceData> {
           calculatedTotals.vat += vatAmount;
           calculatedTotals.gross += totalAmount;
 
+          // Validate and clean VAT number - must be exactly 9 digits for Greek AFM
+          let clientVat = columnMapping.clientVat >= 0 ? String(row[columnMapping.clientVat] || '').trim() : '';
+          // Strip any non-digit chars (e.g. "EL123456789" → "123456789")
+          const cleanVat = clientVat.replace(/\D/g, '');
+          // Only keep if it's a valid 9-digit Greek VAT
+          clientVat = /^\d{9}$/.test(cleanVat) ? cleanVat : '';
+
           rows.push({
             date: parseGreekDate(dateVal),
             invoiceNumber,
             mydataCode,
             clientName: columnMapping.clientName >= 0 ? String(row[columnMapping.clientName] || '') : '',
-            clientVat: columnMapping.clientVat >= 0 ? String(row[columnMapping.clientVat] || '') : '',
+            clientVat,
             netAmount: finalNet,
             vatAmount,
             totalAmount,
