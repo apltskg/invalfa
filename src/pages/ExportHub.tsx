@@ -384,7 +384,7 @@ export default function ExportHub() {
           className="rounded-xl gap-2"
         >
           <FileSpreadsheet className="h-4 w-4" />
-          {exportingXlsx ? "Generating..." : "Download XLSX Report"}
+          {exportingXlsx ? "Δημιουργία..." : "Λήψη XLSX Αναφοράς"}
         </Button>
         <Button
           onClick={generateZip}
