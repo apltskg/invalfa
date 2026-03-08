@@ -16,7 +16,7 @@ import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend, Area, AreaChart } from "recharts";
 
 interface TimelineItem {
     id: string;
