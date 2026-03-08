@@ -336,10 +336,10 @@ export default function InvoiceExchange() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-44 rounded-xl">
-                                            <DropdownMenuItem className="gap-2 text-sm text-slate-600">
+                                            <DropdownMenuItem className="gap-2 text-sm">
                                                 <Eye className="h-4 w-4" /> Προβολή Link
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="gap-2 text-sm text-slate-600">
+                                            <DropdownMenuItem className="gap-2 text-sm">
                                                 <Mail className="h-4 w-4" /> Επανάληψη Email
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
