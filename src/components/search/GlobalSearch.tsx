@@ -254,7 +254,7 @@ export function GlobalSearch() {
                           {item.badge}
                         </Badge>
                       )}
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     </CommandItem>
                   ))}
                 </CommandGroup>
