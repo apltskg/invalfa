@@ -343,15 +343,15 @@ export default function Packages() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-border/50">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t border-border/50">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Έξοδα</p>
-                          <p className="font-semibold text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
+                          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Έξοδα</p>
+                          <p className="font-semibold text-sm sm:text-base text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Κέρδος (Εκτ.)</p>
-                          <p className={`font-semibold ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Κέρδος</p>
+                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
                           </p>
                         </div>
