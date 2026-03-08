@@ -288,8 +288,9 @@ export default function MonthlyClosing() {
     }, []);
 
     async function checkAllSteps() {
-        // Only show full loading if no cached data
-        if (!hasCached) setLoading(true);
+        const hasExisting = Object.keys(statuses).length > 0;
+        if (!hasExisting) setLoading(true);
+        setRefreshing(true);
         const results: Record<string, StepStatus> = {};
         for (const step of steps) {
             try {
@@ -300,9 +301,9 @@ export default function MonthlyClosing() {
             }
         }
         setStatuses(results);
-        // Persist to localStorage
         try { localStorage.setItem(cacheKey, JSON.stringify(results)); } catch {}
         setLoading(false);
+        setRefreshing(false);
     }
 
     const completedCount = Object.values(statuses).filter(s => s.done).length;
