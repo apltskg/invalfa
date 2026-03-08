@@ -309,14 +309,14 @@ export default function InvoiceExchange() {
 
                                     {/* Invoice ref */}
                                     <div className="flex items-center gap-1.5 min-w-0">
-                                        <FileText className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                                        <span className="text-xs text-slate-500 truncate">
+                                        <FileText className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                                        <span className="text-xs text-muted-foreground truncate">
                                             {share.invoice_id.slice(0, 8)}…
                                         </span>
                                     </div>
 
                                     {/* Date */}
-                                    <p className="text-sm text-slate-400">
+                                    <p className="text-sm text-muted-foreground">
                                         {share.created_at
                                             ? format(new Date(share.created_at), "dd/MM/yyyy")
                                             : "—"}
