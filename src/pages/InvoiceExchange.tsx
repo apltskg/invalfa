@@ -289,11 +289,11 @@ export default function InvoiceExchange() {
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-border">
                         {filtered.map(share => {
                             const statusCfg = STATUS_CONFIG[share.status] || STATUS_CONFIG.pending;
                             return (
-                                <div key={share.id} className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                <div key={share.id} className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 items-center px-5 py-3.5 hover:bg-muted/50 transition-colors group">
                                     {/* Recipient */}
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
