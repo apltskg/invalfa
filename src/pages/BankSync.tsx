@@ -387,7 +387,15 @@ export default function BankSync() {
           )}
           <Button
             onClick={() => setUploadModalOpen(true)}
-            className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700"
+            className="rounded-xl gap-2 h-9 text-sm"
+          >
+            <FileText className="h-4 w-4" />
+            Εισαγωγή PDF
+          </Button>
+          <Button
+            onClick={() => setCsvModalOpen(true)}
+            variant="outline"
+            className="rounded-xl gap-2 h-9 text-sm"
           >
             <FileText className="h-4 w-4" />
             Εισαγωγή PDF
