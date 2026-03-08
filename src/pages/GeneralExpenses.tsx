@@ -33,7 +33,7 @@ import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 interface InvoiceListEntry {
     id: string;

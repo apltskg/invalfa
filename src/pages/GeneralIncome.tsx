@@ -25,7 +25,7 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 interface IncomeCategory {
     id: string;
