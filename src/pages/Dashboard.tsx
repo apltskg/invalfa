@@ -31,6 +31,9 @@ export default function Dashboard() {
     const [items, setItems] = useState<TimelineItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [dismissedBanner, setDismissedBanner] = useState(false);
+    const [unmatchedCount, setUnmatchedCount] = useState(0);
+    const [pendingExpenses, setPendingExpenses] = useState(0);
+    const [trendData, setTrendData] = useState<{ month: string; income: number; expenses: number }[]>([]);
     const { startDate, endDate, displayLabel } = useMonth();
 
     // Show monthly closing banner in the first 10 days of the month
