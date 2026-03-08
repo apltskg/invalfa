@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
 
 // ── Shared Dialog Shell ──────────────────────────────────────────────
 interface FormDialogProps {
@@ -138,6 +139,19 @@ export function FormInput({
   icon: Icon,
   className,
 }: FormInputProps) {
+  // Use custom DatePickerInput for date fields
+  if (type === "date") {
+    return (
+      <FormField label={label} hint={hint} className={className}>
+        <DatePickerInput
+          value={String(value)}
+          onChange={onChange}
+          placeholder={placeholder || "Επιλέξτε ημερομηνία"}
+        />
+      </FormField>
+    );
+  }
+
   return (
     <FormField label={label} hint={hint} className={className}>
       <div className="relative">
