@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { useMonth } from "@/contexts/MonthContext";
 import { BankLogo, SUPPORTED_BANKS, getBankBorderColor } from "@/components/bank/BankLogo";
 import { BankPDFUploadModal } from "@/components/bank/BankPDFUploadModal";
+import { BankCSVUploadModal } from "@/components/bank/BankCSVUploadModal";
 import { TransactionRow } from "@/components/bank/TransactionRow";
 import { BulkMatchingView } from "@/components/bank/BulkMatchingView";
 import { useMatchingSuggestions } from "@/hooks/useMatchingSuggestions";
