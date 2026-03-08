@@ -217,27 +217,27 @@ export default function InvoiceExchange() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-blue-500">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-blue-500">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Συνολικές Αποστολές</p>
+                        <p className="text-xs font-medium text-muted-foreground">Συνολικές Αποστολές</p>
                         <p className="text-2xl font-bold text-blue-600 mt-0.5">{stats.total}</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-amber-400">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-amber-400">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Εστάλησαν</p>
+                        <p className="text-xs font-medium text-muted-foreground">Εστάλησαν</p>
                         <p className="text-2xl font-bold text-amber-500 mt-0.5">{stats.sent}</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-purple-400">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-purple-400">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Προβλήθηκαν</p>
+                        <p className="text-xs font-medium text-muted-foreground">Προβλήθηκαν</p>
                         <p className="text-2xl font-bold text-purple-500 mt-0.5">{stats.viewed}</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-xl border-slate-200 bg-white border-l-4 border-l-emerald-500">
+                <Card className="rounded-xl border-border bg-card border-l-4 border-l-emerald-500">
                     <CardContent className="p-4">
-                        <p className="text-xs font-medium text-slate-500">Επιβεβαιώθηκαν</p>
+                        <p className="text-xs font-medium text-muted-foreground">Επιβεβαιώθηκαν</p>
                         <p className="text-2xl font-bold text-emerald-600 mt-0.5">{stats.acknowledged}</p>
                     </CardContent>
                 </Card>
