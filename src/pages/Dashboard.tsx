@@ -86,11 +86,42 @@ export default function Dashboard() {
             ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             setItems(timeline);
+
+            // Widget data: unmatched bank transactions
+            const unmatched = (transactions || []).filter((t: any) => t.match_status === "unmatched").length;
+            setUnmatchedCount(unmatched);
+
+            // Widget data: pending expenses (no invoice_date or recent)
+            const pendingExp = (invoices || []).filter((i: any) => i.type === "expense" && !i.supplier_id).length;
+            setPendingExpenses(pendingExp);
+
+            // Fetch 6-month trend
+            fetchTrend();
         } catch (error) {
             console.error("Dashboard fetch error:", error);
         } finally {
             setLoading(false);
         }
+    }
+
+    async function fetchTrend() {
+        const months: { month: string; income: number; expenses: number }[] = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const target = subMonths(now, i);
+            const mStart = format(startOfMonth(target), "yyyy-MM-dd");
+            const mEnd = format(endOfMonth(target), "yyyy-MM-dd");
+            const label = format(target, "MMM", { locale: el });
+
+            const [{ data: invs }] = await Promise.all([
+                supabase.from("invoices").select("amount, type").gte("invoice_date", mStart).lte("invoice_date", mEnd),
+            ]);
+
+            const income = (invs || []).filter((i: any) => i.type === "income").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+            const expenses = (invs || []).filter((i: any) => i.type === "expense").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+            months.push({ month: label, income, expenses });
+        }
+        setTrendData(months);
     }
 
     const totalIncome = items
