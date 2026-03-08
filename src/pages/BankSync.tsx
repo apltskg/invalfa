@@ -311,7 +311,7 @@ export default function BankSync() {
     });
 
     return result;
-  }, [transactions, searchQuery, selectedBanks, statusFilter, sortField, sortDirection]);
+  }, [transactions, searchQuery, selectedBanks, statusFilter, amountMin, amountMax, sortField, sortDirection]);
 
   // Group by date
   const groupedTransactions = useMemo(() => {
