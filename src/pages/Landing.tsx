@@ -4,7 +4,7 @@ import {
     FileText, BarChart2, CreditCard, Package, Users, Zap,
     CheckCircle2, ArrowRight, Star, Shield, TrendingUp,
     Building2, Globe, Download, ChevronRight, Menu, X,
-    Layers, Inbox, Bot, BadgeEuro, Receipt, Lock, PhoneCall
+    Layers, Inbox, Bot, BadgeEuro, Receipt, Lock, PhoneCall, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
