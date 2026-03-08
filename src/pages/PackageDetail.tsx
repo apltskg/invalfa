@@ -449,7 +449,7 @@ export default function PackageDetail() {
           <div className="space-y-3">
             {transactions.length === 0 ? (
               <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
-                <p className="text-muted-foreground">No transactions found</p>
+                <p className="text-muted-foreground">Δεν βρέθηκαν κινήσεις</p>
               </Card>
             ) : (
               transactions.map((txn) => {

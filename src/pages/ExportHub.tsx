@@ -515,7 +515,7 @@ export default function ExportHub() {
                   {log.month_year}
                 </Badge>
                 <span className="text-muted-foreground">
-                  {log.packages_included} packages, {log.invoices_included} invoices
+                  {log.packages_included} πακέτα, {log.invoices_included} παραστατικά
                 </span>
                 <span className="text-muted-foreground">{format(new Date(log.sent_at), "dd MMM yyyy, HH:mm")}</span>
               </div>

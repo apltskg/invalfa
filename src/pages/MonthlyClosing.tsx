@@ -254,12 +254,11 @@ export default function MonthlyClosing() {
             bgColor: "bg-emerald-50",
             route: "/settings",
             checkFn: async () => {
-                // Check if accountant link was generated for this period
-                const { count } = await (supabase as any)
-                    .from("accountant_links")
+                // Check if accountant magic link was generated for this period
+                const { count } = await supabase
+                    .from("accountant_magic_links")
                     .select("*", { count: "exact", head: true })
-                    .gte("created_at", period.start)
-                    .lte("created_at", period.end + "T23:59:59");
+                    .eq("month_year", period.monthKey);
                 return {
                     done: (count || 0) > 0,
                     count: count || 0,
