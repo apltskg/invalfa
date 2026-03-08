@@ -166,10 +166,17 @@ export default function Travellers() {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Σίγουρα θέλετε να διαγράψετε;")) return;
-        const { error } = await (supabase as any).from("travellers").delete().eq("id", id);
+        setDeleteTargetId(id);
+        setDeleteConfirmOpen(true);
+    }
+
+    async function confirmDelete() {
+        if (!deleteTargetId) return;
+        const { error } = await (supabase as any).from("travellers").delete().eq("id", deleteTargetId);
         if (error) toast.error("Αποτυχία διαγραφής");
-        else { toast.success("Διαγράφηκε!"); setSelected(null); }
+        else { toast.success("Διαγράφηκε!"); if (selected?.id === deleteTargetId) setSelected(null); }
+        setDeleteConfirmOpen(false);
+        setDeleteTargetId(null);
         await fetchTravellers();
     }
 
