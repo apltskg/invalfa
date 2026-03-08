@@ -93,6 +93,9 @@ export default function ContactBook({ mode }: ContactBookProps) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [duplicateWarning, setDuplicateWarning] = useState<any | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     const emptyForm = {
         name: "", contact_person: "", email: "", phone: "",
