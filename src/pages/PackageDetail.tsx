@@ -303,10 +303,10 @@ export default function PackageDetail() {
                 <p className="text-2xl font-bold text-rose-500 tabular-nums mt-0.5">€{totalExpenses.toFixed(0)}</p>
               </div>
             </Card>
-            <Card className={`rounded-2xl border bg-white overflow-hidden col-span-2 border-l-4 ${netProfit >= 0 ? 'border-l-blue-500' : 'border-l-rose-500'}`}>
+            <Card className={`rounded-2xl border border-border bg-card overflow-hidden col-span-2 border-l-4 ${netProfit >= 0 ? 'border-l-blue-500' : 'border-l-rose-500'}`}>
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500">Καθαρό Κέρδος</p>
+                  <p className="text-xs text-muted-foreground">Καθαρό Κέρδος</p>
                   <p className={`text-2xl font-bold tabular-nums mt-0.5 ${netProfit >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
                     {netProfit >= 0 ? '+' : ''}€{netProfit.toFixed(2)}
                   </p>
