@@ -265,8 +265,8 @@ export default function InvoiceExchange() {
             </div>
 
             {/* List */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="grid grid-cols-[1fr_160px_120px_100px_44px] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     <span>Παραλήπτης</span>
                     <span>Τιμολόγιο</span>
                     <span>Ημερομηνία</span>
