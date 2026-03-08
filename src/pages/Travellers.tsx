@@ -274,7 +274,7 @@ export default function Travellers() {
                                             : "hover:bg-muted/50 border-l-2 border-l-transparent"
                                         }`}
                                 >
-                                    <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${avatarColor(t.id)} flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm`}>
+                                    <div className={`h-9 w-9 rounded-lg ${avatarColor(t.id)} flex items-center justify-center text-xs font-semibold shrink-0`}>
                                         {getInitials(t)}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -285,8 +285,8 @@ export default function Travellers() {
                                             {t.passport_number && (
                                                 <span className="text-[11px] text-muted-foreground font-mono">{t.passport_number}</span>
                                             )}
-                                            {age !== null && (
-                                                <span className="text-[11px] text-muted-foreground/60">• {age} ετών</span>
+                                            {t.phone && !t.passport_number && (
+                                                <span className="text-[11px] text-muted-foreground">{t.phone}</span>
                                             )}
                                         </div>
                                     </div>
