@@ -210,6 +210,75 @@ export function NotificationBell() {
                     isSystem: true
                 });
             }
+
+            // 7. Pending Invoice Requests
+            const { count: pendingRequests } = await supabase
+                .from("invoice_requests")
+                .select("*", { count: 'exact', head: true })
+                .eq("status", "pending");
+
+            if (pendingRequests && pendingRequests > 0) {
+                newAlerts.push({
+                    id: "pending-invoice-requests",
+                    type: "warning",
+                    title: "Νέα Αιτήματα Τιμολογίων",
+                    message: `${pendingRequests} αιτήματα τιμολογίων εκκρεμούν προς διαχείριση.`,
+                    action: { label: "Προβολή", onClick: () => (window.location.href = "/invoice-requests-inbox") },
+                    date: today,
+                    isSystem: true
+                });
+            }
+
+            // 8. High-value unmatched transactions (> €500)
+            const { data: highValueUnmatched } = await supabase
+                .from("bank_transactions")
+                .select("id, amount")
+                .eq("match_status", "unmatched")
+                .gt("amount", 500);
+
+            if (highValueUnmatched && highValueUnmatched.length > 0) {
+                const totalAmount = highValueUnmatched.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+                newAlerts.push({
+                    id: "high-value-unmatched",
+                    type: "warning",
+                    title: "Μεγάλες Αταίριαστες Συναλλαγές",
+                    message: `${highValueUnmatched.length} συναλλαγές άνω των €500 (σύνολο €${totalAmount.toLocaleString('el-GR', { minimumFractionDigits: 2 })}) χωρίς αντιστοίχιση.`,
+                    action: { label: "Ταίριασμα", onClick: () => (window.location.href = "/bank-sync") },
+                    date: today,
+                    isSystem: true
+                });
+            }
+
+            // 9. Monthly closing deadline approaching (after 25th of month)
+            const dayOfMonth = today.getDate();
+            if (dayOfMonth >= 25) {
+                const currentMonth = format(today, "yyyy-MM");
+                const { count: unmatchedThisMonth } = await supabase
+                    .from("bank_transactions")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("match_status", "unmatched")
+                    .gte("transaction_date", `${currentMonth}-01`);
+
+                const { count: noCatThisMonth } = await supabase
+                    .from("invoices")
+                    .select("*", { count: 'exact', head: true })
+                    .is("expense_category_id", null)
+                    .gte("invoice_date", `${currentMonth}-01`);
+
+                const pendingItems = (unmatchedThisMonth || 0) + (noCatThisMonth || 0);
+                if (pendingItems > 0) {
+                    const daysLeft = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - dayOfMonth;
+                    newAlerts.push({
+                        id: "monthly-deadline",
+                        type: "warning",
+                        title: "Πλησιάζει Κλείσιμο Μήνα",
+                        message: `${daysLeft} ημέρες για κλείσιμο — ${pendingItems} εκκρεμότητες (αταίριαστες + χωρίς κατηγορία).`,
+                        action: { label: "Κλείσιμο", onClick: () => (window.location.href = "/monthly-closing") },
+                        date: today,
+                        isSystem: true
+                    });
+                }
+            }
         } catch (err) {
             console.error(err);
         }
