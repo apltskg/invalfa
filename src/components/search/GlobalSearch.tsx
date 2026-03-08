@@ -221,12 +221,13 @@ export function GlobalSearch() {
               ))}
             </CommandGroup>
           )}
-          {query.length >= 2 && !loading && results.length === 0 ? (
+          {query.length >= 2 && loading && (
             <CommandEmpty>Αναζήτηση...</CommandEmpty>
+          )}
+          {query.length >= 2 && !loading && results.length === 0 && (
             <CommandEmpty>Δεν βρέθηκαν αποτελέσματα</CommandEmpty>
-          ) : loading ? (
-            <CommandEmpty>Αναζήτηση...</CommandEmpty>
-          ) : (
+          )}
+          {query.length >= 2 && !loading && results.length > 0 && (
             Object.entries(grouped).map(([type, items], idx) => {
               const config = typeConfig[type as keyof typeof typeConfig];
               const Icon = config.icon;
