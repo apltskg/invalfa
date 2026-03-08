@@ -32,8 +32,8 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
       setLoading(true);
 
       try {
-        // Fetch invoices + supplier/customer data in parallel
-        const [{ data: invoices }, { data: suppliers }, { data: customers }] = await Promise.all([
+        // Fetch invoices + supplier/customer + invoice list items data in parallel
+        const [{ data: invoices }, { data: suppliers }, { data: customers }, { data: listItems }] = await Promise.all([
           supabase
             .from("invoices")
             .select("id, type, amount, invoice_date, merchant, extracted_data, file_name, package_id, supplier_id, customer_id")
@@ -41,6 +41,10 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
             .limit(500),
           supabase.from("suppliers").select("id, name, vat_number").limit(500),
           supabase.from("customers").select("id, name, vat_number").limit(500),
+          supabase.from("invoice_list_items")
+            .select("id, invoice_number, client_name, client_vat, invoice_date, net_amount, total_amount, match_status")
+            .neq("match_status", "matched")
+            .limit(500),
         ]);
 
         const supplierMap = new Map((suppliers || []).map(s => [s.id, s]));
@@ -78,6 +82,26 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
               package_id: inv.package_id,
               supplier_id: inv.supplier_id,
               customer_id: inv.customer_id,
+            });
+          }
+        }
+
+        // Add invoice list items as matchable records (income type)
+        if (listItems) {
+          for (const item of listItems) {
+            matchableRecords.push({
+              id: item.id,
+              type: 'income',
+              amount: item.total_amount || item.net_amount,
+              date: item.invoice_date,
+              vendor_or_client: item.client_name,
+              invoice_number: item.invoice_number,
+              description: item.client_name || '',
+              tax_id: null,
+              buyer_vat: item.client_vat,
+              package_id: null,
+              supplier_id: null,
+              customer_id: null,
             });
           }
         }

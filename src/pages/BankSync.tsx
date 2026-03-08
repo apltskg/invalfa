@@ -363,17 +363,16 @@ export default function BankSync() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="outline"
             onClick={handleAutoMatch}
             disabled={autoMatchingRunning || transactions.length === 0}
-            className="rounded-xl gap-2 border-border h-9 text-sm"
+            className="rounded-xl gap-2 h-9 text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             {autoMatchingRunning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Zap className="h-4 w-4" />
             )}
-            Αυτόματο Ταίριασμα
+            Smart Match
           </Button>
           {matchingStats.total > 0 && (
             <Button
@@ -387,6 +386,7 @@ export default function BankSync() {
           )}
           <Button
             onClick={() => setUploadModalOpen(true)}
+            variant="outline"
             className="rounded-xl gap-2 h-9 text-sm"
           >
             <FileText className="h-4 w-4" />
@@ -398,7 +398,7 @@ export default function BankSync() {
             className="rounded-xl gap-2 h-9 text-sm"
           >
             <FileText className="h-4 w-4" />
-            Εισαγωγή PDF
+            Εισαγωγή CSV
           </Button>
         </div>
       </div>

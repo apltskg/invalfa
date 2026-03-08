@@ -35,6 +35,17 @@ interface Invoice {
     extracted_data: any;
 }
 
+interface InvoiceListItem {
+    id: string;
+    invoice_number: string | null;
+    client_name: string | null;
+    client_vat: string | null;
+    invoice_date: string | null;
+    net_amount: number | null;
+    total_amount: number | null;
+    match_status: string | null;
+}
+
 interface Supplier {
     id: string;
     name: string;
@@ -231,6 +242,7 @@ export async function runAutoMatching(
             { data: invoiceMatches },
             { data: suppliers },
             { data: customers },
+            { data: invoiceListItems },
         ] = await Promise.all([
             txnQuery,
             supabase.from("invoice_transaction_matches").select("transaction_id"),
@@ -238,6 +250,7 @@ export async function runAutoMatching(
             supabase.from("invoice_transaction_matches").select("invoice_id"),
             supabase.from("suppliers").select("id, name, vat_number"),
             supabase.from("customers").select("id, name, vat_number"),
+            supabase.from("invoice_list_items").select("id, invoice_number, client_name, client_vat, invoice_date, net_amount, total_amount, match_status").neq("match_status", "matched"),
         ]);
 
         if (!transactions || transactions.length === 0) return result;
@@ -263,26 +276,55 @@ export async function runAutoMatching(
         const supplierMap = new Map((suppliers || []).map(s => [s.id, s as Supplier]));
         const customerMap = new Map((customers || []).map(c => [c.id, c as Customer]));
 
+        // Build invoice list items as pseudo-invoices for matching
+        const listItemInvoices: Invoice[] = (invoiceListItems || []).map((item: InvoiceListItem) => ({
+            id: item.id,
+            amount: item.total_amount || item.net_amount,
+            invoice_date: item.invoice_date,
+            merchant: item.client_name,
+            type: 'income' as const,
+            package_id: null,
+            supplier_id: null,
+            customer_id: null,
+            extracted_data: {
+                invoice_number: item.invoice_number,
+                buyer_vat: item.client_vat,
+            },
+        }));
+
+        // Combine all matchable records
+        const allMatchable = [...unmatchedInvoices, ...listItemInvoices];
+
         // 3. Find matches
         const matchesToCreate: Array<{ invoice_id: string; transaction_id: string; status: string }> = [];
+        const txnStatusUpdates: Array<{ id: string; status: string; record_id: string; record_type: string }> = [];
 
         for (const txn of unmatchedTxns) {
-            let bestMatch: { invoice: Invoice; confidence: number; reasons: string[] } | null = null;
+            let bestMatch: { invoice: Invoice; confidence: number; reasons: string[]; isListItem: boolean } | null = null;
             const expectedType = txn.amount > 0 ? 'income' : 'expense';
 
-            for (const inv of unmatchedInvoices) {
+            for (const inv of allMatchable) {
                 if (inv.type !== expectedType) continue;
                 const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap);
                 if (confidence > (bestMatch?.confidence || 0)) {
-                    bestMatch = { invoice: inv as Invoice, confidence, reasons };
+                    const isListItem = listItemInvoices.some(li => li.id === inv.id);
+                    bestMatch = { invoice: inv as Invoice, confidence, reasons, isListItem };
                 }
             }
 
             if (bestMatch && bestMatch.confidence >= minConfidence) {
-                matchesToCreate.push({
-                    invoice_id: bestMatch.invoice.id,
-                    transaction_id: txn.id,
-                    status: "confirmed",
+                if (!bestMatch.isListItem) {
+                    matchesToCreate.push({
+                        invoice_id: bestMatch.invoice.id,
+                        transaction_id: txn.id,
+                        status: "confirmed",
+                    });
+                }
+                txnStatusUpdates.push({
+                    id: txn.id,
+                    status: 'matched',
+                    record_id: bestMatch.invoice.id,
+                    record_type: bestMatch.isListItem ? 'invoice_list' : 'invoice',
                 });
                 result.matches.push({
                     transactionId: txn.id,
@@ -290,8 +332,8 @@ export async function runAutoMatching(
                     confidence: bestMatch.confidence,
                     reason: bestMatch.reasons.join(", "),
                 });
-                const invIndex = unmatchedInvoices.findIndex(i => i.id === bestMatch!.invoice.id);
-                if (invIndex > -1) unmatchedInvoices.splice(invIndex, 1);
+                const invIndex = allMatchable.findIndex(i => i.id === bestMatch!.invoice.id);
+                if (invIndex > -1) allMatchable.splice(invIndex, 1);
                 result.matched++;
             } else if (bestMatch && bestMatch.confidence >= 45) {
                 result.matches.push({
@@ -304,16 +346,35 @@ export async function runAutoMatching(
             }
         }
 
-        // 4. Create matches
-        if (!dryRun && matchesToCreate.length > 0) {
-            const { error: insertError } = await supabase
-                .from("invoice_transaction_matches")
-                .insert(matchesToCreate);
+        // 4. Create matches and update transaction statuses
+        if (!dryRun) {
+            if (matchesToCreate.length > 0) {
+                const { error: insertError } = await supabase
+                    .from("invoice_transaction_matches")
+                    .insert(matchesToCreate);
 
-            if (insertError) {
-                console.error("Error creating matches:", insertError);
-                result.failed = matchesToCreate.length;
-                result.matched = 0;
+                if (insertError) {
+                    console.error("Error creating matches:", insertError);
+                    result.failed = matchesToCreate.length;
+                    result.matched = 0;
+                }
+            }
+
+            // Update transaction match_status
+            for (const upd of txnStatusUpdates) {
+                await supabase.from("bank_transactions").update({
+                    match_status: upd.status,
+                    matched_record_id: upd.record_id,
+                    matched_record_type: upd.record_type,
+                }).eq("id", upd.id);
+            }
+
+            // Update invoice_list_items that were matched
+            for (const upd of txnStatusUpdates.filter(u => u.record_type === 'invoice_list')) {
+                await supabase.from("invoice_list_items").update({
+                    match_status: 'matched',
+                    matched_income_id: upd.id,
+                }).eq("id", upd.record_id);
             }
         }
 
