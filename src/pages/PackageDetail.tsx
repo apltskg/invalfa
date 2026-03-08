@@ -428,7 +428,7 @@ export default function PackageDetail() {
                   <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
                     <div className="flex-1">
                       <p className="font-medium text-sm">{transaction.description}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Ταιριάζει με {invoice.merchant} (€{invoice.amount})</p>
                     </div>
                     <Button
                       size="sm"
