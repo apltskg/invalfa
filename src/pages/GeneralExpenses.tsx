@@ -656,21 +656,14 @@ export default function GeneralExpenses() {
             </FormDialog>
 
             {/* Single Delete Dialog */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Διαγραφή Εξόδου</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Να διαγραφεί το έξοδο <strong>{selectedInvoice?.merchant}</strong>{" "}
-                            ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""}); Η ενέργεια δεν αναιρείται.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">Ακύρωση</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">Διαγραφή</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Διαγραφή Εξόδου"
+                description={<>Να διαγραφεί το έξοδο <strong>{selectedInvoice?.merchant}</strong>{" "}({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""});<br/>Η ενέργεια δεν αναιρείται.</>}
+                icon={Trash2}
+                onConfirm={handleDelete}
+            />
 
             {/* Bulk Category Dialog */}
             <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
