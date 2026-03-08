@@ -321,31 +321,30 @@ export default function Travellers() {
                         </div>
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Όνομα" field="first_name" />
-                                <FormField label="Επώνυμο" field="last_name" />
+                                <InlineFormField label="Όνομα" field="first_name" />
+                                <InlineFormField label="Επώνυμο" field="last_name" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Αρ. Διαβατηρίου" field="passport_number" />
-                                <FormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
+                                <InlineFormField label="Αρ. Διαβατηρίου" field="passport_number" />
+                                <InlineFormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Αρ. Ταυτότητας" field="id_number" />
-                                <FormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
+                                <InlineFormField label="Αρ. Ταυτότητας" field="id_number" />
+                                <InlineFormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
                             </div>
-                            <FormField label="Ημ. Γέννησης" field="birth_date" type="date" />
-                            <FormField label="Miles & Bonus" field="miles_bonus_card" />
+                            <InlineFormField label="Ημ. Γέννησης" field="birth_date" type="date" />
+                            <InlineFormField label="Miles & Bonus" field="miles_bonus_card" />
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Τηλέφωνο" field="phone" />
-                                <FormField label="Email" field="email" type="email" />
+                                <InlineFormField label="Τηλέφωνο" field="phone" />
+                                <InlineFormField label="Email" field="email" type="email" />
                             </div>
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Σημειώσεις</label>
+                            <FormField label="Σημειώσεις">
                                 <textarea
                                     value={form.notes || ""}
                                     onChange={e => setForm(prev => ({ ...prev, notes: e.target.value || null }))}
-                                    className="w-full rounded-xl border border-border bg-background p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full rounded-xl border border-border/50 bg-muted/30 p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors"
                                 />
-                            </div>
+                            </FormField>
                         </div>
                     </div>
                 ) : (
