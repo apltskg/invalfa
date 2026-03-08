@@ -53,14 +53,14 @@ function getAge(birthDate: string | null) {
 
 // ── Color palette for avatars ──
 const AVATAR_COLORS = [
-    "from-blue-500 to-indigo-600",
-    "from-emerald-500 to-teal-600",
-    "from-violet-500 to-purple-600",
-    "from-amber-500 to-orange-600",
-    "from-rose-500 to-pink-600",
-    "from-cyan-500 to-sky-600",
-    "from-lime-500 to-green-600",
-    "from-fuchsia-500 to-pink-600",
+    "bg-primary/10 text-primary",
+    "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400",
 ];
 
 function avatarColor(id: string) {
@@ -258,7 +258,9 @@ export default function Travellers() {
                 <div className="flex-1 overflow-y-auto">
                     {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-sm">
-                            <User className="h-8 w-8 mb-2 opacity-30" />
+                            <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                                <User className="h-5 w-5 text-muted-foreground/50" />
+                            </div>
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Κανένας ταξιδιώτης"}
                         </div>
                     ) : (
@@ -274,7 +276,7 @@ export default function Travellers() {
                                             : "hover:bg-muted/50 border-l-2 border-l-transparent"
                                         }`}
                                 >
-                                    <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${avatarColor(t.id)} flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm`}>
+                                    <div className={`h-9 w-9 rounded-lg ${avatarColor(t.id)} flex items-center justify-center text-xs font-semibold shrink-0`}>
                                         {getInitials(t)}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -285,8 +287,8 @@ export default function Travellers() {
                                             {t.passport_number && (
                                                 <span className="text-[11px] text-muted-foreground font-mono">{t.passport_number}</span>
                                             )}
-                                            {age !== null && (
-                                                <span className="text-[11px] text-muted-foreground/60">• {age} ετών</span>
+                                            {t.phone && !t.passport_number && (
+                                                <span className="text-[11px] text-muted-foreground">{t.phone}</span>
                                             )}
                                         </div>
                                     </div>
@@ -302,7 +304,9 @@ export default function Travellers() {
             <div className="flex-1 bg-muted/30 overflow-y-auto">
                 {!selected ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40">
-                        <User className="h-16 w-16 mb-4 opacity-20" />
+                        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                            <User className="h-7 w-7 text-muted-foreground/30" />
+                        </div>
                         <p className="text-sm">Επιλέξτε ταξιδιώτη</p>
                     </div>
                 ) : editing ? (
@@ -353,7 +357,7 @@ export default function Travellers() {
                         {/* Profile header */}
                         <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${avatarColor(selected.id)} flex items-center justify-center text-white text-xl font-bold shadow-lg`}>
+                                <div className={`h-14 w-14 rounded-xl ${avatarColor(selected.id)} flex items-center justify-center text-base font-bold border border-border`}>
                                     {getInitials(selected)}
                                 </div>
                                 <div>
@@ -362,7 +366,7 @@ export default function Travellers() {
                                     </h2>
                                     {selected.birth_date && (
                                         <p className="text-sm text-muted-foreground mt-0.5">
-                                            {fmtDate(selected.birth_date)} • {getAge(selected.birth_date)} ετών
+                                            {fmtDate(selected.birth_date)}
                                         </p>
                                     )}
                                 </div>
