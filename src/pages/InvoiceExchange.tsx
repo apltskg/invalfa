@@ -351,8 +351,8 @@ export default function InvoiceExchange() {
                 )}
 
                 {filtered.length > 0 && (
-                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-xs text-slate-400">{filtered.length} αποστολές</span>
+                    <div className="px-5 py-3 bg-muted/50 border-t border-border flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">{filtered.length} αποστολές</span>
                     </div>
                 )}
             </Card>
