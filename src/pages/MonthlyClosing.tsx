@@ -403,8 +403,8 @@ export default function MonthlyClosing() {
                                 <Card className={cn(
                                     "rounded-2xl border transition-all overflow-hidden",
                                     status.done
-                                        ? "border-emerald-200 bg-emerald-50/50"
-                                        : "border-slate-200 bg-white hover:border-slate-300"
+                                        ? "border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800"
+                                        : "border-border bg-card hover:border-border/80"
                                 )}>
                                     {/* Main row */}
                                     <button
