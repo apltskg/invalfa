@@ -437,7 +437,7 @@ export default function PackageDetail() {
                       disabled={linking === transaction.id}
                     >
                       <LinkIcon className="h-3 w-3" />
-                      Link
+                      Σύνδεση
                     </Button>
                   </div>
                 ))}
