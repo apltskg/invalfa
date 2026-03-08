@@ -40,6 +40,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     setUploadedFile(null);
     setUploading(false);
     setExtracting(false);
+    setExtractionFailed(false);
+    setLastUploadedPath(null);
+    setLastUploadedFile(null);
     setMode("upload");
     onOpenChange(false);
   }, [onOpenChange]);
