@@ -481,7 +481,7 @@ export default function MonthlyClosing() {
 
                                                         {status.count !== undefined && status.total !== undefined && (
                                                             <div className="space-y-1">
-                                                                <div className="flex justify-between text-xs text-slate-500">
+                                                                <div className="flex justify-between text-xs text-muted-foreground">
                                                                     <span>{status.count} / {status.total}</span>
                                                                     <span>{status.total > 0 ? Math.round((status.count / status.total) * 100) : 0}%</span>
                                                                 </div>
