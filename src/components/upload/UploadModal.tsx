@@ -85,31 +85,15 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
       setUploading(false);
       setExtracting(true);
+      setLastUploadedPath(filePath);
+      setLastUploadedFile(file);
 
-      let extractedData: ExtractedData | null = null;
-      try {
-        const response = await supabase.functions.invoke('extract-invoice', {
-          body: { filePath, fileName: file.name }
-        });
-
-        // Robust check for JSON response
-        if (response.error) {
-          console.error('Edge Function error:', response.error);
-          toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
-        } else if (response.data && typeof response.data === 'object') {
-          // Edge function returns { extracted: { merchant, amount, ... } }
-          const rawData = response.data as any;
-          extractedData = (rawData.extracted || rawData) as ExtractedData;
-        } else {
-          console.warn('Unexpected non-JSON response from AI extraction');
-          toast.info("AI could not read some fields automatically. Please fill them manually.");
-        }
-      } catch (extractError) {
-        console.error('Extraction catch error:', extractError);
-        toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
-      }
+      const extractedData = await runExtraction(filePath, file.name);
 
       setExtracting(false);
+      if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+        setExtractionFailed(true);
+      }
       setUploadedFile({
         file,
         path: filePath,
