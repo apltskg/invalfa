@@ -350,6 +350,17 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              {extractionFailed && !extracting && (
+                <div className="flex items-center gap-2 mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <span className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                    Η AI ανάγνωση ήταν ατελής. Μπορείτε να δοκιμάσετε ξανά ή να συμπληρώσετε χειροκίνητα.
+                  </span>
+                  <Button size="sm" variant="outline" onClick={handleRetryExtraction} className="shrink-0">
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Επανάληψη
+                  </Button>
+                </div>
+              )}
               <InvoicePreview
                 fileName={uploadedFile.file?.name || "Manual Entry"}
                 fileUrl={uploadedFile.url}
