@@ -126,6 +126,40 @@ export default function Dashboard() {
         setTrendData(months);
     }
 
+    async function fetchCategories() {
+        const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+        // Fetch expense invoices with their expense_category for current month
+        const { data: cats } = await supabase
+            .from("invoices")
+            .select("amount, expense_category_id, category")
+            .eq("type", "expense")
+            .gte("invoice_date", startDate)
+            .lte("invoice_date", endDate);
+
+        if (!cats || cats.length === 0) {
+            setCategoryData([]);
+            return;
+        }
+
+        // Fetch category names
+        const { data: expCats } = await supabase.from("expense_categories").select("id, name_el");
+        const catMap = new Map((expCats || []).map(c => [c.id, c.name_el]));
+
+        // Group by category
+        const grouped: Record<string, number> = {};
+        for (const inv of cats) {
+            const name = (inv.expense_category_id && catMap.get(inv.expense_category_id)) || inv.category || "Άλλο";
+            grouped[name] = (grouped[name] || 0) + (inv.amount || 0);
+        }
+
+        const sorted = Object.entries(grouped)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([name, value], i) => ({ name, value: Math.round(value), color: COLORS[i % COLORS.length] }));
+
+        setCategoryData(sorted);
+    }
+
     const totalIncome = items
         .filter((i) => i.type === "invoice" && (i.data as Invoice).type === "income")
         .reduce((s, i) => s + ((i.data as Invoice).amount || 0), 0);
