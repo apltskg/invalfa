@@ -194,103 +194,74 @@ export default function Packages() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-xl gap-2 h-9 text-sm">
+        <Button onClick={() => setDialogOpen(true)} className="rounded-xl gap-2 h-9 text-sm">
               <Plus className="h-4 w-4" />
-              νέος Φάκελος
+              Νέος Φάκελος
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-3xl">
-            <DialogHeader>
-              <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <PackageIcon className="h-6 w-6 text-primary" />
-              </div>
-              <DialogTitle className="text-center text-xl">Δημιουργία Νέου Φακέλου</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="client_name">Όνομα Πελάτη / Γκρουπ</Label>
-                <div className="flex gap-2">
-                  <Select
-                    onValueChange={(val) => setNewPackage({ ...newPackage, client_name: val })}
-                  >
-                    <SelectTrigger className="rounded-xl flex-1">
-                      <SelectValue placeholder="Επιλέξτε Υπάρχοντα Πελάτη" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map(c => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    id="client_name"
-                    value={newPackage.client_name}
-                    onChange={(e) => setNewPackage({ ...newPackage, client_name: e.target.value })}
-                    placeholder="ή πληκτρολογήστε νέο..."
-                    className="rounded-xl flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Tip: Επιλέξτε από τη λίστα ή γράψτε νέο όνομα.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Έναρξη</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={newPackage.start_date}
-                    onChange={(e) => setNewPackage({ ...newPackage, start_date: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_date">Λήξη</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={newPackage.end_date}
-                    onChange={(e) => setNewPackage({ ...newPackage, end_date: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="margin">Στόχος Κέρδους (%)</Label>
-                <div className="relative">
-                  <Input
-                    id="margin"
-                    type="number"
-                    value={newPackage.target_margin_percent}
-                    onChange={(e) => setNewPackage({ ...newPackage, target_margin_percent: e.target.value })}
-                    placeholder="10"
-                    className="rounded-xl pl-10"
-                  />
-                  <span className="absolute left-3 top-2.5 text-muted-foreground">%</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Περιγραφή (Προαιρετικό)</Label>
-                <Input
-                  id="description"
-                  value={newPackage.description}
-                  onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
-                  placeholder="Λεπτομέρειες ταξιδιού..."
-                  className="rounded-xl"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={createPackage} className="w-full rounded-xl" size="lg">
-                Δημιουργία Φακέλου
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+
+        <FormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title="Δημιουργία Νέου Φακέλου"
+          icon={PackageIcon}
+          onSubmit={createPackage}
+          submitLabel="Δημιουργία Φακέλου"
+        >
+          <FormField label="Πελάτης / Γκρουπ">
+            <Select
+              onValueChange={(val) => setNewPackage({ ...newPackage, client_name: val })}
+            >
+              <SelectTrigger className="rounded-xl h-10 text-sm bg-muted/30 border-border/50">
+                <SelectValue placeholder="Επιλέξτε υπάρχοντα πελάτη..." />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map(c => (
+                  <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormInput
+            label="Ή πληκτρολογήστε νέο"
+            value={newPackage.client_name}
+            onChange={(v) => setNewPackage({ ...newPackage, client_name: v })}
+            placeholder="π.χ. Group Paris – Ιούνιος 2025"
+            icon={Users}
+          />
+          <FormDivider />
+          <FormRow>
+            <FormInput
+              label="Έναρξη"
+              type="date"
+              value={newPackage.start_date}
+              onChange={(v) => setNewPackage({ ...newPackage, start_date: v })}
+              icon={Calendar}
+            />
+            <FormInput
+              label="Λήξη"
+              type="date"
+              value={newPackage.end_date}
+              onChange={(v) => setNewPackage({ ...newPackage, end_date: v })}
+              icon={Calendar}
+            />
+          </FormRow>
+          <FormRow>
+            <FormInput
+              label="Στόχος Κέρδους (%)"
+              type="number"
+              value={newPackage.target_margin_percent}
+              onChange={(v) => setNewPackage({ ...newPackage, target_margin_percent: v })}
+              placeholder="10"
+            />
+          </FormRow>
+          <FormTextarea
+            label="Περιγραφή (Προαιρετικό)"
+            value={newPackage.description}
+            onChange={(v) => setNewPackage({ ...newPackage, description: v })}
+            placeholder="Λεπτομέρειες ταξιδιού..."
+            rows={2}
+          />
+        </FormDialog>
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
