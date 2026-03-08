@@ -275,6 +275,16 @@ export default function BankSync() {
       result = result.filter((t) => t.bank_name && selectedBanks.includes(t.bank_name));
     }
 
+    // Amount filter
+    if (amountMin) {
+      const min = parseFloat(amountMin);
+      if (!isNaN(min)) result = result.filter((t) => Math.abs(t.amount) >= min);
+    }
+    if (amountMax) {
+      const max = parseFloat(amountMax);
+      if (!isNaN(max)) result = result.filter((t) => Math.abs(t.amount) <= max);
+    }
+
     // Status filter
     if (statusFilter !== "all") {
       result = result.filter((t) => t.match_status === statusFilter);
