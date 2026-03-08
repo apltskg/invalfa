@@ -79,8 +79,8 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
         <button
             onClick={handle}
             className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-200 ${copied
-                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400"
+                : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
         >
             {copied ? <CheckCheck size={12} /> : <Copy size={12} />}
@@ -104,9 +104,9 @@ function CopyPair({ plain, msgEl, msgEn }: { plain: string; msgEl: string; msgEn
 function DisplayRow({ label, value, mono = false }: { label: string; value?: string; mono?: boolean }) {
     if (!value) return null;
     return (
-        <div className="py-2 border-b border-slate-100 last:border-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
-            <p className={`text-sm text-slate-800 ${mono ? "font-mono tracking-wider" : ""}`}>{value}</p>
+        <div className="py-2 border-b border-border last:border-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">{label}</p>
+            <p className={`text-sm text-foreground ${mono ? "font-mono tracking-wider" : ""}`}>{value}</p>
         </div>
     );
 }
@@ -120,17 +120,17 @@ function EditField({
 }) {
     return (
         <div className="space-y-1">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</Label>
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</Label>
             {multiline ? (
                 <Textarea
                     value={value} onChange={e => onChange(e.target.value)}
-                    className="rounded-xl border-slate-200 text-sm resize-none"
+                    className="rounded-xl border-border text-sm resize-none"
                     rows={2}
                 />
             ) : (
                 <Input
                     value={value} onChange={e => onChange(e.target.value)}
-                    className={`rounded-xl border-slate-200 text-sm h-9 ${mono ? "font-mono tracking-wider" : ""}`}
+                    className={`rounded-xl border-border text-sm h-9 ${mono ? "font-mono tracking-wider" : ""}`}
                 />
             )}
         </div>
@@ -144,8 +144,8 @@ function SectionHeader({
     icon: React.ReactNode; title: string; plain: string; msgEl: string; msgEn: string;
 }) {
     return (
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <div className="px-6 py-4 bg-muted/50 border-b border-border flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                 {icon}{title}
             </p>
             <CopyPair plain={plain} msgEl={msgEl} msgEn={msgEn} />
@@ -203,7 +203,6 @@ export default function Settings() {
         setSettings(s => ({ ...s, [key]: v }));
 
     /* ── copy-all text blocks ── */
-    // ── Plain copy blocks ──
     const copyCompany = [
         `${settings.company_name} / ${settings.company_name_gr}`,
         `${settings.activity} / ${settings.activity_gr}`,
@@ -239,11 +238,8 @@ export default function Settings() {
 
     const copyAllBanks = [copyEurobank, "", copyAlpha, "", copyWise].join("\n");
 
-    // helper: strip EL prefix for Greek VAT display
     const vatGr = settings.vat_number.replace(/^EL/i, "");
 
-    // ── Message-ready copy blocks ──
-    // Greek versions — no emojis, no "EL" before ΑΦΜ
     const msgElCompany = [
         `Ορίστε τα στοιχεία μας:`,
         ``,
@@ -256,7 +252,6 @@ export default function Settings() {
         `Email: ${settings.email}`,
     ].join("\n");
 
-    // English versions — no emojis, keep EL prefix on VAT
     const msgEnCompany = [
         `Here are our company details:`,
         ``,
@@ -374,7 +369,7 @@ export default function Settings() {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -385,8 +380,8 @@ export default function Settings() {
             {/* ── Page header ── */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Ρυθμίσεις</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Στοιχεία εταιρείας, τράπεζες και πληρωμές</p>
+                    <h1 className="text-2xl font-bold text-foreground">Ρυθμίσεις</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Στοιχεία εταιρείας, τράπεζες και πληρωμές</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {editMode ? (
@@ -395,7 +390,7 @@ export default function Settings() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => { setEditMode(false); fetchSettings(); }}
-                                className="rounded-xl gap-2 border-slate-200 text-slate-500"
+                                className="rounded-xl gap-2 border-border text-muted-foreground"
                             >
                                 <X className="h-4 w-4" /> Άκυρο
                             </Button>
@@ -414,7 +409,7 @@ export default function Settings() {
                             variant="outline"
                             size="sm"
                             onClick={() => setEditMode(true)}
-                            className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+                            className="rounded-xl gap-2 border-border text-muted-foreground hover:bg-muted"
                         >
                             <Pencil className="h-4 w-4" /> Επεξεργασία
                         </Button>
@@ -423,9 +418,9 @@ export default function Settings() {
             </div>
 
             {/* ── Company Info ── */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
                 <SectionHeader
-                    icon={<Building2 className="h-4 w-4 text-slate-400" />}
+                    icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
                     title="Στοιχεία Εταιρείας / Company Details"
                     plain={copyCompany}
                     msgEl={msgElCompany}
@@ -458,7 +453,7 @@ export default function Settings() {
                             <EditField label="URL Λογότυπου" value={settings.logo_url} onChange={upd("logo_url")} />
                         </div>
                     ) : (
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-border">
                             <DisplayRow label="Επωνυμία (EN)" value={settings.company_name} />
                             <DisplayRow label="Επωνυμία (ΕΛ)" value={settings.company_name_gr} />
                             <DisplayRow label="Δραστηριότητα (EN)" value={settings.activity} />
@@ -476,10 +471,10 @@ export default function Settings() {
             </Card>
 
             {/* ── Banking ── */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-slate-400" />
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-6 py-4 bg-muted/50 border-b border-border flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
                         Τραπεζικά Στοιχεία / Bank Accounts
                     </p>
                     <CopyPair plain={copyAllBanks} msgEl={msgElAllBanks} msgEn={msgEnAllBanks} />
@@ -487,9 +482,9 @@ export default function Settings() {
                 <CardContent className="p-6 space-y-5">
 
                     {/* Eurobank */}
-                    <div className="rounded-xl border border-blue-100 bg-blue-50 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-blue-100">
-                            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 flex items-center gap-2">
+                    <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-blue-100 dark:border-blue-900/50">
+                            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 flex items-center gap-2">
                                 <Landmark size={13} /> Eurobank
                             </p>
                             <CopyPair plain={copyEurobank} msgEl={msgElEurobank} msgEn={msgEnEurobank} />
@@ -504,7 +499,7 @@ export default function Settings() {
                                     <EditField label="IBAN" value={settings.eurobank_iban} onChange={upd("eurobank_iban")} mono />
                                 </div>
                             ) : (
-                                <div className="divide-y divide-blue-100/70">
+                                <div className="divide-y divide-blue-100/70 dark:divide-blue-900/30">
                                     <DisplayRow label="Δικαιούχος" value={settings.eurobank_beneficiary} />
                                     <DisplayRow label="IBAN" value={settings.eurobank_iban} mono />
                                     <DisplayRow label="BIC / SWIFT" value={settings.eurobank_bic} mono />
@@ -514,9 +509,9 @@ export default function Settings() {
                     </div>
 
                     {/* Alpha Bank */}
-                    <div className="rounded-xl border border-red-100 bg-red-50 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-red-100">
-                            <p className="text-xs font-bold uppercase tracking-widest text-red-600 flex items-center gap-2">
+                    <div className="rounded-xl border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-red-100 dark:border-red-900/50">
+                            <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center gap-2">
                                 <Landmark size={13} /> Alpha Bank
                             </p>
                             <CopyPair plain={copyAlpha} msgEl={msgElAlpha} msgEn={msgEnAlpha} />
@@ -531,7 +526,7 @@ export default function Settings() {
                                     <EditField label="IBAN" value={settings.alpha_iban} onChange={upd("alpha_iban")} mono />
                                 </div>
                             ) : (
-                                <div className="divide-y divide-red-100/70">
+                                <div className="divide-y divide-red-100/70 dark:divide-red-900/30">
                                     <DisplayRow label="Δικαιούχος" value={settings.alpha_beneficiary} />
                                     <DisplayRow label="IBAN" value={settings.alpha_iban} mono />
                                     <DisplayRow label="BIC / SWIFT" value={settings.alpha_bic} mono />
@@ -541,9 +536,9 @@ export default function Settings() {
                     </div>
 
                     {/* Wise */}
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-emerald-100">
-                            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 flex items-center gap-2">
+                    <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-emerald-100 dark:border-emerald-900/50">
+                            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                                 <Globe size={13} /> Wise — International / SEPA
                             </p>
                             <CopyPair plain={copyWise} msgEl={msgElWise} msgEn={msgEnWise} />
@@ -559,7 +554,7 @@ export default function Settings() {
                                     <EditField label="Διεύθυνση Τράπεζας" value={settings.wise_bank_address} onChange={upd("wise_bank_address")} />
                                 </div>
                             ) : (
-                                <div className="divide-y divide-emerald-100/70">
+                                <div className="divide-y divide-emerald-100/70 dark:divide-emerald-900/30">
                                     <DisplayRow label="Beneficiary" value={settings.wise_beneficiary} />
                                     <DisplayRow label="IBAN" value={settings.wise_iban} mono />
                                     <DisplayRow label="Swift / BIC" value={settings.wise_swift} mono />
@@ -572,9 +567,9 @@ export default function Settings() {
             </Card>
 
             {/* ── Viva Wallet ── */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-6 py-4 bg-muted/50 border-b border-border flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-violet-400" />
                         Viva Wallet — Πύλη Πληρωμής
                     </p>
@@ -591,7 +586,7 @@ export default function Settings() {
                             href={settings.viva_wallet_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors"
                         >
                             <ExternalLink className="h-4 w-4" />
                             Άνοιγμα Πύλης Πληρωμής
@@ -601,10 +596,10 @@ export default function Settings() {
             </Card>
 
             {/* ── Expense categories ── */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-slate-400" />
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-6 py-4 bg-muted/50 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-muted-foreground" />
                         Κατηγορίες Εξόδων
                     </p>
                 </div>
@@ -614,9 +609,9 @@ export default function Settings() {
             </Card>
 
             {/* ── Income categories ── */}
-            <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-6 py-4 bg-muted/50 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Tag className="h-4 w-4 text-emerald-400" />
                         Κατηγορίες Εσόδων
                     </p>

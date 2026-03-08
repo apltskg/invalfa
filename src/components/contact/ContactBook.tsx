@@ -96,12 +96,10 @@ export default function ContactBook({ mode }: ContactBookProps) {
     const emptyForm = {
         name: "", contact_person: "", email: "", phone: "",
         address: "", vat_number: "", notes: "",
-        // supplier-only
         tax_office: "", iban: "", default_category_id: "", invoice_instructions: "",
     };
     const [formData, setFormData] = useState(emptyForm);
 
-    // AFM verification
     const { verify: verifyAfm, loading: afmLoading, result: afmResult } = useAfmVerification();
 
     /* ── fetch ─────────────────────────────────────────────────────── */
@@ -243,23 +241,23 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
             {/* ═══ LEFT: LIST PANEL ═══════════════════════════════════ */}
             <div className={cn(
-                "flex flex-col border-r border-slate-100 bg-white transition-all duration-300",
+                "flex flex-col border-r border-border bg-card transition-all duration-300",
                 selectedId ? "w-[380px] shrink-0" : "flex-1"
             )}>
                 {/* Header */}
-                <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+                <div className="px-6 pt-6 pb-4 border-b border-border">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h1 className="text-xl font-bold text-slate-900">
+                            <h1 className="text-xl font-bold text-foreground">
                                 {isCustomers ? "Πελάτες" : "Προμηθευτές"}
                             </h1>
-                            <p className="text-xs text-slate-400 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 {filtered.length} {filtered.length === 1 ? (isCustomers ? "πελάτης" : "προμηθευτής") : (isCustomers ? "πελάτες" : "προμηθευτές")}
                             </p>
                         </div>
                         <Button
                             onClick={() => { resetForm(); setDialogOpen(true); }}
-                            className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-700 text-white gap-1.5 text-sm"
+                            className="h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-sm"
                         >
                             <Plus className="h-4 w-4" />
                             Νέος
@@ -268,17 +266,17 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
                     <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                             <Input
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="Αναζήτηση..."
-                                className="pl-8 h-9 text-sm rounded-xl border-slate-200 bg-slate-50 focus:bg-white"
+                                className="pl-8 h-9 text-sm rounded-xl border-border bg-muted/50 focus:bg-card"
                             />
                         </div>
                         <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                            <SelectTrigger className="h-9 w-auto px-3 rounded-xl border-slate-200 bg-slate-50 text-sm gap-1.5">
-                                <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+                            <SelectTrigger className="h-9 w-auto px-3 rounded-xl border-border bg-muted/50 text-sm gap-1.5">
+                                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -295,15 +293,15 @@ export default function ContactBook({ mode }: ContactBookProps) {
                     {loading ? (
                         <div className="p-4 space-y-2">
                             {[1, 2, 3, 4, 5].map(i => (
-                                <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+                                <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
                             ))}
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center px-6">
                             {isCustomers
-                                ? <Users className="h-10 w-10 text-slate-200 mb-3" />
-                                : <Building2 className="h-10 w-10 text-slate-200 mb-3" />}
-                            <p className="text-sm font-medium text-slate-500 mb-1">
+                                ? <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                                : <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />}
+                            <p className="text-sm font-medium text-muted-foreground mb-1">
                                 {searchQuery ? "Δεν βρέθηκαν αποτελέσματα" : `Δεν υπάρχουν ${isCustomers ? "πελάτες" : "προμηθευτές"}`}
                             </p>
                             {!searchQuery && (
@@ -328,8 +326,8 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                     className={cn(
                                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group",
                                         selectedId === entity.id
-                                            ? "bg-slate-900 text-white"
-                                            : "hover:bg-slate-50 text-slate-900"
+                                            ? "bg-primary text-primary-foreground"
+                                            : "hover:bg-muted/50 text-foreground"
                                     )}
                                 >
                                     {/* Avatar */}
@@ -344,10 +342,10 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <p className={cn("text-sm font-semibold truncate", selectedId === entity.id ? "text-white" : "text-slate-900")}>
+                                        <p className={cn("text-sm font-semibold truncate", selectedId === entity.id ? "text-primary-foreground" : "text-foreground")}>
                                             {entity.name}
                                         </p>
-                                        <p className={cn("text-xs truncate mt-0.5", selectedId === entity.id ? "text-white/60" : "text-slate-400")}>
+                                        <p className={cn("text-xs truncate mt-0.5", selectedId === entity.id ? "text-primary-foreground/60" : "text-muted-foreground")}>
                                             {(entity as any).email || (entity as any).vat_number
                                                 ? ((entity as any).email || `ΑΦΜ ${(entity as any).vat_number}`)
                                                 : (entity.stats.invoiceCount > 0
@@ -360,10 +358,10 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                     {/* Amount */}
                                     {entity.stats.totalAmount > 0 && (
                                         <div className="text-right shrink-0">
-                                            <p className={cn("text-sm font-bold tabular-nums", selectedId === entity.id ? "text-white" : "text-slate-800")}>
+                                            <p className={cn("text-sm font-bold tabular-nums", selectedId === entity.id ? "text-primary-foreground" : "text-foreground")}>
                                                 {fmt(entity.stats.totalAmount)}
                                             </p>
-                                            <p className={cn("text-[10px]", selectedId === entity.id ? "text-white/50" : "text-slate-400")}>
+                                            <p className={cn("text-[10px]", selectedId === entity.id ? "text-primary-foreground/50" : "text-muted-foreground")}>
                                                 {entity.stats.invoiceCount} αρχεία
                                             </p>
                                         </div>
@@ -384,10 +382,10 @@ export default function ContactBook({ mode }: ContactBookProps) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 40 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="flex-1 flex flex-col bg-slate-50 overflow-hidden"
+                        className="flex-1 flex flex-col bg-muted/30 overflow-hidden"
                     >
                         {/* Panel header */}
-                        <div className="bg-white border-b border-slate-100 px-8 pt-8 pb-0">
+                        <div className="bg-card border-b border-border px-8 pt-8 pb-0">
                             <div className="flex items-start justify-between mb-6">
                                 <div className="flex items-center gap-4">
                                     {/* Big avatar */}
@@ -398,16 +396,16 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                         {initials(selected.name)}
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-slate-900">{selected.name}</h2>
+                                        <h2 className="text-xl font-bold text-foreground">{selected.name}</h2>
                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                                             {(selected as any).vat_number && (
-                                                <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
                                                     ΑΦΜ {(selected as any).vat_number}
                                                 </span>
                                             )}
                                             {(selected as any).email && (
                                                 <a href={`mailto:${(selected as any).email}`}
-                                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                                                     <Mail className="h-3 w-3" />{(selected as any).email}
                                                 </a>
                                             )}
@@ -420,7 +418,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => openEdit(selected)}
-                                        className="rounded-xl h-8 px-3 text-xs gap-1.5 border-slate-200"
+                                        className="rounded-xl h-8 px-3 text-xs gap-1.5 border-border"
                                     >
                                         <Edit className="h-3.5 w-3.5" /> Επεξεργασία
                                     </Button>
@@ -428,7 +426,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => setSelectedId(null)}
-                                        className="rounded-xl h-8 w-8 p-0 text-slate-400 hover:text-slate-700"
+                                        className="rounded-xl h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                     >
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -442,27 +440,27 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                         label: isCustomers ? "Σύνολο εσόδων" : "Σύνολο εξόδων",
                                         value: fmt(selected.stats.totalAmount),
                                         icon: isCustomers ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />,
-                                        color: isCustomers ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50",
+                                        color: isCustomers ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" : "text-rose-600 bg-rose-50 dark:bg-rose-950/30",
                                     },
                                     {
                                         label: "Αριθμός εγγραφών",
                                         value: String(selected.stats.invoiceCount),
                                         icon: <FileText className="h-4 w-4" />,
-                                        color: "text-blue-600 bg-blue-50",
+                                        color: "text-blue-600 bg-blue-50 dark:bg-blue-950/30",
                                     },
                                     {
                                         label: "Μέσο ποσό",
                                         value: selected.stats.avgAmount > 0 ? fmt(selected.stats.avgAmount) : "—",
                                         icon: <Receipt className="h-4 w-4" />,
-                                        color: "text-violet-600 bg-violet-50",
+                                        color: "text-violet-600 bg-violet-50 dark:bg-violet-950/30",
                                     },
                                 ].map((kpi, i) => (
-                                    <div key={i} className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                                    <div key={i} className="rounded-2xl bg-muted/50 border border-border p-4">
                                         <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-3", kpi.color)}>
                                             {kpi.icon}
                                         </div>
-                                        <p className="text-xl font-black text-slate-900 tabular-nums">{kpi.value}</p>
-                                        <p className="text-xs text-slate-400 mt-0.5">{kpi.label}</p>
+                                        <p className="text-xl font-black text-foreground tabular-nums">{kpi.value}</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{kpi.label}</p>
                                     </div>
                                 ))}
                             </div>
@@ -476,8 +474,8 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                         className={cn(
                                             "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
                                             panelTab === tab
-                                                ? "border-slate-900 text-slate-900"
-                                                : "border-transparent text-slate-400 hover:text-slate-700"
+                                                ? "border-primary text-foreground"
+                                                : "border-transparent text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         {tab === "overview" ? "Πληροφορίες" : `Ιστορικό (${selectedInvoices.length})`}
@@ -491,26 +489,26 @@ export default function ContactBook({ mode }: ContactBookProps) {
                             {panelTab === "overview" && (
                                 <div className="space-y-6">
                                     {/* Contact details grid */}
-                                    <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-4">Στοιχεία επικοινωνίας</h3>
+                                    <div className="bg-card rounded-2xl border border-border p-6">
+                                        <h3 className="text-sm font-semibold text-foreground mb-4">Στοιχεία επικοινωνίας</h3>
                                         <div className="grid grid-cols-2 gap-4">
                                             {[
-                                                { icon: <User className="h-4 w-4 text-slate-400" />, label: "Υπεύθυνος", val: (selected as any).contact_person },
-                                                { icon: <Mail className="h-4 w-4 text-slate-400" />, label: "Email", val: (selected as any).email },
-                                                { icon: <Phone className="h-4 w-4 text-slate-400" />, label: "Τηλέφωνο", val: (selected as any).phone },
-                                                { icon: <MapPin className="h-4 w-4 text-slate-400" />, label: "Διεύθυνση", val: (selected as any).address },
-                                                { icon: <Hash className="h-4 w-4 text-slate-400" />, label: "ΑΦΜ", val: (selected as any).vat_number },
-                                                !isCustomers && { icon: <Landmark className="h-4 w-4 text-slate-400" />, label: "IBAN", val: (selected as any).iban },
-                                                !isCustomers && { icon: <Building2 className="h-4 w-4 text-slate-400" />, label: "Δ.Ο.Υ.", val: (selected as any).tax_office },
+                                                { icon: <User className="h-4 w-4 text-muted-foreground" />, label: "Υπεύθυνος", val: (selected as any).contact_person },
+                                                { icon: <Mail className="h-4 w-4 text-muted-foreground" />, label: "Email", val: (selected as any).email },
+                                                { icon: <Phone className="h-4 w-4 text-muted-foreground" />, label: "Τηλέφωνο", val: (selected as any).phone },
+                                                { icon: <MapPin className="h-4 w-4 text-muted-foreground" />, label: "Διεύθυνση", val: (selected as any).address },
+                                                { icon: <Hash className="h-4 w-4 text-muted-foreground" />, label: "ΑΦΜ", val: (selected as any).vat_number },
+                                                !isCustomers && { icon: <Landmark className="h-4 w-4 text-muted-foreground" />, label: "IBAN", val: (selected as any).iban },
+                                                !isCustomers && { icon: <Building2 className="h-4 w-4 text-muted-foreground" />, label: "Δ.Ο.Υ.", val: (selected as any).tax_office },
                                             ].filter(Boolean).map((item: any, i) => (
                                                 item.val ? (
                                                     <div key={i} className="flex items-start gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 mt-0.5">
+                                                        <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 mt-0.5">
                                                             {item.icon}
                                                         </div>
                                                         <div>
-                                                            <p className="text-[10px] text-slate-400 uppercase tracking-wide">{item.label}</p>
-                                                            <p className="text-sm text-slate-800 font-medium mt-0.5">{item.val}</p>
+                                                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{item.label}</p>
+                                                            <p className="text-sm text-foreground font-medium mt-0.5">{item.val}</p>
                                                         </div>
                                                     </div>
                                                 ) : null
@@ -520,49 +518,49 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
                                     {/* Notes */}
                                     {(selected as any).notes && (
-                                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                                            <p className="text-xs font-semibold text-amber-700 mb-2 uppercase tracking-wide">Σημειώσεις</p>
-                                            <p className="text-sm text-amber-800 leading-relaxed">{(selected as any).notes}</p>
+                                        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-2xl p-5">
+                                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2 uppercase tracking-wide">Σημειώσεις</p>
+                                            <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">{(selected as any).notes}</p>
                                         </div>
                                     )}
 
                                     {/* Supplier: invoice instructions */}
                                     {!isCustomers && (selected as any).invoice_instructions && (
-                                        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
-                                            <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Οδηγίες τιμολογίων</p>
-                                            <p className="text-sm text-blue-800 leading-relaxed">{(selected as any).invoice_instructions}</p>
+                                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl p-5">
+                                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-2 uppercase tracking-wide">Οδηγίες τιμολογίων</p>
+                                            <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">{(selected as any).invoice_instructions}</p>
                                         </div>
                                     )}
 
                                     {/* Recent invoices preview */}
                                     {selectedInvoices.length > 0 && (
-                                        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                                        <div className="bg-card rounded-2xl border border-border p-6">
                                             <div className="flex items-center justify-between mb-4">
-                                                <h3 className="text-sm font-semibold text-slate-700">Πρόσφατες συναλλαγές</h3>
+                                                <h3 className="text-sm font-semibold text-foreground">Πρόσφατες συναλλαγές</h3>
                                                 <button
                                                     onClick={() => setPanelTab("invoices")}
-                                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                                                 >
                                                     Όλες <ChevronRight className="h-3 w-3" />
                                                 </button>
                                             </div>
                                             <div className="space-y-2">
                                                 {selectedInvoices.slice(0, 4).map(inv => (
-                                                    <div key={inv.id} className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+                                                    <div key={inv.id} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
                                                         <div className={cn(
                                                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                                                            isCustomers ? "bg-emerald-50" : "bg-rose-50"
+                                                            isCustomers ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-rose-50 dark:bg-rose-950/30"
                                                         )}>
                                                             {isCustomers
                                                                 ? <ArrowDownRight className="h-4 w-4 text-emerald-600" />
                                                                 : <ArrowUpRight className="h-4 w-4 text-rose-600" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-slate-800 truncate">
+                                                            <p className="text-sm font-medium text-foreground truncate">
                                                                 {inv.merchant || "—"}
                                                             </p>
                                                             {inv.invoice_date && (
-                                                                <p className="text-xs text-slate-400">
+                                                                <p className="text-xs text-muted-foreground">
                                                                     {format(parseISO(inv.invoice_date), "d MMM yyyy", { locale: el })}
                                                                 </p>
                                                             )}
@@ -582,14 +580,14 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                     )}
 
                                     {/* Delete zone */}
-                                    <div className="border border-red-100 rounded-2xl p-5 bg-red-50/50">
-                                        <p className="text-sm font-semibold text-red-700 mb-1">Επικίνδυνη ζώνη</p>
-                                        <p className="text-xs text-red-500 mb-3">Η διαγραφή δεν μπορεί να αναιρεθεί. Τα τιμολόγια δεν θα διαγραφούν.</p>
+                                    <div className="border border-red-100 dark:border-red-900/50 rounded-2xl p-5 bg-red-50/50 dark:bg-red-950/10">
+                                        <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Επικίνδυνη ζώνη</p>
+                                        <p className="text-xs text-red-500 dark:text-red-400/70 mb-3">Η διαγραφή δεν μπορεί να αναιρεθεί. Τα τιμολόγια δεν θα διαγραφούν.</p>
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => handleDelete(selected.id)}
-                                            className="border-red-200 text-red-600 hover:bg-red-100 rounded-xl text-xs h-8"
+                                            className="border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-950/30 rounded-xl text-xs h-8"
                                         >
                                             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                                             Διαγραφή {isCustomers ? "πελάτη" : "προμηθευτή"}
@@ -602,8 +600,8 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                 <div className="space-y-3">
                                     {selectedInvoices.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-20 text-center">
-                                            <FileText className="h-10 w-10 text-slate-200 mb-3" />
-                                            <p className="text-sm text-slate-400">
+                                            <FileText className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                                            <p className="text-sm text-muted-foreground">
                                                 {isCustomers ? "Δεν υπάρχουν έσοδα από αυτόν τον πελάτη" : "Δεν υπάρχουν έξοδα από αυτόν τον προμηθευτή"}
                                             </p>
                                         </div>
@@ -614,30 +612,30 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                                 initial={{ opacity: 0, y: 6 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: i * 0.04 }}
-                                                className="bg-white rounded-2xl border border-slate-100 p-4 hover:border-slate-200 transition-colors"
+                                                className="bg-card rounded-2xl border border-border p-4 hover:border-border/80 transition-colors"
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div className={cn(
                                                         "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                                        isCustomers ? "bg-emerald-50" : "bg-rose-50"
+                                                        isCustomers ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-rose-50 dark:bg-rose-950/30"
                                                     )}>
                                                         {isCustomers
                                                             ? <ArrowDownRight className="h-5 w-5 text-emerald-600" />
                                                             : <ArrowUpRight className="h-5 w-5 text-rose-600" />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-semibold text-slate-900 truncate">
+                                                        <p className="text-sm font-semibold text-foreground truncate">
                                                             {inv.merchant || "Χωρίς περιγραφή"}
                                                         </p>
                                                         <div className="flex items-center gap-2 mt-1">
                                                             {inv.invoice_date && (
-                                                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                                     <Clock className="h-3 w-3" />
                                                                     {format(parseISO(inv.invoice_date), "d MMM yyyy", { locale: el })}
                                                                 </span>
                                                             )}
                                                             {inv.category && (
-                                                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                                                                     {inv.category}
                                                                 </span>
                                                             )}
@@ -666,11 +664,11 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
             {/* Empty state when nothing selected */}
             {!selectedId && !loading && filtered.length > 0 && (
-                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 text-center p-12">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                        {isCustomers ? <Users className="h-7 w-7 text-slate-300" /> : <Building2 className="h-7 w-7 text-slate-300" />}
+                <div className="flex-1 flex flex-col items-center justify-center bg-muted/30 text-center p-12">
+                    <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                        {isCustomers ? <Users className="h-7 w-7 text-muted-foreground/50" /> : <Building2 className="h-7 w-7 text-muted-foreground/50" />}
                     </div>
-                    <p className="text-sm font-medium text-slate-400">Επίλεξε {isCustomers ? "πελάτη" : "προμηθευτή"} για να δεις την καρτέλα</p>
+                    <p className="text-sm font-medium text-muted-foreground">Επίλεξε {isCustomers ? "πελάτη" : "προμηθευτή"} για να δεις την καρτέλα</p>
                 </div>
             )}
 
@@ -688,7 +686,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                     <div className="space-y-4 pt-2">
                         {/* Name */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Επωνυμία *</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Επωνυμία *</Label>
                             <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 placeholder={isCustomers ? "π.χ., Γιώργος Παπαδόπουλος" : "π.χ., Aegean Airlines"}
                                 className="h-11 rounded-xl" />
@@ -697,7 +695,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                         <div className="grid grid-cols-2 gap-3">
                             {/* VAT */}
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ΑΦΜ</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">ΑΦΜ</Label>
                                 <div className="flex gap-2">
                                     <Input
                                         value={formData.vat_number}
@@ -748,7 +746,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                             </div>
                             {/* Contact */}
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Υπεύθυνος</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Υπεύθυνος</Label>
                                 <Input value={formData.contact_person} onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
                                     placeholder="Όνομα" className="h-11 rounded-xl" />
                             </div>
@@ -756,9 +754,9 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
                         {/* Duplicate warning */}
                         {duplicateWarning && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-start gap-2">
                                 <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                                <p className="text-xs text-amber-700">
+                                <p className="text-xs text-amber-700 dark:text-amber-400">
                                     Υπάρχει ήδη <strong>{duplicateWarning.name}</strong> με αυτό το ΑΦΜ.
                                 </p>
                             </div>
@@ -766,19 +764,19 @@ export default function ContactBook({ mode }: ContactBookProps) {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Email</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</Label>
                                 <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     type="email" placeholder="email@example.com" className="h-11 rounded-xl" />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Τηλέφωνο</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Τηλέφωνο</Label>
                                 <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                     placeholder="+30 690 000 0000" className="h-11 rounded-xl" />
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Διεύθυνση</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Διεύθυνση</Label>
                             <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })}
                                 placeholder="Οδός, Αριθμός, Πόλη" className="h-11 rounded-xl" />
                         </div>
@@ -788,18 +786,18 @@ export default function ContactBook({ mode }: ContactBookProps) {
                             <>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Δ.Ο.Υ.</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Δ.Ο.Υ.</Label>
                                         <Input value={formData.tax_office} onChange={e => setFormData({ ...formData, tax_office: e.target.value })}
                                             placeholder="Α' Αθηνών" className="h-11 rounded-xl" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">IBAN</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IBAN</Label>
                                         <Input value={formData.iban} onChange={e => setFormData({ ...formData, iban: e.target.value })}
                                             placeholder="GR..." className="h-11 rounded-xl font-mono" />
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Προεπιλεγμένη κατηγορία εξόδου</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Προεπιλεγμένη κατηγορία εξόδου</Label>
                                     <Select value={formData.default_category_id} onValueChange={v => setFormData({ ...formData, default_category_id: v })}>
                                         <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Επιλέξτε..." /></SelectTrigger>
                                         <SelectContent>
@@ -810,7 +808,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Οδηγίες τιμολογίων</Label>
+                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Οδηγίες τιμολογίων</Label>
                                     <Textarea value={formData.invoice_instructions}
                                         onChange={e => setFormData({ ...formData, invoice_instructions: e.target.value })}
                                         placeholder="π.χ., Αποστολή με email στο invoices@..." className="rounded-xl min-h-[60px]" />
@@ -819,7 +817,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                         )}
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Σημειώσεις</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Σημειώσεις</Label>
                             <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                 placeholder="Πρόσθετες πληροφορίες..." className="rounded-xl min-h-[80px]" />
                         </div>
@@ -830,7 +828,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
                             Ακύρωση
                         </Button>
                         <Button onClick={handleSave} disabled={saving || (!!duplicateWarning && !editingId)}
-                            className="rounded-xl h-11 flex-1 bg-slate-900 hover:bg-slate-700">
+                            className="rounded-xl h-11 flex-1 bg-primary hover:bg-primary/90">
                             {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
                         </Button>
                     </DialogFooter>
