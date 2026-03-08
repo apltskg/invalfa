@@ -74,6 +74,29 @@ serve(async (req) => {
     const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
     const isPDF = fileExtension === 'pdf';
 
+    // Dynamic confidence scoring based on extracted fields
+    const calculateConfidence = (parsed: any): number => {
+      let score = 0;
+      let total = 0;
+      const fields = [
+        { key: 'merchant', weight: 2 },
+        { key: 'amount', weight: 3 },
+        { key: 'date', weight: 2 },
+        { key: 'tax_id', weight: 2 },
+        { key: 'invoice_number', weight: 1.5 },
+        { key: 'vat_amount', weight: 1 },
+        { key: 'net_amount', weight: 1 },
+        { key: 'category', weight: 0.5 },
+      ];
+      for (const f of fields) {
+        total += f.weight;
+        if (parsed[f.key] != null && parsed[f.key] !== '' && parsed[f.key] !== 'other') {
+          score += f.weight;
+        }
+      }
+      return Math.round((score / total) * 100) / 100;
+    };
+
     console.log(`[START] Processing invoice: ${safeFileName} (type: ${fileExtension})`);
 
     // Create service role client to access storage
