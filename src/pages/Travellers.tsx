@@ -353,7 +353,7 @@ export default function Travellers() {
                         {/* Profile header */}
                         <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${avatarColor(selected.id)} flex items-center justify-center text-white text-xl font-bold shadow-lg`}>
+                                <div className={`h-14 w-14 rounded-xl ${avatarColor(selected.id)} flex items-center justify-center text-base font-bold border border-border`}>
                                     {getInitials(selected)}
                                 </div>
                                 <div>
@@ -362,7 +362,7 @@ export default function Travellers() {
                                     </h2>
                                     {selected.birth_date && (
                                         <p className="text-sm text-muted-foreground mt-0.5">
-                                            {fmtDate(selected.birth_date)} • {getAge(selected.birth_date)} ετών
+                                            {fmtDate(selected.birth_date)}
                                         </p>
                                     )}
                                 </div>
