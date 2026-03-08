@@ -30,6 +30,9 @@ interface UploadModalProps {
 export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, defaultType = "expense" }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [extractionFailed, setExtractionFailed] = useState(false);
+  const [lastUploadedPath, setLastUploadedPath] = useState<string | null>(null);
+  const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [mode, setMode] = useState<"upload" | "manual">("upload");
 
