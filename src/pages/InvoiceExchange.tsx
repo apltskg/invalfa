@@ -201,8 +201,8 @@ export default function InvoiceExchange() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Invoice Hub</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">
+                    <h1 className="text-2xl font-bold text-foreground">Invoice Hub</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
                         Αποστολή και παρακολούθηση τιμολογίων προς πελάτες
                     </p>
                 </div>
