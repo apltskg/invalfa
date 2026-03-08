@@ -35,6 +35,7 @@ import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 import Travellers from "./pages/Travellers";
 import MonthlyClosing from "./pages/MonthlyClosing";
 import QuickScan from "./pages/QuickScan";
+import ViewInvoice from "./pages/ViewInvoice";
 
 const queryClient = new QueryClient();
 
