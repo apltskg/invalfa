@@ -4,6 +4,7 @@ import { ContextualFAB } from "./ContextualFAB";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MonthSelector } from "./MonthSelector";
 import { MonthProvider } from "@/contexts/MonthContext";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 
 interface AppLayoutProps {
   children: React.ReactNode;
