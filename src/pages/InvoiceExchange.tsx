@@ -370,9 +370,9 @@ export default function InvoiceExchange() {
                     <div className="space-y-4 py-2">
                         {/* Invoice picker */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500">ΤΙΜΟΛΟΓΙΟ *</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground">ΤΙΜΟΛΟΓΙΟ *</Label>
                             <Select value={form.invoice_id} onValueChange={v => setForm(f => ({ ...f, invoice_id: v }))}>
-                                <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                <SelectTrigger className="rounded-xl border-border text-sm h-9">
                                     <SelectValue placeholder="Επιλέξτε τιμολόγιο..." />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-52">
