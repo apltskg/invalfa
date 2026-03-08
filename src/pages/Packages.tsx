@@ -16,12 +16,6 @@ import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { useMonth } from "@/contexts/MonthContext";
 import { FormDialog, FormInput, FormRow, FormField, FormTextarea, FormDivider } from "@/components/shared/FormDialog";
-import { supabase } from "@/integrations/supabase/client";
-import { Package, Invoice } from "@/types/database";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { useMonth } from "@/contexts/MonthContext";
 
 type PackageWithStats = Package & {
   invoices: Invoice[];
