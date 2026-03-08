@@ -550,8 +550,8 @@ export default function MonthlyClosing() {
                         <div className="flex items-start gap-3">
                             <Sparkles className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-sm font-medium text-blue-800">Συμβουλή</p>
-                                <p className="text-xs text-blue-600 mt-0.5">
+                                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Συμβουλή</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                                     Ακολουθήστε τα βήματα με τη σειρά. Πρώτα ανεβάστε την τιμολογιέρα,
                                     μετά τα έξοδα, μετά τις κινήσεις τράπεζας, κάντε τις αντιστοιχίσεις
                                     και τέλος στείλτε τον σύνδεσμο στον λογιστή.

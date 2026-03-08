@@ -164,7 +164,7 @@ export default function AdminSettings() {
                     <h1 className="text-2xl font-bold text-foreground">Διαχείριση Χρηστών</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Χρήστες και δικαιώματα &mdash; {profiles?.length || 0} σύνολο</p>
                 </div>
-                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl h-9 text-sm bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2 rounded-xl h-9 text-sm">
                     <UserPlus className="h-4 w-4" />
                     Προσθήκη Χρήστη
                 </Button>

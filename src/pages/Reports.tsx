@@ -200,7 +200,7 @@ export default function Reports() {
             </div>
 
             <Tabs defaultValue="aged" className="space-y-6">
-                <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
+                <TabsList className="bg-muted p-1 rounded-xl h-10">
                     <TabsTrigger value="aged" className="rounded-lg gap-2 text-sm">
                         <Clock className="h-4 w-4" />
                         Ηλικιακή Ανάλυση

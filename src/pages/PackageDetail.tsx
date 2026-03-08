@@ -338,7 +338,7 @@ export default function PackageDetail() {
                     <div className="space-y-1">
                       {recentPayments.slice(0, 3).map((p, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-slate-400">{format(new Date(p.date), 'dd MMM yyyy')}</span>
+                          <span className="text-muted-foreground">{format(new Date(p.date), 'dd MMM yyyy')}</span>
                           <span className="font-medium text-emerald-600">+€{p.amount.toFixed(2)}</span>
                         </div>
                       ))}
