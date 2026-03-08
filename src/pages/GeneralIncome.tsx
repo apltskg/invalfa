@@ -25,7 +25,7 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 interface IncomeCategory {
     id: string;
@@ -47,6 +47,11 @@ export default function GeneralIncome() {
     const [search, setSearch] = useState("");
     const [categories, setCategories] = useState<IncomeCategory[]>([]);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+    // Manual entry state
+    const [manualEntryOpen, setManualEntryOpen] = useState(false);
+    const [manualEntry, setManualEntry] = useState({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+    const [manualSaving, setManualSaving] = useState(false);
 
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
 
@@ -153,13 +158,23 @@ export default function GeneralIncome() {
                     <h1 className="text-2xl font-bold text-foreground">Γενικά Έσοδα</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Έσοδα εκτός φακέλων</p>
                 </div>
-                <Button
-                    onClick={() => setUploadModalOpen(true)}
-                    className="rounded-xl gap-2 h-9 text-sm bg-emerald-600 hover:bg-emerald-700"
-                >
-                    <Plus className="h-4 w-4" />
-                    Νέο Έσοδο
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setManualEntryOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm"
+                    >
+                        <Edit className="h-4 w-4" />
+                        Χειροκίνητη
+                    </Button>
+                    <Button
+                        onClick={() => setUploadModalOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm bg-emerald-600 hover:bg-emerald-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Νέο Έσοδο
+                    </Button>
+                </div>
             </div>
 
             {/* Stats row */}
@@ -434,23 +449,88 @@ export default function GeneralIncome() {
                 )}
             </FormDialog>
 
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Διαγραφή Εσόδου</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Να διαγραφεί το έσοδο <strong>{selectedInvoice?.merchant}</strong>{" "}
-                            ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""}); Η ενέργεια δεν αναιρείται.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl border-border">Ακύρωση</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">
-                            Διαγραφή
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Διαγραφή Εσόδου"
+                description={<>Να διαγραφεί το έσοδο <strong>{selectedInvoice?.merchant}</strong>{" "}({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""});<br/>Η ενέργεια δεν αναιρείται.</>}
+                icon={Trash2}
+                onConfirm={handleDelete}
+            />
+
+            {/* Manual Entry Dialog */}
+            <FormDialog
+                open={manualEntryOpen}
+                onOpenChange={setManualEntryOpen}
+                title="Χειροκίνητη Καταχώρηση Εσόδου"
+                icon={Edit}
+                iconClassName="bg-emerald-500/10 text-emerald-600"
+                onSubmit={async () => {
+                    if (!manualEntry.merchant || !manualEntry.amount) {
+                        toast.error("Συμπληρώστε Πελάτη και Ποσό");
+                        return;
+                    }
+                    setManualSaving(true);
+                    try {
+                        const { error } = await supabase.from("invoices").insert({
+                            merchant: manualEntry.merchant,
+                            amount: parseFloat(manualEntry.amount),
+                            invoice_date: manualEntry.invoice_date || null,
+                            expense_category_id: manualEntry.category_id === "none" ? null : manualEntry.category_id,
+                            type: "income",
+                            file_path: `manual/${Date.now()}`,
+                            file_name: "manual-entry",
+                            category: "other",
+                        } as any);
+                        if (error) throw error;
+                        toast.success("Καταχωρήθηκε επιτυχώς");
+                        setManualEntryOpen(false);
+                        setManualEntry({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+                        fetchData();
+                    } catch { toast.error("Αποτυχία καταχώρησης"); }
+                    finally { setManualSaving(false); }
+                }}
+                submitLabel="Καταχώρηση"
+                loading={manualSaving}
+                disabled={!manualEntry.merchant || !manualEntry.amount}
+            >
+                <FormInput
+                    label="Πελάτης / Πηγή"
+                    value={manualEntry.merchant}
+                    onChange={v => setManualEntry({ ...manualEntry, merchant: v })}
+                    placeholder="Όνομα πελάτη..."
+                />
+                <FormField label="Κατηγορία">
+                    <Select value={manualEntry.category_id} onValueChange={v => setManualEntry({ ...manualEntry, category_id: v })}>
+                        <SelectTrigger className="rounded-xl h-10 text-sm bg-muted/30 border-border/50">
+                            <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                            {categories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </FormField>
+                <FormDivider />
+                <FormRow>
+                    <FormInput
+                        label="Ποσό (€)"
+                        type="number"
+                        value={manualEntry.amount}
+                        onChange={v => setManualEntry({ ...manualEntry, amount: v })}
+                        placeholder="0.00"
+                    />
+                    <FormInput
+                        label="Ημερομηνία"
+                        type="date"
+                        value={manualEntry.invoice_date}
+                        onChange={v => setManualEntry({ ...manualEntry, invoice_date: v })}
+                        icon={Calendar}
+                    />
+                </FormRow>
+            </FormDialog>
         </div>
     );
 }

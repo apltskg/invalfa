@@ -33,7 +33,7 @@ import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 interface InvoiceListEntry {
     id: string;
@@ -74,6 +74,11 @@ export default function GeneralExpenses() {
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
     const [bulkCategoryId, setBulkCategoryId] = useState<string>("none");
     const [bulkProcessing, setBulkProcessing] = useState(false);
+
+    // Manual entry state
+    const [manualEntryOpen, setManualEntryOpen] = useState(false);
+    const [manualEntry, setManualEntry] = useState({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+    const [manualSaving, setManualSaving] = useState(false);
 
     const isSelecting = selectedIds.size > 0;
 
@@ -294,6 +299,14 @@ export default function GeneralExpenses() {
                     >
                         <FileText className="h-4 w-4" />
                         Μαζική Εισαγωγή
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setManualEntryOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm"
+                    >
+                        <Edit className="h-4 w-4" />
+                        Χειροκίνητη
                     </Button>
                     <Button
                         onClick={() => setUploadModalOpen(true)}
@@ -643,21 +656,14 @@ export default function GeneralExpenses() {
             </FormDialog>
 
             {/* Single Delete Dialog */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Διαγραφή Εξόδου</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Να διαγραφεί το έξοδο <strong>{selectedInvoice?.merchant}</strong>{" "}
-                            ({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""}); Η ενέργεια δεν αναιρείται.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">Ακύρωση</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">Διαγραφή</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Διαγραφή Εξόδου"
+                description={<>Να διαγραφεί το έξοδο <strong>{selectedInvoice?.merchant}</strong>{" "}({selectedInvoice?.amount ? `€${selectedInvoice.amount.toFixed(2)}` : ""});<br/>Η ενέργεια δεν αναιρείται.</>}
+                icon={Trash2}
+                onConfirm={handleDelete}
+            />
 
             {/* Bulk Category Dialog */}
             <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
@@ -695,27 +701,90 @@ export default function GeneralExpenses() {
             </Dialog>
 
             {/* Bulk Delete Dialog */}
-            <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Μαζική Διαγραφή</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Να διαγραφούν <strong>{selectedIds.size}</strong> εγγραφές; Η ενέργεια δεν αναιρείται.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">Ακύρωση</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleBulkDelete}
-                            disabled={bulkProcessing}
-                            className="rounded-xl bg-rose-600 hover:bg-rose-700"
-                        >
-                            {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                            Διαγραφή {selectedIds.size} εγγραφών
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+                open={bulkDeleteDialogOpen}
+                onOpenChange={setBulkDeleteDialogOpen}
+                title="Μαζική Διαγραφή"
+                description={<>Να διαγραφούν <strong>{selectedIds.size}</strong> εγγραφές;<br/>Η ενέργεια δεν αναιρείται.</>}
+                icon={Trash2}
+                onConfirm={handleBulkDelete}
+                confirmLabel={`Διαγραφή ${selectedIds.size} εγγραφών`}
+                loading={bulkProcessing}
+            />
+
+            {/* Manual Entry Dialog */}
+            <FormDialog
+                open={manualEntryOpen}
+                onOpenChange={setManualEntryOpen}
+                title="Χειροκίνητη Καταχώρηση Εξόδου"
+                icon={Edit}
+                iconClassName="bg-rose-500/10 text-rose-600"
+                onSubmit={async () => {
+                    if (!manualEntry.merchant || !manualEntry.amount) {
+                        toast.error("Συμπληρώστε Προμηθευτή και Ποσό");
+                        return;
+                    }
+                    setManualSaving(true);
+                    try {
+                        const { error } = await supabase.from("invoices").insert({
+                            merchant: manualEntry.merchant,
+                            amount: parseFloat(manualEntry.amount),
+                            invoice_date: manualEntry.invoice_date || null,
+                            expense_category_id: manualEntry.category_id === "none" ? null : manualEntry.category_id,
+                            type: "expense",
+                            file_path: `manual/${Date.now()}`,
+                            file_name: "manual-entry",
+                            category: "other",
+                        } as any);
+                        if (error) throw error;
+                        toast.success("Καταχωρήθηκε επιτυχώς");
+                        setManualEntryOpen(false);
+                        setManualEntry({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+                        fetchData();
+                    } catch { toast.error("Αποτυχία καταχώρησης"); }
+                    finally { setManualSaving(false); }
+                }}
+                submitLabel="Καταχώρηση"
+                loading={manualSaving}
+                disabled={!manualEntry.merchant || !manualEntry.amount}
+            >
+                <FormInput
+                    label="Προμηθευτής"
+                    value={manualEntry.merchant}
+                    onChange={v => setManualEntry({ ...manualEntry, merchant: v })}
+                    placeholder="Όνομα προμηθευτή..."
+                />
+                <FormField label="Κατηγορία Εξόδου">
+                    <Select value={manualEntry.category_id} onValueChange={v => setManualEntry({ ...manualEntry, category_id: v })}>
+                        <SelectTrigger className="rounded-xl h-10 text-sm bg-muted/30 border-border/50">
+                            <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                            {categories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </FormField>
+                <FormDivider />
+                <FormRow>
+                    <FormInput
+                        label="Ποσό (€)"
+                        type="number"
+                        value={manualEntry.amount}
+                        onChange={v => setManualEntry({ ...manualEntry, amount: v })}
+                        placeholder="0.00"
+                    />
+                    <FormInput
+                        label="Ημερομηνία"
+                        type="date"
+                        value={manualEntry.invoice_date}
+                        onChange={v => setManualEntry({ ...manualEntry, invoice_date: v })}
+                        icon={Calendar}
+                    />
+                </FormRow>
+            </FormDialog>
         </div>
     );
 }
