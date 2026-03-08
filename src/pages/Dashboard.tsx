@@ -34,6 +34,7 @@ export default function Dashboard() {
     const [unmatchedCount, setUnmatchedCount] = useState(0);
     const [pendingExpenses, setPendingExpenses] = useState(0);
     const [trendData, setTrendData] = useState<{ month: string; income: number; expenses: number }[]>([]);
+    const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
     const { startDate, endDate, displayLabel } = useMonth();
 
     // Show monthly closing banner in the first 10 days of the month
