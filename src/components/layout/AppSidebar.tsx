@@ -3,7 +3,7 @@ import {
   BarChart3, LogOut, ArrowDownCircle, ArrowUpCircle, Truck, Users,
   LayoutDashboard, Shield, Receipt, ClipboardList, ArrowLeftRight,
   Brain, ChevronRight, Infinity as InfinityIcon, CreditCard,
-  Globe, Briefcase, Plane, ClipboardCheck
+  Globe, Briefcase, Plane, ClipboardCheck, Moon, Sun
 } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
