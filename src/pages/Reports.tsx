@@ -193,8 +193,8 @@ export default function Reports() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">Αναφορές</h1>
-                <p className="text-slate-500 text-sm mt-1">
+                <h1 className="text-2xl font-bold text-foreground">Αναφορές</h1>
+                <p className="text-muted-foreground text-sm mt-1">
                     Οικονομικές αναφορές και στατιστικά πληρωμών
                 </p>
             </div>
