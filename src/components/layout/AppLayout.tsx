@@ -23,7 +23,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <SidebarTrigger className="h-10 w-10 sm:h-8 sm:w-8 rounded-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors" />
                 <MonthSelector />
               </div>
-              <NotificationBell />
+              <div className="flex items-center gap-2">
+                <GlobalSearch />
+                <NotificationBell />
+              </div>
             </div>
             {/* Page content - bottom padding for FAB */}
             <div className="p-3 sm:p-4 md:p-6 pb-24 sm:pb-6">
