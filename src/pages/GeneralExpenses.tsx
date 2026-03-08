@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { BulkUploadModal } from "@/components/upload/BulkUploadModal";
@@ -28,12 +27,9 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-    Dialog, DialogContent, DialogHeader,
-    DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
 
 interface InvoiceListEntry {
     id: string;
