@@ -92,10 +92,10 @@ export default function GeneralIncome() {
     const updateCategory = async (invoiceId: string, newCategoryId: string | null) => {
         try {
             const { error } = await supabase.from("invoices")
-                .update({ income_category_id: newCategoryId } as any)
+                .update({ expense_category_id: newCategoryId })
                 .eq("id", invoiceId);
             if (error) throw error;
-            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, income_category_id: newCategoryId } as any : inv));
+            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, expense_category_id: newCategoryId } : inv));
             toast.success("Η κατηγορία ενημερώθηκε", { duration: 1500 });
         } catch {
             toast.error("Σφάλμα κατά την ενημέρωση κατηγορίας", { duration: 2500 });
