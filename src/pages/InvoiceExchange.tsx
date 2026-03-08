@@ -392,17 +392,17 @@ export default function InvoiceExchange() {
                             </Select>
                         </div>
 
-                        <div className="border-t border-slate-100 pt-4">
-                            <p className="text-xs font-semibold text-slate-500 mb-3">ΠΑΡΑΛΗΠΤΗΣ</p>
+                        <div className="border-t border-border pt-4">
+                            <p className="text-xs font-semibold text-muted-foreground mb-3">ΠΑΡΑΛΗΠΤΗΣ</p>
 
                             {/* From existing customer */}
                             <div className="space-y-1.5 mb-3">
-                                <Label className="text-xs text-slate-400">Επιλογή από πελατολόγιο</Label>
+                                <Label className="text-xs text-muted-foreground">Επιλογή από πελατολόγιο</Label>
                                 <Select
                                     value={form.customer_id}
                                     onValueChange={handleCustomerSelect}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                                    <SelectTrigger className="rounded-xl border-border text-sm h-9">
                                         <SelectValue placeholder="Αναζήτηση πελάτη..." />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-48">
