@@ -65,6 +65,7 @@ export default function BankSync() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [invoiceSelectorOpen, setInvoiceSelectorOpen] = useState(false);
   const [selectedTransactionForInvoice, setSelectedTransactionForInvoice] = useState<string | null>(null);
