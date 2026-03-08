@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "next-themes";
 
 // ── My Company section ──────────────────────────────────────────────────────
 const companyItems = [
