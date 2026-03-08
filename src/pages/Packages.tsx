@@ -65,15 +65,23 @@ export default function Packages() {
   async function fetchData() {
     try {
       setLoading(true);
-      const [{ data: pkgs }, { data: invs }, { data: matches }] = await Promise.all([
-        supabase
+      const { data: pkgs } = await supabase
           .from("packages")
           .select("*")
           .gte("start_date", startDate)
           .lte("start_date", endDate)
-          .order("created_at", { ascending: false }),
-        supabase.from("invoices").select("*"),
-        supabase.from("invoice_transaction_matches").select("invoice_id"),
+          .order("created_at", { ascending: false });
+
+      const pkgIds = (pkgs || []).map(p => p.id);
+
+      // Only fetch invoices & matches for these packages (not ALL)
+      const [{ data: invs }, { data: matches }] = await Promise.all([
+        pkgIds.length > 0
+          ? supabase.from("invoices").select("*").in("package_id", pkgIds)
+          : Promise.resolve({ data: [] as any[] }),
+        pkgIds.length > 0
+          ? supabase.from("invoice_transaction_matches").select("invoice_id")
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
       const matchedInvoiceIds = new Set(((matches as any[]) || []).map(m => m.invoice_id));
@@ -175,13 +183,13 @@ export default function Packages() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Φάκελοι Ταξιδιών</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Φάκελοι Ταξιδιών</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700">
+            <Button className="rounded-xl gap-2 h-9 text-sm">
               <Plus className="h-4 w-4" />
               νέος Φάκελος
             </Button>
@@ -351,7 +359,7 @@ export default function Packages() {
                         </div>
                         <div>
                           <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Κέρδος</p>
-                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                             {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
                           </p>
                         </div>

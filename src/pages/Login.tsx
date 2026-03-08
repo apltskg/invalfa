@@ -88,13 +88,13 @@ export default function Login() {
             Always <span className="text-blue-600">First</span>
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Sign in to manage your invoices
+            Συνδεθείτε για να διαχειριστείτε τα παραστατικά σας
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Ηλ. Ταχυδρομείο</Label>
               <Input
                 id="email"
                 type="email"
@@ -112,7 +112,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Κωδικός</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -147,7 +147,7 @@ export default function Login() {
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Σύνδεση
             </Button>
           </form>
 
