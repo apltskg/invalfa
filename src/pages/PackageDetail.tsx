@@ -421,7 +421,7 @@ export default function PackageDetail() {
             <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
               <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Έξυπνες Προτάσεις</span>
               </div>
               <div className="divide-y divide-primary/10">
                 {suggestedMatches.map(({ transaction, invoice }) => (
