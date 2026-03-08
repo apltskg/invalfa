@@ -144,7 +144,7 @@ export default function GeneralIncome() {
 
     const filtered = invoices.filter(i => {
         const matchSearch = !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase());
-        const matchCat = !activeCategory || (inv => (inv as any).income_category_id === activeCategory)(i);
+        const matchCat = !activeCategory || inv.expense_category_id === activeCategory;
         return matchSearch && matchCat;
     });
 
