@@ -301,6 +301,14 @@ export default function GeneralExpenses() {
                         Μαζική Εισαγωγή
                     </Button>
                     <Button
+                        variant="outline"
+                        onClick={() => setManualEntryOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm"
+                    >
+                        <Edit className="h-4 w-4" />
+                        Χειροκίνητη
+                    </Button>
+                    <Button
                         onClick={() => setUploadModalOpen(true)}
                         className="rounded-xl gap-2 h-9 text-sm bg-rose-600 hover:bg-rose-700"
                     >
