@@ -270,14 +270,14 @@ export default function PackageDetail() {
 
         <div className="grid gap-4 md:grid-cols-3">
           {/* Main Info Card */}
-          <Card className="md:col-span-2 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+          <Card className="md:col-span-2 rounded-2xl border border-border bg-card px-6 py-5">
             <div className="flex justify-between items-start">
               <div>
                 <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="mb-2 rounded-lg text-xs">
                   {pkg.status === 'active' ? 'Ενεργό' : 'Ολοκληρωμένο'}
                 </Badge>
-                <h1 className="text-2xl font-bold text-slate-900">{pkg.client_name}</h1>
-                <p className="text-slate-400 mt-1 text-sm flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">{pkg.client_name}</h1>
+                <p className="text-muted-foreground mt-1 text-sm flex items-center gap-2">
                   {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"}
                   {" - "}
                   {pkg.end_date ? format(new Date(pkg.end_date), "dd MMM yyyy") : "?"}
