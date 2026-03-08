@@ -96,7 +96,7 @@ export default function InvoiceExchange() {
         try {
             const { data, error } = await (supabase as any)
                 .from("hub_shares")
-                .select("*")
+                .select("*, invoice:invoices(merchant, amount, invoice_date)")
                 .order("created_at", { ascending: false });
             if (error) throw error;
             setShares((data as unknown as HubShare[]) || []);
