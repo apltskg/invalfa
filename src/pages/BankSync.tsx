@@ -73,6 +73,8 @@ export default function BankSync() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [amountMin, setAmountMin] = useState<string>("");
+  const [amountMax, setAmountMax] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -273,6 +275,16 @@ export default function BankSync() {
       result = result.filter((t) => t.bank_name && selectedBanks.includes(t.bank_name));
     }
 
+    // Amount filter
+    if (amountMin) {
+      const min = parseFloat(amountMin);
+      if (!isNaN(min)) result = result.filter((t) => Math.abs(t.amount) >= min);
+    }
+    if (amountMax) {
+      const max = parseFloat(amountMax);
+      if (!isNaN(max)) result = result.filter((t) => Math.abs(t.amount) <= max);
+    }
+
     // Status filter
     if (statusFilter !== "all") {
       result = result.filter((t) => t.match_status === statusFilter);
@@ -299,7 +311,7 @@ export default function BankSync() {
     });
 
     return result;
-  }, [transactions, searchQuery, selectedBanks, statusFilter, sortField, sortDirection]);
+  }, [transactions, searchQuery, selectedBanks, statusFilter, amountMin, amountMax, sortField, sortDirection]);
 
   // Group by date
   const groupedTransactions = useMemo(() => {
@@ -500,6 +512,25 @@ export default function BankSync() {
                   </SelectContent>
                 </Select>
 
+                {/* Amount Range Filter */}
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    placeholder="Από €"
+                    value={amountMin}
+                    onChange={(e) => setAmountMin(e.target.value)}
+                    className="w-[90px] rounded-xl text-sm h-9"
+                  />
+                  <span className="text-xs text-muted-foreground">–</span>
+                  <Input
+                    type="number"
+                    placeholder="Έως €"
+                    value={amountMax}
+                    onChange={(e) => setAmountMax(e.target.value)}
+                    className="w-[90px] rounded-xl text-sm h-9"
+                  />
+                </div>
+
                 {/* Sort */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -540,7 +571,7 @@ export default function BankSync() {
                 </DropdownMenu>
 
                 {/* Clear Filters */}
-                {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all") && (
+                {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all" || amountMin || amountMax) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -548,6 +579,8 @@ export default function BankSync() {
                       setSearchQuery("");
                       setSelectedBanks([]);
                       setStatusFilter("all");
+                      setAmountMin("");
+                      setAmountMax("");
                     }}
                     className="text-muted-foreground"
                   >
