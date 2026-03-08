@@ -454,41 +454,49 @@ export default function Travellers() {
             </div>
 
             {/* ── Add Dialog ── */}
-            <Dialog open={showAdd} onOpenChange={setShowAdd}>
-                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Νέος Ταξιδιώτης</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Όνομα *" field="first_name" />
-                            <FormField label="Επώνυμο *" field="last_name" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Αρ. Διαβατηρίου" field="passport_number" />
-                            <FormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Αρ. Ταυτότητας" field="id_number" />
-                            <FormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
-                        </div>
-                        <FormField label="Ημ. Γέννησης" field="birth_date" type="date" />
-                        <FormField label="Miles & Bonus" field="miles_bonus_card" />
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Τηλέφωνο" field="phone" />
-                            <FormField label="Email" field="email" type="email" />
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowAdd(false)}>
-                                Ακύρωση
-                            </Button>
-                            <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving}>
-                                {saving ? "Αποθήκευση..." : "Αποθήκευση"}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <FormDialog
+                open={showAdd}
+                onOpenChange={setShowAdd}
+                title="Νέος Ταξιδιώτης"
+                icon={User}
+                iconClassName="bg-blue-500/10 text-blue-600"
+                onSubmit={handleSave}
+                submitLabel="Αποθήκευση"
+                loading={saving}
+                disabled={!form.first_name.trim() || !form.last_name.trim()}
+                maxWidth="sm:max-w-[520px]"
+            >
+                <FormRow>
+                    <FormInput label="Όνομα *" value={form.first_name} onChange={v => setForm(prev => ({ ...prev, first_name: v }))} placeholder="Όνομα" />
+                    <FormInput label="Επώνυμο *" value={form.last_name} onChange={v => setForm(prev => ({ ...prev, last_name: v }))} placeholder="Επώνυμο" />
+                </FormRow>
+                <FormDivider />
+                <FormRow>
+                    <FormInput label="Αρ. Διαβατηρίου" value={form.passport_number || ""} onChange={v => setForm(prev => ({ ...prev, passport_number: v || null }))} />
+                    <FormInput label="Λήξη Διαβατηρίου" type="date" value={form.passport_expiry || ""} onChange={v => setForm(prev => ({ ...prev, passport_expiry: v || null }))} icon={Calendar} />
+                </FormRow>
+                <FormRow>
+                    <FormInput label="Αρ. Ταυτότητας" value={form.id_number || ""} onChange={v => setForm(prev => ({ ...prev, id_number: v || null }))} />
+                    <FormInput label="Λήξη Ταυτότητας" type="date" value={form.id_expiration || ""} onChange={v => setForm(prev => ({ ...prev, id_expiration: v || null }))} icon={Calendar} />
+                </FormRow>
+                <FormInput label="Ημ. Γέννησης" type="date" value={form.birth_date || ""} onChange={v => setForm(prev => ({ ...prev, birth_date: v || null }))} icon={Calendar} />
+                <FormInput label="Miles & Bonus" value={form.miles_bonus_card || ""} onChange={v => setForm(prev => ({ ...prev, miles_bonus_card: v || null }))} icon={CreditCard} />
+                <FormDivider />
+                <FormRow>
+                    <FormInput label="Τηλέφωνο" value={form.phone || ""} onChange={v => setForm(prev => ({ ...prev, phone: v || null }))} icon={Phone} />
+                    <FormInput label="Email" type="email" value={form.email || ""} onChange={v => setForm(prev => ({ ...prev, email: v || null }))} icon={Mail} />
+                </FormRow>
+            </FormDialog>
+
+            {/* Delete Confirmation */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+                title="Διαγραφή Ταξιδιώτη"
+                description="Η ενέργεια δεν μπορεί να αναιρεθεί."
+                icon={Trash2}
+                onConfirm={confirmDelete}
+            />
         </div>
     );
 }
