@@ -128,7 +128,7 @@ export function ContextualFAB() {
   return (
     <>
       <motion.div
-        className="fixed bottom-8 right-8 z-50"
+        className="fixed bottom-6 right-4 sm:bottom-8 sm:right-8 z-50 fab-container"
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
@@ -136,10 +136,10 @@ export function ContextualFAB() {
         <Button
           size="lg"
           onClick={config.action}
-          className="h-14 gap-2 rounded-full px-6 shadow-elevated"
+          className="h-14 gap-2 rounded-full px-5 sm:px-6 shadow-elevated active:scale-95 transition-transform"
         >
           {config.icon}
-          <span className="font-medium">{config.label}</span>
+          <span className="font-medium hidden sm:inline">{config.label}</span>
         </Button>
       </motion.div>
 
