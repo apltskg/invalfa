@@ -175,15 +175,24 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="px-2 py-3 border-t border-slate-100 space-y-0.5">
+      <SidebarFooter className="px-2 py-3 border-t border-border space-y-0.5">
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="flex items-center gap-2.5 w-full h-9 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+        </button>
+
         {isAdmin && (
           <SidebarMenuItem className="list-none">
             <SidebarMenuButton
               asChild
-              className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="h-9 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               <Link to="/admin" className="flex items-center gap-2.5">
-                <Shield className="h-4 w-4 text-slate-400" />
+                <Shield className="h-4 w-4" />
                 <span>Admin</span>
               </Link>
             </SidebarMenuButton>
@@ -192,10 +201,10 @@ export function AppSidebar() {
         <SidebarMenuItem className="list-none">
           <SidebarMenuButton
             asChild
-            className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            className="h-9 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             <Link to="/settings" className="flex items-center gap-2.5">
-              <Settings className="h-4 w-4 text-slate-400" />
+              <Settings className="h-4 w-4" />
               <span>Ρυθμίσεις</span>
             </Link>
           </SidebarMenuButton>
@@ -203,16 +212,16 @@ export function AppSidebar() {
 
         {/* User row */}
         {user && (
-          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg bg-slate-50">
-            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-              <span className="text-[10px] font-bold text-white">
+          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg bg-muted">
+            <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-[10px] font-bold text-primary-foreground">
                 {user.email?.[0]?.toUpperCase() || "U"}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 truncate flex-1">{user.email}</p>
+            <p className="text-[11px] text-muted-foreground truncate flex-1">{user.email}</p>
             <button
               onClick={handleSignOut}
-              className="text-slate-400 hover:text-red-500 transition-colors"
+              className="text-muted-foreground hover:text-destructive transition-colors"
               title="Αποσύνδεση"
             >
               <LogOut className="h-3.5 w-3.5" />
