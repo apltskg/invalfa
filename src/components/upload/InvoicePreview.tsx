@@ -413,6 +413,31 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
             />
           </div>
 
+          {/* Invoice Number & VAT fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="invoiceNumber">Αρ. Τιμολογίου</Label>
+              <Input
+                id="invoiceNumber"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                placeholder="π.χ. ΤΙΜ-001"
+                className="rounded-xl text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxId">ΑΦΜ {type === "income" ? "Πελάτη" : "Προμηθευτή"}</Label>
+              <Input
+                id="taxId"
+                value={taxId}
+                onChange={(e) => setTaxId(e.target.value)}
+                placeholder="9 ψηφία"
+                maxLength={9}
+                className="rounded-xl text-sm"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="date">Ημερομηνία</Label>
             <Input
