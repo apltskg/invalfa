@@ -379,9 +379,9 @@ export default function InvoiceExchange() {
                                     {invoices.map(inv => (
                                         <SelectItem key={inv.id} value={inv.id}>
                                             <div className="flex items-center gap-2">
-                                                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                                                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                                                 <span className="font-medium">{inv.merchant || "Άγνωστος"}</span>
-                                                <span className="text-slate-400 text-xs">
+                                                <span className="text-muted-foreground text-xs">
                                                     {inv.amount ? `€${inv.amount.toFixed(2)}` : ""}
                                                     {inv.invoice_date ? ` · ${format(new Date(inv.invoice_date), "dd/MM/yy")}` : ""}
                                                 </span>
