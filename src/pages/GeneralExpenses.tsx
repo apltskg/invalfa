@@ -580,73 +580,63 @@ export default function GeneralExpenses() {
             <BulkUploadModal open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} onComplete={fetchData} defaultType="expense" />
 
             {/* Edit Dialog */}
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="rounded-2xl max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle className="text-base">Επεξεργασία Εξόδου</DialogTitle>
-                    </DialogHeader>
-                    {editingInvoice && (
-                        <div className="space-y-4 py-2">
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground">Προμηθευτής</Label>
-                                <Input
-                                    value={editingInvoice.merchant || ""}
-                                    onChange={e => setEditingInvoice({ ...editingInvoice, merchant: e.target.value })}
-                                    className="rounded-xl text-sm"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground">Κατηγορία Εξόδου</Label>
-                                <Select
-                                    value={(editingInvoice as any).expense_category_id || "none"}
-                                    onValueChange={v => setEditingInvoice({
-                                        ...editingInvoice, ...({
-                                            expense_category_id: v === "none" ? null : v
-                                        } as any)
-                                    })}
-                                >
-                                    <SelectTrigger className="rounded-xl text-sm h-9">
-                                        <SelectValue placeholder="Επιλέξτε κατηγορία..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
-                                        {categories.map(cat => (
-                                            <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-muted-foreground">Ποσό (€)</Label>
-                                    <Input
-                                        type="number"
-                                        value={editingInvoice.amount || 0}
-                                        onChange={e => setEditingInvoice({ ...editingInvoice, amount: parseFloat(e.target.value) })}
-                                        className="rounded-xl text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-muted-foreground">Ημερομηνία</Label>
-                                    <Input
-                                        type="date"
-                                        value={editingInvoice.invoice_date || ""}
-                                        onChange={e => setEditingInvoice({ ...editingInvoice, invoice_date: e.target.value })}
-                                        className="rounded-xl text-sm"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-sm">Ακύρωση</Button>
-                        <Button onClick={handleUpdate} disabled={saving} className="rounded-xl text-sm">
-                            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                            Αποθήκευση
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <FormDialog
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+                title="Επεξεργασία Εξόδου"
+                icon={Edit}
+                iconClassName="bg-rose-500/10 text-rose-600"
+                onSubmit={handleUpdate}
+                submitLabel="Αποθήκευση"
+                loading={saving}
+            >
+                {editingInvoice && (
+                    <>
+                        <FormInput
+                            label="Προμηθευτής"
+                            value={editingInvoice.merchant || ""}
+                            onChange={(v) => setEditingInvoice({ ...editingInvoice, merchant: v })}
+                            placeholder="Όνομα προμηθευτή..."
+                        />
+                        <FormField label="Κατηγορία Εξόδου">
+                            <Select
+                                value={(editingInvoice as any).expense_category_id || "none"}
+                                onValueChange={v => setEditingInvoice({
+                                    ...editingInvoice, ...({
+                                        expense_category_id: v === "none" ? null : v
+                                    } as any)
+                                })}
+                            >
+                                <SelectTrigger className="rounded-xl h-10 text-sm bg-muted/30 border-border/50">
+                                    <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                                    {categories.map(cat => (
+                                        <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                        <FormDivider />
+                        <FormRow>
+                            <FormInput
+                                label="Ποσό (€)"
+                                type="number"
+                                value={editingInvoice.amount || 0}
+                                onChange={(v) => setEditingInvoice({ ...editingInvoice, amount: parseFloat(v) })}
+                            />
+                            <FormInput
+                                label="Ημερομηνία"
+                                type="date"
+                                value={editingInvoice.invoice_date || ""}
+                                onChange={(v) => setEditingInvoice({ ...editingInvoice, invoice_date: v })}
+                                icon={Calendar}
+                            />
+                        </FormRow>
+                    </>
+                )}
+            </FormDialog>
 
             {/* Single Delete Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
