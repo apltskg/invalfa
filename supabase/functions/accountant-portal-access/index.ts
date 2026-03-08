@@ -191,6 +191,21 @@ Deno.serve(async (req) => {
 
       const bankStatements = bankStatementsData || [];
 
+      // Fetch comments for all invoices in scope
+      const allInvoiceIds = [
+        ...invoices.map(i => i.id),
+        ...generalInvoices.map(i => i.id),
+      ];
+      let comments: any[] = [];
+      if (allInvoiceIds.length > 0) {
+        const { data: commentsData } = await supabase
+          .from('invoice_comments')
+          .select('*')
+          .in('invoice_id', allInvoiceIds)
+          .order('created_at', { ascending: true });
+        comments = commentsData || [];
+      }
+
       return new Response(
         JSON.stringify({
           authorized: true,
@@ -199,7 +214,8 @@ Deno.serve(async (req) => {
           transactions,
           generalInvoices,
           invoiceListImports: invoiceListImportsWithItems,
-          bankStatements
+          bankStatements,
+          comments,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
