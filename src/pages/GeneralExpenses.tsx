@@ -444,8 +444,10 @@ export default function GeneralExpenses() {
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
                     </div>
                 ) : filtered.length === 0 ? (
-                    <div className="p-16 text-center">
-                        <TrendingDown className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                     <div className="p-16 text-center">
+                        <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                            <TrendingDown className="h-5 w-5 text-muted-foreground/50" />
+                        </div>
                         <p className="text-muted-foreground text-sm">
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν υπάρχουν καταχωρίσεις"}
                         </p>

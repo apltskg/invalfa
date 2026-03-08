@@ -344,7 +344,7 @@ export default function BankSync() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <p className="text-muted-foreground animate-pulse">Φόρτωση κινήσεων...</p>
+        <div className="h-8 w-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
