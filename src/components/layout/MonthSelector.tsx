@@ -48,16 +48,17 @@ export function MonthSelector() {
   const currentModeLabel = VIEW_MODES.find(m => m.value === viewMode)?.label || 'Μήνας';
 
   return (
-    <div className="flex items-center gap-2">
-      {/* View Mode Selector — clear dropdown instead of tiny letter buttons */}
+    <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* View Mode Selector — hidden on mobile, shown on sm+ */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-3 rounded-xl gap-1.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50"
+            className="h-9 sm:h-8 px-2.5 sm:px-3 rounded-xl gap-1 sm:gap-1.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50"
           >
-            {currentModeLabel}
+            <span className="hidden sm:inline">{currentModeLabel}</span>
+            <span className="sm:hidden">{currentModeLabel.charAt(0)}</span>
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
@@ -83,7 +84,7 @@ export function MonthSelector() {
           variant="ghost"
           size="icon"
           onClick={goToPrevious}
-          className="h-7 w-7 rounded-lg hover:bg-slate-100"
+          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-slate-100 active:bg-slate-200"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -93,12 +94,12 @@ export function MonthSelector() {
             <Button
               variant="ghost"
               className={cn(
-                "h-7 px-3 rounded-lg gap-1.5 font-medium capitalize text-sm hover:bg-slate-100",
+                "h-9 sm:h-7 px-2 sm:px-3 rounded-lg gap-1 sm:gap-1.5 font-medium capitalize text-xs sm:text-sm hover:bg-slate-100 active:bg-slate-200",
                 isCurrentPeriod && "text-blue-600"
               )}
             >
-              <Calendar className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[130px]">{displayLabel}</span>
+              <Calendar className="h-3.5 w-3.5 hidden sm:block" />
+              <span className="truncate max-w-[90px] sm:max-w-[130px]">{displayLabel}</span>
               <ChevronDown className="h-3 w-3 opacity-40" />
             </Button>
           </DropdownMenuTrigger>
@@ -111,7 +112,7 @@ export function MonthSelector() {
                   key={key}
                   onClick={() => setSelectedDate(month)}
                   className={cn(
-                    "capitalize cursor-pointer",
+                    "capitalize cursor-pointer min-h-[44px] sm:min-h-0",
                     isSelected && "bg-blue-50 text-blue-600 font-medium"
                   )}
                 >
@@ -129,7 +130,7 @@ export function MonthSelector() {
                       key={year}
                       onClick={() => setSelectedDate(new Date(year, 0, 1))}
                       className={cn(
-                        "cursor-pointer",
+                        "cursor-pointer min-h-[44px] sm:min-h-0",
                         isSelected && "bg-blue-50 text-blue-600 font-medium"
                       )}
                     >
@@ -151,7 +152,7 @@ export function MonthSelector() {
           variant="ghost"
           size="icon"
           onClick={goToNext}
-          className="h-7 w-7 rounded-lg hover:bg-slate-100"
+          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-slate-100 active:bg-slate-200"
           disabled={isCurrentPeriod}
         >
           <ChevronRight className="h-4 w-4" />
