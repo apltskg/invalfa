@@ -337,7 +337,7 @@ export default function MonthlyClosing() {
             {/* Progress Card */}
             <Card className={cn(
                 "rounded-2xl border-2 overflow-hidden transition-all",
-                allDone ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"
+                allDone ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800" : "border-border bg-card"
             )}>
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-3">
