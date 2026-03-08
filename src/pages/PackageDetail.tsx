@@ -221,13 +221,13 @@ export default function PackageDetail() {
   const InvoiceList = ({ items }: { items: InvoiceWithMatch[] }) => (
     <div className="space-y-3">
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-xl">No items found</p>
+        <p className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-xl">Δεν βρέθηκαν εγγραφές</p>
       ) : (
         items.map(inv => (
           <Card key={inv.id} className="p-4 rounded-xl hover:bg-muted/50 transition-colors flex justify-between items-center group cursor-pointer" onClick={() => openPreview(inv)}>
             <div>
               <div className="font-medium flex items-center gap-2">
-                {inv.merchant || "Unknown"}
+                {inv.merchant || "Άγνωστος"}
                 {inv.matchedTransaction && <CheckCircle2 className="h-3 w-3 text-green-500" />}
               </div>
               <div className="text-xs text-muted-foreground flex gap-2">
@@ -237,7 +237,7 @@ export default function PackageDetail() {
             </div>
             <div className="text-right">
               <div className="font-semibold">€{(inv.amount || 0).toFixed(2)}</div>
-              <div className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">View</div>
+              <div className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">Προβολή</div>
             </div>
           </Card>
         ))
