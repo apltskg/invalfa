@@ -545,7 +545,7 @@ export default function MonthlyClosing() {
 
             {/* Quick Tips */}
             {!loading && !allDone && (
-                <Card className="rounded-2xl border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+                <Card className="rounded-2xl border-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-100 dark:border-blue-900">
                     <CardContent className="p-5">
                         <div className="flex items-start gap-3">
                             <Sparkles className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
