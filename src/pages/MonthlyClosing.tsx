@@ -468,9 +468,9 @@ export default function MonthlyClosing() {
                                                 transition={{ duration: 0.2 }}
                                                 className="overflow-hidden"
                                             >
-                                                <div className="px-5 pb-4 pt-0 border-t border-slate-100">
+                                                <div className="px-5 pb-4 pt-0 border-t border-border">
                                                     <div className="pt-3 space-y-3">
-                                                        <p className="text-sm text-slate-600">{step.description}</p>
+                                                        <p className="text-sm text-muted-foreground">{step.description}</p>
 
                                                         {status.warning && (
                                                             <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
