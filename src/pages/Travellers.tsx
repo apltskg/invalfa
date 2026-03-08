@@ -53,14 +53,14 @@ function getAge(birthDate: string | null) {
 
 // ── Color palette for avatars ──
 const AVATAR_COLORS = [
-    "from-blue-500 to-indigo-600",
-    "from-emerald-500 to-teal-600",
-    "from-violet-500 to-purple-600",
-    "from-amber-500 to-orange-600",
-    "from-rose-500 to-pink-600",
-    "from-cyan-500 to-sky-600",
-    "from-lime-500 to-green-600",
-    "from-fuchsia-500 to-pink-600",
+    "bg-primary/10 text-primary",
+    "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400",
 ];
 
 function avatarColor(id: string) {
