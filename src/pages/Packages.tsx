@@ -280,9 +280,9 @@ export default function Packages() {
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full grid grid-cols-3 p-1 bg-muted/50 rounded-2xl border border-white/10 h-auto">
-          <TabsTrigger value="all" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
-          <TabsTrigger value="active" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρ.</TabsTrigger>
+          <TabsTrigger value="all" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">Όλα</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">Ολοκληρ.</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4 mt-4">
