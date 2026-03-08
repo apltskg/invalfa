@@ -354,8 +354,8 @@ export default function BankSync() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Συγχρονισμός Τράπεζας</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-foreground">Συγχρονισμός Τράπεζας</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Διαχείριση τραπεζικών κινήσεων και αντιστοίχιση με παραστατικά
           </p>
         </div>
@@ -364,7 +364,7 @@ export default function BankSync() {
             variant="outline"
             onClick={handleAutoMatch}
             disabled={autoMatchingRunning || transactions.length === 0}
-            className="rounded-xl gap-2 border-slate-200 h-9 text-sm"
+            className="rounded-xl gap-2 border-border h-9 text-sm"
           >
             {autoMatchingRunning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -377,7 +377,7 @@ export default function BankSync() {
             <Button
               variant="outline"
               onClick={() => setActiveTab("suggestions")}
-              className="rounded-xl gap-2 border-slate-200 h-9 text-sm"
+              className="rounded-xl gap-2 border-border h-9 text-sm"
             >
               <Sparkles className="h-4 w-4" />
               {matchingStats.total} Προτάσεις
@@ -396,24 +396,24 @@ export default function BankSync() {
       {/* Stats */}
       {transactions.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="p-4 rounded-xl border-slate-200 bg-white">
-            <p className="text-xs text-slate-500 font-medium">Σύνολο</p>
-            <p className="text-2xl font-bold text-slate-800 mt-0.5">{stats.total}</p>
+          <Card className="p-4 rounded-xl border-border bg-card">
+            <p className="text-xs text-muted-foreground font-medium">Σύνολο</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{stats.total}</p>
           </Card>
-          <Card className="p-4 rounded-xl border-slate-200 bg-white border-l-4 border-l-emerald-500">
-            <p className="text-xs text-slate-500 font-medium">Ταιριασμένα</p>
+          <Card className="p-4 rounded-xl border-border bg-card border-l-4 border-l-emerald-500">
+            <p className="text-xs text-muted-foreground font-medium">Ταιριασμένα</p>
             <p className="text-2xl font-bold text-emerald-600 mt-0.5">{stats.matched}</p>
           </Card>
-          <Card className="p-4 rounded-xl border-slate-200 bg-white border-l-4 border-l-amber-500">
-            <p className="text-xs text-slate-500 font-medium">Με Προτάσεις</p>
+          <Card className="p-4 rounded-xl border-border bg-card border-l-4 border-l-amber-500">
+            <p className="text-xs text-muted-foreground font-medium">Με Προτάσεις</p>
             <p className="text-2xl font-bold text-amber-600 mt-0.5">{matchingStats.total}</p>
           </Card>
-          <Card className="p-4 rounded-xl border-slate-200 bg-white border-l-4 border-l-blue-500">
-            <p className="text-xs text-slate-500 font-medium">Εισπράξεις</p>
+          <Card className="p-4 rounded-xl border-border bg-card border-l-4 border-l-blue-500">
+            <p className="text-xs text-muted-foreground font-medium">Εισπράξεις</p>
             <p className="text-2xl font-bold text-emerald-600 mt-0.5">€{stats.totalIncome.toFixed(0)}</p>
           </Card>
-          <Card className="p-4 rounded-xl border-slate-200 bg-white border-l-4 border-l-rose-500">
-            <p className="text-xs text-slate-500 font-medium">Πληρωμές</p>
+          <Card className="p-4 rounded-xl border-border bg-card border-l-4 border-l-rose-500">
+            <p className="text-xs text-muted-foreground font-medium">Πληρωμές</p>
             <p className="text-2xl font-bold text-rose-600 mt-0.5">€{stats.totalExpense.toFixed(0)}</p>
           </Card>
         </div>

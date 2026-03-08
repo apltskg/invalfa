@@ -450,6 +450,63 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_shares: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          customer_email: string
+          customer_id: string | null
+          customer_name: string | null
+          email_sent_at: string | null
+          id: string
+          invoice_id: string
+          message: string | null
+          status: string
+          viewed_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_email: string
+          customer_id?: string | null
+          customer_name?: string | null
+          email_sent_at?: string | null
+          id?: string
+          invoice_id: string
+          message?: string | null
+          status?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_email?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          email_sent_at?: string | null
+          id?: string
+          invoice_id?: string
+          message?: string | null
+          status?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_shares_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_shares_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_comments: {
         Row: {
           comment_text: string
