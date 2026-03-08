@@ -41,6 +41,8 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
   const [category, setCategory] = useState<InvoiceCategory>(extractedData?.category || "other");
   const [expenseCategoryId, setExpenseCategoryId] = useState<string | null>(null);
   const [incomeCategoryId, setIncomeCategoryId] = useState<string | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState((extractedData as any)?.invoice_number || "");
+  const [taxId, setTaxId] = useState((extractedData as any)?.tax_id || "");
   const [packageId, setPackageId] = useState<string | null>(propPackageId || defaultPackageId || null);
 
   const [packages, setPackages] = useState<Package[]>([]);
