@@ -31,6 +31,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveContactIds } from "@/lib/auto-link-contact";
 import { toast } from "sonner";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
 
@@ -197,21 +198,31 @@ export function BulkUploadModal({
     }
 
     try {
-      const invoices = validFiles.map(f => ({
-        file_path: f.filePath!,
-        file_name: f.file.name,
-        merchant: f.extractedData?.merchant || null,
-        amount: f.extractedData?.amount || null,
-        invoice_date: f.extractedData?.date || null,
-        category: (f.extractedData?.category as string) || 'other',
-        expense_category_id: defaultType === 'expense' ? (selectedCategory || null) : null,
-        
-        package_id: selectedPackage || null,
-        extracted_data: f.extractedData as any,
-        type: defaultType,
-      }));
+      // Auto-link contacts for each invoice
+      const invoicesWithContacts = await Promise.all(
+        validFiles.map(async (f) => {
+          const autoLinked = await resolveContactIds(
+            f.extractedData?.merchant,
+            defaultType as "income" | "expense",
+            (f.extractedData as any)?.tax_id
+          );
+          return {
+            file_path: f.filePath!,
+            file_name: f.file.name,
+            merchant: f.extractedData?.merchant || null,
+            amount: f.extractedData?.amount || null,
+            invoice_date: f.extractedData?.date || null,
+            category: (f.extractedData?.category as string) || 'other',
+            expense_category_id: defaultType === 'expense' ? (selectedCategory || null) : null,
+            package_id: selectedPackage || null,
+            extracted_data: f.extractedData as any,
+            type: defaultType,
+            ...autoLinked,
+          };
+        })
+      );
 
-      const { error } = await (supabase as any).from('invoices').insert(invoices);
+      const { error } = await (supabase as any).from('invoices').insert(invoicesWithContacts);
 
       if (error) throw error;
 
