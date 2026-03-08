@@ -327,7 +327,7 @@ export default function PackageDetail() {
                     style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>Εισπραγμένα: €{totalPaid.toFixed(2)}</span>
                   <span>{totalIncome > 0 ? ((totalPaid / totalIncome) * 100).toFixed(0) : 0}%</span>
                 </div>
