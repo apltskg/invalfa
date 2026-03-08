@@ -189,7 +189,7 @@ export default function Packages() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl gap-2 h-9 text-sm bg-blue-600 hover:bg-blue-700">
+            <Button className="rounded-xl gap-2 h-9 text-sm">
               <Plus className="h-4 w-4" />
               νέος Φάκελος
             </Button>
