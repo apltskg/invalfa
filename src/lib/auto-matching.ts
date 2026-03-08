@@ -35,6 +35,17 @@ interface Invoice {
     extracted_data: any;
 }
 
+interface InvoiceListItem {
+    id: string;
+    invoice_number: string | null;
+    client_name: string | null;
+    client_vat: string | null;
+    invoice_date: string | null;
+    net_amount: number | null;
+    total_amount: number | null;
+    match_status: string | null;
+}
+
 interface Supplier {
     id: string;
     name: string;
