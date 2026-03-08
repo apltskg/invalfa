@@ -354,7 +354,7 @@ export default function ExportHub() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Export Hub</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Κέντρο Εξαγωγών</h1>
         <p className="mt-1 text-muted-foreground">
           Δημιουργία μηνιαίων αναφορών για τον λογιστή - <span className="font-medium capitalize">{currentMonthLabel}</span>
         </p>
