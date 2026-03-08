@@ -60,6 +60,16 @@ interface PortalTransaction extends BankTransaction {
   notes?: string | null;
 }
 
+interface InvoiceComment {
+  id: string;
+  invoice_id: string;
+  comment_text: string;
+  is_doubt: boolean;
+  is_read: boolean;
+  created_at: string;
+  shareable_link_id: string | null;
+}
+
 interface PortalResponse {
   authorized: boolean;
   monthYear?: string;
@@ -68,6 +78,7 @@ interface PortalResponse {
   generalInvoices?: Invoice[];
   invoiceListImports?: InvoiceListImport[];
   bankStatements?: any[];
+  comments?: InvoiceComment[];
   error?: string;
 }
 
