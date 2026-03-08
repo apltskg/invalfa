@@ -75,6 +75,11 @@ export default function GeneralExpenses() {
     const [bulkCategoryId, setBulkCategoryId] = useState<string>("none");
     const [bulkProcessing, setBulkProcessing] = useState(false);
 
+    // Manual entry state
+    const [manualEntryOpen, setManualEntryOpen] = useState(false);
+    const [manualEntry, setManualEntry] = useState({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+    const [manualSaving, setManualSaving] = useState(false);
+
     const isSelecting = selectedIds.size > 0;
 
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
