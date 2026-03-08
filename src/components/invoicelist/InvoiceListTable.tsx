@@ -156,7 +156,7 @@ export function InvoiceListTable({
 
 
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+  const renderSortableHeader = (field: SortField, children: React.ReactNode) => (
     <TableHead
       onClick={() => toggleSort(field)}
       className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -204,14 +204,12 @@ export function InvoiceListTable({
               <TableHead className="w-12">
                 <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
               </TableHead>
-              <SortableHeader field="invoice_date">Ημερομηνία</SortableHeader>
-              <SortableHeader field="invoice_number">Παραστατικό</SortableHeader>
-              <SortableHeader field="client_name">Πελάτης</SortableHeader>
+              {renderSortableHeader("invoice_date", "Ημερομηνία")}
+              {renderSortableHeader("invoice_number", "Παραστατικό")}
+              {renderSortableHeader("client_name", "Πελάτης")}
               <TableHead className="text-right">Καθαρή</TableHead>
               <TableHead className="text-right">Φ.Π.Α.</TableHead>
-              <SortableHeader field="total_amount">
-                <span className="text-right w-full">Σύνολο</span>
-              </SortableHeader>
+              {renderSortableHeader("total_amount", <span className="text-right w-full">Σύνολο</span>)}
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>

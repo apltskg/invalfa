@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, Edit3 } from "lucide-react";
+import { Upload, Edit3, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,9 @@ interface UploadModalProps {
 export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, defaultType = "expense" }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [extractionFailed, setExtractionFailed] = useState(false);
+  const [lastUploadedPath, setLastUploadedPath] = useState<string | null>(null);
+  const [lastUploadedFile, setLastUploadedFile] = useState<File | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [mode, setMode] = useState<"upload" | "manual">("upload");
 
@@ -37,6 +40,9 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     setUploadedFile(null);
     setUploading(false);
     setExtracting(false);
+    setExtractionFailed(false);
+    setLastUploadedPath(null);
+    setLastUploadedFile(null);
     setMode("upload");
     onOpenChange(false);
   }, [onOpenChange]);
@@ -49,6 +55,50 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       extractedData: null,
       isManual: true
     });
+  };
+
+  const runExtraction = async (filePath: string, fileName: string): Promise<ExtractedData | null> => {
+    try {
+      const response = await supabase.functions.invoke('extract-invoice', {
+        body: { filePath, fileName }
+      });
+      if (response.error) {
+        console.error('Edge Function error:', response.error);
+        toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
+        return null;
+      }
+      if (response.data && typeof response.data === 'object') {
+        const rawData = response.data as any;
+        return (rawData.extracted || rawData) as ExtractedData;
+      }
+      toast.info("Το AI δεν κατάφερε να διαβάσει κάποια πεδία. Συμπληρώστε χειροκίνητα.");
+      return null;
+    } catch (e) {
+      console.error('Extraction error:', e);
+      toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
+      return null;
+    }
+  };
+
+  const handleRetryExtraction = async () => {
+    if (!lastUploadedPath || !lastUploadedFile) return;
+    setExtracting(true);
+    setExtractionFailed(false);
+    toast.info("Επανάληψη ανάγνωσης AI...");
+
+    const extractedData = await runExtraction(lastUploadedPath, lastUploadedFile.name);
+
+    setExtracting(false);
+    if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+      setExtractionFailed(true);
+      toast.error("Η ανάγνωση απέτυχε ξανά. Συμπληρώστε χειροκίνητα.");
+    } else {
+      toast.success("Επιτυχής ανάγνωση!");
+    }
+
+    if (uploadedFile) {
+      setUploadedFile({ ...uploadedFile, extractedData });
+    }
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -79,31 +129,15 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
 
       setUploading(false);
       setExtracting(true);
+      setLastUploadedPath(filePath);
+      setLastUploadedFile(file);
 
-      let extractedData: ExtractedData | null = null;
-      try {
-        const response = await supabase.functions.invoke('extract-invoice', {
-          body: { filePath, fileName: file.name }
-        });
-
-        // Robust check for JSON response
-        if (response.error) {
-          console.error('Edge Function error:', response.error);
-          toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
-        } else if (response.data && typeof response.data === 'object') {
-          // Edge function returns { extracted: { merchant, amount, ... } }
-          const rawData = response.data as any;
-          extractedData = (rawData.extracted || rawData) as ExtractedData;
-        } else {
-          console.warn('Unexpected non-JSON response from AI extraction');
-          toast.info("AI could not read some fields automatically. Please fill them manually.");
-        }
-      } catch (extractError) {
-        console.error('Extraction catch error:', extractError);
-        toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
-      }
+      const extractedData = await runExtraction(filePath, file.name);
 
       setExtracting(false);
+      if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+        setExtractionFailed(true);
+      }
       setUploadedFile({
         file,
         path: filePath,
@@ -316,6 +350,17 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              {extractionFailed && !extracting && (
+                <div className="flex items-center gap-2 mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <span className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                    Η AI ανάγνωση ήταν ατελής. Μπορείτε να δοκιμάσετε ξανά ή να συμπληρώσετε χειροκίνητα.
+                  </span>
+                  <Button size="sm" variant="outline" onClick={handleRetryExtraction} className="shrink-0">
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Επανάληψη
+                  </Button>
+                </div>
+              )}
               <InvoicePreview
                 fileName={uploadedFile.file?.name || "Manual Entry"}
                 fileUrl={uploadedFile.url}
