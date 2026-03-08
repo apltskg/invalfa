@@ -358,7 +358,7 @@ export default function MonthlyClosing() {
                                 )}>
                                     {allDone ? "Κλείσιμο Ολοκληρώθηκε! 🎉" : `${completedCount} / ${totalSteps} Βήματα`}
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-muted-foreground">
                                     {allDone
                                         ? "Όλα τα βήματα ολοκληρώθηκαν — ο λογιστής μπορεί να δουλέψει"
                                         : "Ακολουθήστε τα βήματα παρακάτω για να ολοκληρώσετε"
