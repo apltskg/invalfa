@@ -453,8 +453,8 @@ export default function MonthlyClosing() {
 
                                         {/* Expand arrow */}
                                         {isExpanded
-                                            ? <ChevronUp className="h-4 w-4 text-slate-300 shrink-0" />
-                                            : <ChevronDown className="h-4 w-4 text-slate-300 shrink-0" />
+                                            ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                                            : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                                         }
                                     </button>
 
