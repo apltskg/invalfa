@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Package as PackageIcon, FileText, AlertCircle, CheckCircle2, Calendar, TrendingUp, Users, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -295,11 +296,7 @@ export default function Packages() {
 
         <TabsContent value={activeTab} className="space-y-4 mt-4">
           {loading ? (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-56 sm:h-64 animate-pulse rounded-2xl sm:rounded-3xl bg-muted/50 border-none" />
-              ))}
-            </div>
+            <PageSkeleton variant="cards" />
           ) : filteredPackages.length === 0 ? (
             <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-16 bg-muted/20">
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">

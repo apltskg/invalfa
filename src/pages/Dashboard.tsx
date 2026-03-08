@@ -10,7 +10,7 @@ import {
     FileText, CreditCard, TrendingUp, TrendingDown,
     ArrowUpRight, ArrowDownRight, Calendar, Building2,
     Loader2, BarChart3, ClipboardCheck, ChevronRight, X,
-    AlertCircle, Receipt, ArrowLeftRight
+    AlertCircle, Receipt, ArrowLeftRight, LayoutDashboard
 } from "lucide-react";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { el } from "date-fns/locale";
@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend, Area, AreaChart } from "recharts";
 import { RecurringExpensesWidget } from "@/components/dashboard/RecurringExpensesWidget";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 interface TimelineItem {
     id: string;
@@ -215,6 +217,38 @@ export default function Dashboard() {
             </CardContent>
         </Card>
     );
+
+    if (loading) {
+        return <PageSkeleton variant="dashboard" />;
+    }
+
+    // Onboarding empty state when no data exists
+    const hasNoData = items.length === 0 && trendData.every(t => t.income === 0 && t.expenses === 0);
+    if (hasNoData) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Αρχική</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5 capitalize">{displayLabel}</p>
+                </div>
+                <EmptyState
+                    icon={LayoutDashboard}
+                    title="Καλωσήρθατε στο Always First!"
+                    description="Ξεκινήστε δημιουργώντας τον πρώτο σας φάκελο ταξιδιού ή ανεβάζοντας τα πρώτα παραστατικά."
+                    actionLabel="Δημιουργία Φακέλου"
+                    onAction={() => navigate("/packages")}
+                    secondaryLabel="Ανέβασμα Εξόδου"
+                    onSecondary={() => navigate("/general-expenses")}
+                    hints={[
+                        "Δημιουργήστε φακέλους ταξιδιών για κάθε γκρουπ",
+                        "Ανεβάστε παραστατικά (PDF/JPG) — η AI τα αναγνωρίζει αυτόματα",
+                        "Εισάγετε extrait τράπεζας και αντιστοιχίστε κινήσεις",
+                        "Στείλτε τα πάντα στον λογιστή με ένα κλικ"
+                    ]}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
