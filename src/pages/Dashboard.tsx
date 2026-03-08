@@ -17,6 +17,7 @@ import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMonth } from "@/contexts/MonthContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend, Area, AreaChart } from "recharts";
+import { RecurringExpensesWidget } from "@/components/dashboard/RecurringExpensesWidget";
 
 interface TimelineItem {
     id: string;
@@ -406,6 +407,11 @@ export default function Dashboard() {
                         </CardContent>
                     </Card>
                 </div>
+            )}
+
+            {/* Recurring Expenses Detection */}
+            {!loading && (
+                <RecurringExpensesWidget startDate={startDate} endDate={endDate} />
             )}
 
             {/* Charts Grid */}

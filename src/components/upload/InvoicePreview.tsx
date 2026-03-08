@@ -288,7 +288,47 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
 
   const entities = type === "income" ? customers : suppliers;
 
+  // ── Supplier Intelligence: auto-suggest category when supplier is selected ──
+  const applySupplierIntelligence = async (supplierId: string) => {
+    try {
+      // 1. Check supplier's default_category_id
+      const supplier = suppliers.find(s => s.id === supplierId);
+      if (supplier && (supplier as any).default_category_id) {
+        const catExists = expenseCategories.find(c => c.id === (supplier as any).default_category_id);
+        if (catExists) {
+          setExpenseCategoryId(catExists.id);
+          return;
+        }
+      }
 
+      // 2. Fallback: find most-used category from historical invoices for this supplier
+      const { data: history } = await supabase
+        .from("invoices")
+        .select("expense_category_id")
+        .eq("supplier_id", supplierId)
+        .eq("type", "expense")
+        .not("expense_category_id", "is", null)
+        .limit(50);
+
+      if (history && history.length > 0) {
+        // Count occurrences
+        const counts: Record<string, number> = {};
+        for (const h of history) {
+          const catId = (h as any).expense_category_id;
+          if (catId) counts[catId] = (counts[catId] || 0) + 1;
+        }
+        const topCatId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (topCatId) {
+          const catExists = expenseCategories.find(c => c.id === topCatId);
+          if (catExists) {
+            setExpenseCategoryId(topCatId);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Supplier intelligence failed:", e);
+    }
+  };
 
   return (
     <motion.div
@@ -380,6 +420,10 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
                                 setMerchant(currentValue);
                                 setSelectedEntityId(entity.id);
                                 setOpenCombobox(false);
+                                // Supplier Intelligence: auto-suggest category
+                                if (type === "expense") {
+                                  applySupplierIntelligence(entity.id);
+                                }
                               }}
                             >
                               <Check
