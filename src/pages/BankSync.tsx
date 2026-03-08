@@ -364,7 +364,7 @@ export default function BankSync() {
             variant="outline"
             onClick={handleAutoMatch}
             disabled={autoMatchingRunning || transactions.length === 0}
-            className="rounded-xl gap-2 border-slate-200 h-9 text-sm"
+            className="rounded-xl gap-2 border-border h-9 text-sm"
           >
             {autoMatchingRunning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -377,7 +377,7 @@ export default function BankSync() {
             <Button
               variant="outline"
               onClick={() => setActiveTab("suggestions")}
-              className="rounded-xl gap-2 border-slate-200 h-9 text-sm"
+              className="rounded-xl gap-2 border-border h-9 text-sm"
             >
               <Sparkles className="h-4 w-4" />
               {matchingStats.total} Προτάσεις
