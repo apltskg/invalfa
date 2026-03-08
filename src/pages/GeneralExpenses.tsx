@@ -5,6 +5,7 @@ import {
     CheckSquare, Square, X, Tag
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveContactIds } from "@/lib/auto-link-contact";
 import { Invoice } from "@/types/database";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
