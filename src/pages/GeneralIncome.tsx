@@ -48,6 +48,11 @@ export default function GeneralIncome() {
     const [categories, setCategories] = useState<IncomeCategory[]>([]);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+    // Manual entry state
+    const [manualEntryOpen, setManualEntryOpen] = useState(false);
+    const [manualEntry, setManualEntry] = useState({ merchant: "", amount: "", invoice_date: "", category_id: "none" });
+    const [manualSaving, setManualSaving] = useState(false);
+
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
 
     async function fetchCategories() {
