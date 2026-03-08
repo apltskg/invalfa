@@ -127,11 +127,27 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setLoading(false);
     }
 
+    /* ── helpers: match invoices by ID or merchant name ──────────── */
+    function matchesEntity(inv: any, entity: any): boolean {
+        const idKey = isCustomers ? "customer_id" : "supplier_id";
+        if (inv[idKey] === entity.id) return true;
+        // Fallback: match by merchant name (case-insensitive, trimmed)
+        if (inv.merchant && entity.name) {
+            const invName = inv.merchant.trim().toLowerCase();
+            const entName = entity.name.trim().toLowerCase();
+            if (invName === entName) return true;
+            // Also check if one contains the other (for partial matches like "ALFA Travel" vs "ALFA ΜΟΝΟΠΡΟΣΩΠΗ ΙΚΕ")
+            if (invName.length > 3 && entName.length > 3) {
+                if (invName.includes(entName) || entName.includes(invName)) return true;
+            }
+        }
+        return false;
+    }
+
     /* ── derived ────────────────────────────────────────────────────── */
     const entitiesWithStats = useMemo(() => {
-        const idKey = isCustomers ? "customer_id" : "supplier_id";
         return entities.map(e => {
-            const rows = (invoices as any[]).filter(inv => inv[idKey] === e.id);
+            const rows = (invoices as any[]).filter(inv => matchesEntity(inv, e));
             const totalAmount = rows.reduce((s, r) => s + (r.amount || 0), 0);
             const lastRow = rows.sort((a, b) =>
                 (b.invoice_date || "").localeCompare(a.invoice_date || ""))[0];
@@ -164,11 +180,12 @@ export default function ContactBook({ mode }: ContactBookProps) {
     const selected = entitiesWithStats.find(e => e.id === selectedId);
     const selectedInvoices = useMemo(() => {
         if (!selectedId) return [];
-        const idKey = isCustomers ? "customer_id" : "supplier_id";
+        const entity = entities.find(e => e.id === selectedId);
+        if (!entity) return [];
         return (invoices as any[])
-            .filter(inv => inv[idKey] === selectedId)
+            .filter(inv => matchesEntity(inv, entity))
             .sort((a, b) => (b.invoice_date || "").localeCompare(a.invoice_date || ""));
-    }, [selectedId, invoices, mode]);
+    }, [selectedId, invoices, entities, mode]);
 
     /* ── CRUD ──────────────────────────────────────────────────────── */
     function checkDuplicate(vat: string) {
