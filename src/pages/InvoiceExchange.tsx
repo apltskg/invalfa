@@ -276,15 +276,15 @@ export default function InvoiceExchange() {
 
                 {loading ? (
                     <div className="flex items-center justify-center p-16">
-                        <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="p-16 text-center">
-                        <Send className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                        <p className="text-slate-400 text-sm font-medium">
+                        <Send className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-muted-foreground text-sm font-medium">
                             {search ? "Δεν βρέθηκαν αποτελέσματα" : "Δεν έχουν σταλεί τιμολόγια ακόμη"}
                         </p>
-                        <p className="text-slate-300 text-xs mt-1">
+                        <p className="text-muted-foreground/60 text-xs mt-1">
                             Πατήστε «Αποστολή Τιμολογίου» για να ξεκινήσετε
                         </p>
                     </div>
