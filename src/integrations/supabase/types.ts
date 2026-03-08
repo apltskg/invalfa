@@ -507,6 +507,53 @@ export type Database = {
           },
         ]
       }
+      invoice_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          invoice_list_item_id: string | null
+          matched_record_id: string | null
+          matched_record_type: string | null
+          new_status: string | null
+          old_status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          invoice_list_item_id?: string | null
+          matched_record_id?: string | null
+          matched_record_type?: string | null
+          new_status?: string | null
+          old_status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          invoice_list_item_id?: string | null
+          matched_record_id?: string | null
+          matched_record_type?: string | null
+          new_status?: string | null
+          old_status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_audit_log_invoice_list_item_id_fkey"
+            columns: ["invoice_list_item_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_list_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_comments: {
         Row: {
           comment_text: string
