@@ -7,7 +7,8 @@ import { Package, Invoice, BankTransaction } from "@/types/database";
 import {
   FileText, CreditCard, AlertCircle, FileSpreadsheet,
   Download, Folder, TrendingUp, TrendingDown, BarChart3,
-  Link2, ExternalLink,
+  Link2, ExternalLink, MessageCircle, CheckCircle2, Send, Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
