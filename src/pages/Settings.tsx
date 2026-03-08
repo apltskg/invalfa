@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
     Save, Building2, Tag, CreditCard, Mail, Phone, MapPin, Globe,
     Loader2, Check, Copy, CheckCheck, ExternalLink, Hash, Landmark,
-    Wallet, Pencil, X
+    Wallet, Pencil, X, Moon, Sun, Monitor
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -160,6 +161,7 @@ export default function Settings() {
     const [saved, setSaved] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [settings, setSettings] = useState<AgencySettings>(DEFAULT_SETTINGS);
+    const { theme, setTheme } = useTheme();
 
     useEffect(() => { fetchSettings(); }, []);
 
@@ -416,6 +418,38 @@ export default function Settings() {
                     )}
                 </div>
             </div>
+
+            {/* ── Appearance ── */}
+            <Card className="rounded-2xl border-border bg-card overflow-hidden">
+                <div className="px-6 py-4 bg-muted/50 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Moon className="h-4 w-4 text-muted-foreground" />
+                        Εμφάνιση / Appearance
+                    </p>
+                </div>
+                <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                        {([
+                            { value: "light", icon: Sun, label: "Φωτεινό" },
+                            { value: "dark", icon: Moon, label: "Σκοτεινό" },
+                            { value: "system", icon: Monitor, label: "Σύστημα" },
+                        ] as const).map(({ value, icon: Icon, label }) => (
+                            <button
+                                key={value}
+                                onClick={() => setTheme(value)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                                    theme === value
+                                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                        : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                                }`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* ── Company Info ── */}
             <Card className="rounded-2xl border-border bg-card overflow-hidden">
