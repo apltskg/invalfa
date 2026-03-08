@@ -346,16 +346,35 @@ export async function runAutoMatching(
             }
         }
 
-        // 4. Create matches
-        if (!dryRun && matchesToCreate.length > 0) {
-            const { error: insertError } = await supabase
-                .from("invoice_transaction_matches")
-                .insert(matchesToCreate);
+        // 4. Create matches and update transaction statuses
+        if (!dryRun) {
+            if (matchesToCreate.length > 0) {
+                const { error: insertError } = await supabase
+                    .from("invoice_transaction_matches")
+                    .insert(matchesToCreate);
 
-            if (insertError) {
-                console.error("Error creating matches:", insertError);
-                result.failed = matchesToCreate.length;
-                result.matched = 0;
+                if (insertError) {
+                    console.error("Error creating matches:", insertError);
+                    result.failed = matchesToCreate.length;
+                    result.matched = 0;
+                }
+            }
+
+            // Update transaction match_status
+            for (const upd of txnStatusUpdates) {
+                await supabase.from("bank_transactions").update({
+                    match_status: upd.status,
+                    matched_record_id: upd.record_id,
+                    matched_record_type: upd.record_type,
+                }).eq("id", upd.id);
+            }
+
+            // Update invoice_list_items that were matched
+            for (const upd of txnStatusUpdates.filter(u => u.record_type === 'invoice_list')) {
+                await supabase.from("invoice_list_items").update({
+                    match_status: 'matched',
+                    matched_income_id: upd.id,
+                }).eq("id", upd.record_id);
             }
         }
 
