@@ -156,7 +156,7 @@ export function InvoiceListTable({
 
 
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+  const renderSortableHeader = (field: SortField, children: React.ReactNode) => (
     <TableHead
       onClick={() => toggleSort(field)}
       className="cursor-pointer hover:bg-muted/50 transition-colors"
