@@ -172,11 +172,11 @@ export default function Packages() {
     : packages.filter(p => p.status === activeTab);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Φάκελοι Ταξιδιών</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Φάκελοι Ταξιδιών</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -279,17 +279,17 @@ export default function Packages() {
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full sm:w-auto p-1 bg-muted/50 rounded-2xl border border-white/10">
-          <TabsTrigger value="all" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
-          <TabsTrigger value="active" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
-          <TabsTrigger value="completed" className="rounded-xl px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρωμένα</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 p-1 bg-muted/50 rounded-2xl border border-white/10 h-auto">
+          <TabsTrigger value="all" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Όλα</TabsTrigger>
+          <TabsTrigger value="active" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ενεργά</TabsTrigger>
+          <TabsTrigger value="completed" className="rounded-xl px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">Ολοκληρ.</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
+        <TabsContent value={activeTab} className="space-y-4 mt-4">
           {loading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-64 animate-pulse rounded-3xl bg-muted/50 border-none" />
+                <Card key={i} className="h-56 sm:h-64 animate-pulse rounded-2xl sm:rounded-3xl bg-muted/50 border-none" />
               ))}
             </div>
           ) : filteredPackages.length === 0 ? (
@@ -306,35 +306,35 @@ export default function Packages() {
               </Button>
             </Card>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredPackages.map((pkg, index) => (
                 <motion.div
                   key={pkg.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                 >
                   <Card
-                    className="group relative cursor-pointer overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 border border-border/50 bg-gradient-to-br from-card to-secondary/30"
+                    className="group relative cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 active:scale-[0.98] border border-border/50 bg-gradient-to-br from-card to-secondary/30 touch-card"
                     onClick={() => navigate(`/packages/${pkg.id}`)}
                   >
                     <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
                     </div>
 
-                    <div className="mb-6 space-y-4">
+                    <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-start">
-                        <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm">
+                        <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm text-[10px] sm:text-xs">
                           {pkg.status === "active" ? "Ενεργό" : "Ολοκληρωμένο"}
                         </Badge>
                       </div>
 
                       <div>
-                        <h3 className="font-bold text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-base sm:text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors line-clamp-2">
                           {pkg.client_name}
                         </h3>
-                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
+                        <div className="mt-1.5 sm:mt-2 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                           <span>
                             {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"} -{" "}
                             {pkg.end_date ? format(new Date(pkg.end_date), "dd/MM/yyyy") : "?"}
@@ -343,15 +343,15 @@ export default function Packages() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-border/50">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t border-border/50">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Έξοδα</p>
-                          <p className="font-semibold text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
+                          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Έξοδα</p>
+                          <p className="font-semibold text-sm sm:text-base text-foreground">€{pkg.stats.expenses.toFixed(0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Κέρδος (Εκτ.)</p>
-                          <p className={`font-semibold ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5 sm:mb-1">Κέρδος</p>
+                          <p className={`font-semibold text-sm sm:text-base ${pkg.stats.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {pkg.stats.profit >= 0 ? '+' : ''}€{pkg.stats.profit.toFixed(0)}
                           </p>
                         </div>

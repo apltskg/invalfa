@@ -91,6 +91,24 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+    /* Safe area insets for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Better touch targets on mobile */
+  @media (max-width: 640px) {
+    button, [role="button"], a {
+      min-height: 44px;
+    }
+    
+    input, select, textarea {
+      min-height: 48px;
+    }
   }
 }
 
@@ -102,21 +120,57 @@
   border: 1px solid hsl(var(--glass-border));
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Custom scrollbar - hidden on mobile for cleaner look */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Hide scrollbar on mobile */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+/* FAB safe area padding */
+.fab-container {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+/* Mobile-friendly cards - larger touch targets */
+@media (max-width: 640px) {
+  .touch-card {
+    @apply active:scale-[0.98] transition-transform;
+  }
+}
+
+/* Pull-to-refresh prevention */
+html {
+  overscroll-behavior-y: none;
+}
+
+/* Smooth momentum scrolling on iOS */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
 }

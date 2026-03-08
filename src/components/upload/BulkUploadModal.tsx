@@ -76,8 +76,8 @@ export function BulkUploadModal({
       if (pkgResult.data) setPackages(pkgResult.data);
 
       if (defaultType === 'income') {
-        const catResult = await supabase.from('income_categories').select('id,name_el,color,icon').order('sort_order');
-        if (catResult.data) setIncomeCategories(catResult.data);
+        // income_categories table not yet available
+        setIncomeCategories([]);
       } else {
         const catResult = await supabase.from('expense_categories').select('*').eq('is_operational', true);
         if (catResult.data) setExpenseCategories(catResult.data);
