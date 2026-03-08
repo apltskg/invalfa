@@ -297,9 +297,9 @@ export default function PackageDetail() {
                 <p className="text-2xl font-bold text-emerald-600 tabular-nums mt-0.5">€{totalIncome.toFixed(0)}</p>
               </div>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white border-l-4 border-l-rose-400 overflow-hidden">
+            <Card className="rounded-2xl border border-border bg-card border-l-4 border-l-rose-400 overflow-hidden">
               <div className="p-4">
-                <p className="text-xs text-slate-500">Έξοδα</p>
+                <p className="text-xs text-muted-foreground">Έξοδα</p>
                 <p className="text-2xl font-bold text-rose-500 tabular-nums mt-0.5">€{totalExpenses.toFixed(0)}</p>
               </div>
             </Card>
