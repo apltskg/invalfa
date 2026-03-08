@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.manage-users]
 verify_jwt = false
+
+[functions.ai-match]
+verify_jwt = false
+
+[functions.notify-admin]
+verify_jwt = false
+
+[functions.verify-afm]
+verify_jwt = false

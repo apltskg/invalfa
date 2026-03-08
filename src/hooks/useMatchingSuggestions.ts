@@ -14,6 +14,7 @@ interface BankTransaction {
   amount: number;
   match_status: string | null;
   bank_name: string | null;
+  package_id?: string | null;
 }
 
 interface SuggestionResult {
@@ -25,35 +26,58 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
   const [records, setRecords] = useState<MatchableRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch matchable records (invoices)
+  // Fetch matchable records with enriched data (VAT, supplier info)
   useEffect(() => {
     async function fetchRecords() {
       setLoading(true);
 
       try {
-        // Fetch invoices (expenses and income)
-        const { data: invoices } = await supabase
-          .from("invoices")
-          .select("id, type, amount, invoice_date, merchant, extracted_data, file_name")
-          .order("invoice_date", { ascending: false })
-          .limit(500);
+        // Fetch invoices + supplier/customer data in parallel
+        const [{ data: invoices }, { data: suppliers }, { data: customers }] = await Promise.all([
+          supabase
+            .from("invoices")
+            .select("id, type, amount, invoice_date, merchant, extracted_data, file_name, package_id, supplier_id, customer_id")
+            .order("invoice_date", { ascending: false })
+            .limit(500),
+          supabase.from("suppliers").select("id, name, vat_number").limit(500),
+          supabase.from("customers").select("id, name, vat_number").limit(500),
+        ]);
+
+        const supplierMap = new Map((suppliers || []).map(s => [s.id, s]));
+        const customerMap = new Map((customers || []).map(c => [c.id, c]));
 
         const matchableRecords: MatchableRecord[] = [];
 
-        // Process invoices
         if (invoices) {
           for (const inv of invoices) {
             const rawExtracted = inv.extracted_data as Record<string, unknown> | null;
-            // Handle both { extracted: {...} } and flat { merchant, ... } formats
             const extractedData = (rawExtracted?.extracted as Record<string, unknown>) || rawExtracted;
+
+            // Enrich with supplier/customer VAT data
+            const supplier = inv.supplier_id ? supplierMap.get(inv.supplier_id) : null;
+            const customer = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+            
+            const taxId = (extractedData?.tax_id as string) || supplier?.vat_number || null;
+            const buyerVat = (extractedData?.buyer_vat as string) || customer?.vat_number || null;
+            const vendorName = inv.merchant 
+              || (extractedData?.merchant as string) 
+              || supplier?.name 
+              || customer?.name 
+              || null;
+
             matchableRecords.push({
               id: inv.id,
               type: inv.type === 'income' ? 'income' : 'expense',
               amount: inv.amount,
               date: inv.invoice_date,
-              vendor_or_client: inv.merchant || (extractedData?.merchant as string) || null,
+              vendor_or_client: vendorName,
               invoice_number: (extractedData?.invoice_number as string) || null,
               description: inv.file_name,
+              tax_id: taxId,
+              buyer_vat: buyerVat,
+              package_id: inv.package_id,
+              supplier_id: inv.supplier_id,
+              customer_id: inv.customer_id,
             });
           }
         }
@@ -83,9 +107,14 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
         amount: txn.amount,
         transaction_date: txn.transaction_date,
         description: txn.description,
+        package_id: txn.package_id,
       };
 
-      const suggestions = findMatchSuggestions(txnForMatching, records);
+      // Filter records by type: credit transactions → income invoices, debit → expenses
+      const expectedType = txn.amount > 0 ? 'income' : 'expense';
+      const filteredRecords = records.filter(r => r.type === expectedType);
+
+      const suggestions = findMatchSuggestions(txnForMatching, filteredRecords);
 
       return {
         transactionId: txn.id,
@@ -94,19 +123,16 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
     });
   }, [transactions, records, loading]);
 
-  // Get suggestions for a specific transaction
   const getSuggestionsForTransaction = (txnId: string): MatchSuggestion[] => {
     const result = suggestionResults.find(r => r.transactionId === txnId);
     return result?.suggestions || [];
   };
 
-  // Get best suggestion for a transaction
   const getBestSuggestion = (txnId: string): MatchSuggestion | null => {
     const suggestions = getSuggestionsForTransaction(txnId);
     return suggestions.length > 0 ? suggestions[0] : null;
   };
 
-  // Get all transactions with suggestions (for bulk view)
   const transactionsWithSuggestions = useMemo(() => {
     return suggestionResults
       .filter(r => r.suggestions.length > 0)
@@ -120,25 +146,13 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
       .filter(item => item.transaction !== undefined);
   }, [suggestionResults, transactions]);
 
-  // Stats
   const stats = useMemo(() => {
     const withSuggestions = transactionsWithSuggestions.length;
-    const highConfidence = transactionsWithSuggestions.filter(
-      s => s.suggestion.confidenceLevel === 'high'
-    ).length;
-    const mediumConfidence = transactionsWithSuggestions.filter(
-      s => s.suggestion.confidenceLevel === 'medium'
-    ).length;
-    const lowConfidence = transactionsWithSuggestions.filter(
-      s => s.suggestion.confidenceLevel === 'low'
-    ).length;
+    const highConfidence = transactionsWithSuggestions.filter(s => s.suggestion.confidenceLevel === 'high').length;
+    const mediumConfidence = transactionsWithSuggestions.filter(s => s.suggestion.confidenceLevel === 'medium').length;
+    const lowConfidence = transactionsWithSuggestions.filter(s => s.suggestion.confidenceLevel === 'low').length;
 
-    return {
-      total: withSuggestions,
-      high: highConfidence,
-      medium: mediumConfidence,
-      low: lowConfidence,
-    };
+    return { total: withSuggestions, high: highConfidence, medium: mediumConfidence, low: lowConfidence };
   }, [transactionsWithSuggestions]);
 
   return {
