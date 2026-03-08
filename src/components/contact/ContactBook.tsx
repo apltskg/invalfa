@@ -427,8 +427,8 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                 <div className="flex items-center gap-4">
                                     {/* Big avatar */}
                                     <div className={cn(
-                                        "h-14 w-14 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-lg shrink-0",
-                                        `bg-gradient-to-br ${avatarColor(selected.name)}`
+                                        "h-14 w-14 rounded-xl flex items-center justify-center text-base font-bold tracking-tight border border-border",
+                                        avatarColor(selected.name)
                                     )}>
                                         {initials(selected.name)}
                                     </div>
