@@ -284,7 +284,8 @@ export default function MonthlyClosing() {
     }, []);
 
     async function checkAllSteps() {
-        setLoading(true);
+        // Only show full loading if no cached data
+        if (!hasCached) setLoading(true);
         const results: Record<string, StepStatus> = {};
         for (const step of steps) {
             try {
