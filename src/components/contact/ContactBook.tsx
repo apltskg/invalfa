@@ -269,6 +269,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setEditingId(null);
         setDuplicateWarning(null);
         setFormData(emptyForm);
+        setFormErrors({});
     }
 
     /* ── render ─────────────────────────────────────────────────────── */
