@@ -144,7 +144,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-3 border-t border-slate-100" />
+        <div className="mx-3 border-t border-border" />
 
         {/* Analytics */}
         <SidebarGroup className="p-0">
