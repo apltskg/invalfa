@@ -158,13 +158,23 @@ export default function GeneralIncome() {
                     <h1 className="text-2xl font-bold text-foreground">Γενικά Έσοδα</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Έσοδα εκτός φακέλων</p>
                 </div>
-                <Button
-                    onClick={() => setUploadModalOpen(true)}
-                    className="rounded-xl gap-2 h-9 text-sm bg-emerald-600 hover:bg-emerald-700"
-                >
-                    <Plus className="h-4 w-4" />
-                    Νέο Έσοδο
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setManualEntryOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm"
+                    >
+                        <Edit className="h-4 w-4" />
+                        Χειροκίνητη
+                    </Button>
+                    <Button
+                        onClick={() => setUploadModalOpen(true)}
+                        className="rounded-xl gap-2 h-9 text-sm bg-emerald-600 hover:bg-emerald-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Νέο Έσοδο
+                    </Button>
+                </div>
             </div>
 
             {/* Stats row */}
