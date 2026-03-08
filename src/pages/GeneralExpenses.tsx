@@ -728,8 +728,8 @@ export default function GeneralExpenses() {
                     setManualSaving(true);
                     try {
                         const { error } = await supabase.from("invoices").insert({
-                            merchant: manualEntry.merchant,
-                            amount: parseFloat(manualEntry.amount),
+                            merchant,
+                            amount,
                             invoice_date: manualEntry.invoice_date || null,
                             expense_category_id: manualEntry.category_id === "none" ? null : manualEntry.category_id,
                             type: "expense",
