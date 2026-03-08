@@ -409,6 +409,11 @@ export default function Dashboard() {
                 </div>
             )}
 
+            {/* Recurring Expenses Detection */}
+            {!loading && (
+                <RecurringExpensesWidget startDate={startDate} endDate={endDate} />
+            )}
+
             {/* Charts Grid */}
             {(trendData.length > 0 || categoryData.length > 0) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
