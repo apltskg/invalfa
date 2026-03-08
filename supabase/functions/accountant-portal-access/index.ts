@@ -254,7 +254,8 @@ Deno.serve(async (req) => {
         .insert({
           invoice_id: invoiceId,
           comment_text: sanitizedComment,
-          is_doubt: Boolean(isDoubt)
+          is_doubt: Boolean(isDoubt),
+          shareable_link_id: validatedLink.id,
         });
 
       if (commentError) {
