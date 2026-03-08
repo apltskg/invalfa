@@ -255,12 +255,12 @@ export default function InvoiceExchange() {
 
             {/* Search */}
             <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Αναζήτηση παραλήπτη..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                    className="pl-9 rounded-xl border-border bg-card text-sm h-9"
                 />
             </div>
 
