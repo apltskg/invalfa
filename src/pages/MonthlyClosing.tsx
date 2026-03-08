@@ -316,8 +316,8 @@ export default function MonthlyClosing() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Μηνιαίο Κλείσιμο</h1>
-                    <p className="text-sm text-slate-500 mt-0.5 capitalize flex items-center gap-1.5">
+                <h1 className="text-2xl font-bold text-foreground">Μηνιαίο Κλείσιμο</h1>
+                <p className="text-sm text-muted-foreground mt-0.5 capitalize flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
                         Περίοδος: {period.label}
                     </p>
