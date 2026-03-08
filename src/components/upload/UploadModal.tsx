@@ -10,6 +10,7 @@ import { ExtractedData, InvoiceCategory } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { ExtractionProgress } from "./ExtractionProgress";
 import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
+import { runAutoMatching } from "@/lib/auto-matching";
 
 interface UploadedFile {
   file?: File;
