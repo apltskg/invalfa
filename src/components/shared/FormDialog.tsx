@@ -144,7 +144,7 @@ export function FormInput({
     return (
       <FormField label={label} hint={hint} className={className}>
         <DatePickerInput
-          value={value}
+          value={String(value)}
           onChange={onChange}
           placeholder={placeholder || "Επιλέξτε ημερομηνία"}
         />
