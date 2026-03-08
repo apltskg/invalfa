@@ -305,6 +305,110 @@ export default function Dashboard() {
                 </div>
             )}
 
+            {/* Quick Insights Widgets */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Unmatched Transactions */}
+                    <Card className={cn(
+                        "rounded-2xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow",
+                        unmatchedCount > 0 ? "border-amber-200 bg-amber-50/50" : "border-slate-200 bg-white"
+                    )} onClick={() => navigate("/bank-sync")}>
+                        <CardContent className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Χωρίς Αντιστοίχιση</p>
+                                    <p className={cn("text-3xl font-bold mt-1 tabular-nums", unmatchedCount > 0 ? "text-amber-600" : "text-emerald-600")}>
+                                        {unmatchedCount}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-0.5">τραπεζικές κινήσεις</p>
+                                </div>
+                                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", unmatchedCount > 0 ? "bg-amber-100" : "bg-emerald-50")}>
+                                    <ArrowLeftRight className={cn("h-5 w-5", unmatchedCount > 0 ? "text-amber-600" : "text-emerald-600")} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Pending Expenses */}
+                    <Card className={cn(
+                        "rounded-2xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow",
+                        pendingExpenses > 0 ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white"
+                    )} onClick={() => navigate("/general-expenses")}>
+                        <CardContent className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Έξοδα χωρίς Προμηθευτή</p>
+                                    <p className={cn("text-3xl font-bold mt-1 tabular-nums", pendingExpenses > 0 ? "text-blue-600" : "text-emerald-600")}>
+                                        {pendingExpenses}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-0.5">χρειάζονται ενημέρωση</p>
+                                </div>
+                                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", pendingExpenses > 0 ? "bg-blue-100" : "bg-emerald-50")}>
+                                    <Receipt className={cn("h-5 w-5", pendingExpenses > 0 ? "text-blue-600" : "text-emerald-600")} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Active Invoices Count */}
+                    <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/invoice-list")}>
+                        <CardContent className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Παραστατικά Μήνα</p>
+                                    <p className="text-3xl font-bold mt-1 tabular-nums text-slate-800">
+                                        {items.filter(i => i.type === "invoice").length}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {items.filter(i => i.type === "invoice" && (i.data as Invoice).type === "income").length} έσοδα / {items.filter(i => i.type === "invoice" && (i.data as Invoice).type === "expense").length} έξοδα
+                                    </p>
+                                </div>
+                                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-100">
+                                    <FileText className="h-5 w-5 text-slate-600" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* 6-Month Trend Chart */}
+            {trendData.length > 0 && (
+                <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                    <CardHeader className="px-5 py-4 border-b border-slate-100">
+                        <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-slate-400" />
+                            Τάση 6 Μηνών
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={trendData} barGap={4}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                                <Tooltip
+                                    formatter={(value: number, name: string) => [`€${value.toFixed(0)}`, name === "income" ? "Έσοδα" : "Έξοδα"]}
+                                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                                />
+                                <Bar dataKey="income" fill="#10b981" radius={[6, 6, 0, 0]} name="income" />
+                                <Bar dataKey="expenses" fill="#f43f5e" radius={[6, 6, 0, 0]} name="expenses" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                        <div className="flex items-center justify-center gap-6 mt-2">
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded-sm bg-emerald-500" />
+                                <span className="text-xs text-slate-500">Έσοδα</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-3 w-3 rounded-sm bg-rose-500" />
+                                <span className="text-xs text-slate-500">Έξοδα</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Timeline */}
             <Card className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                 <CardHeader className="px-5 py-4 border-b border-slate-100">
