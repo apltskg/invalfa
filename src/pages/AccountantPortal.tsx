@@ -233,6 +233,91 @@ export default function AccountantPortal() {
     }
   };
 
+  // ── Comment & Review helpers ──
+  const getCommentsForInvoice = (invoiceId: string) => comments.filter(c => c.invoice_id === invoiceId);
+
+  const handlePostComment = async (invoiceId: string, isDoubt = false) => {
+    const text = commentInputs[invoiceId]?.trim();
+    if (!text) return;
+    setCommentSubmitting(prev => ({ ...prev, [invoiceId]: true }));
+    try {
+      const { error } = await supabase.functions.invoke("accountant-portal-access", {
+        body: { token, action: "post_comment", invoiceId, commentText: text, isDoubt },
+      });
+      if (error) throw error;
+      setComments(prev => [...prev, { id: crypto.randomUUID(), invoice_id: invoiceId, comment_text: text, is_doubt: isDoubt, is_read: false, created_at: new Date().toISOString(), shareable_link_id: null }]);
+      setCommentInputs(prev => ({ ...prev, [invoiceId]: "" }));
+      toast.success("Το σχόλιο αποθηκεύτηκε");
+    } catch { toast.error("Αποτυχία αποθήκευσης σχολίου"); }
+    finally { setCommentSubmitting(prev => ({ ...prev, [invoiceId]: false })); }
+  };
+
+  const handleMarkReviewed = async (invoiceId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("accountant-portal-access", {
+        body: { token, action: "mark_reviewed", invoiceId },
+      });
+      if (error) throw error;
+      setReviewedIds(prev => new Set([...prev, invoiceId]));
+      setComments(prev => [...prev, { id: crypto.randomUUID(), invoice_id: invoiceId, comment_text: '✓ Ελέγχθηκε από λογιστή', is_doubt: false, is_read: false, created_at: new Date().toISOString(), shareable_link_id: null }]);
+      toast.success("Σημειώθηκε ως ελεγμένο");
+    } catch { toast.error("Αποτυχία ενημέρωσης"); }
+  };
+
+  // Inline comment/review UI for invoice rows
+  function InvoiceActions({ invoiceId }: { invoiceId: string }) {
+    const invComments = getCommentsForInvoice(invoiceId);
+    const isReviewed = reviewedIds.has(invoiceId);
+    const inputText = commentInputs[invoiceId] || "";
+    const submitting = commentSubmitting[invoiceId] || false;
+
+    return (
+      <div className="mt-2 space-y-2">
+        {/* Existing comments */}
+        {invComments.length > 0 && (
+          <div className="space-y-1">
+            {invComments.map(c => (
+              <div key={c.id} className={`text-xs px-2 py-1 rounded-lg ${c.is_doubt ? "bg-amber-50 text-amber-700 border border-amber-200" : c.comment_text.startsWith('✓') ? "bg-green-50 text-green-700 border border-green-200" : "bg-blue-50 text-blue-700 border border-blue-200"}`}>
+                {c.is_doubt && <AlertTriangle className="h-3 w-3 inline mr-1" />}
+                {c.comment_text}
+                <span className="text-[10px] opacity-50 ml-2">{format(new Date(c.created_at), "dd/MM HH:mm")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Actions row */}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Σχόλιο ή αμφισβήτηση..."
+            value={inputText}
+            onChange={e => setCommentInputs(prev => ({ ...prev, [invoiceId]: e.target.value }))}
+            onKeyDown={e => { if (e.key === "Enter" && inputText.trim()) handlePostComment(invoiceId); }}
+            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300"
+          />
+          {inputText.trim() && (
+            <>
+              <button onClick={() => handlePostComment(invoiceId)} disabled={submitting} className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1" title="Σχόλιο">
+                {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              </button>
+              <button onClick={() => handlePostComment(invoiceId, true)} disabled={submitting} className="text-xs px-2 py-1 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-1" title="Αμφισβήτηση">
+                <AlertTriangle className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          {!isReviewed && (
+            <button onClick={() => handleMarkReviewed(invoiceId)} className="text-xs px-2 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1" title="Σημείωση ως ελεγμένο">
+              <CheckCircle2 className="h-3 w-3" /> OK
+            </button>
+          )}
+          {isReviewed && (
+            <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Ελέγχθηκε</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   /* ── Loading ── */
   if (loading) {
     return (
