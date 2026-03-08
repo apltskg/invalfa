@@ -29,6 +29,10 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+    Dialog, DialogContent, DialogHeader,
+    DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
 
 interface InvoiceListEntry {
