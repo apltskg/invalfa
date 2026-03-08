@@ -2,42 +2,22 @@ import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { el } from "date-fns/locale";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search,
-  Filter,
-  MoreVertical,
-  Link2,
-  FolderOpen,
-  Plus,
-  Check,
-  X,
-  ArrowUpDown,
-  User,
+  Search, Filter, MoreVertical, Link2, FolderOpen, Plus,
+  ArrowUpDown, User, ChevronLeft, ChevronRight, Undo2, History,
 } from "lucide-react";
 
 export interface InvoiceListItem {
@@ -64,20 +44,35 @@ interface InvoiceListTableProps {
   onMatchItem: (item: InvoiceListItem) => void;
   onCreateIncome: (item: InvoiceListItem) => void;
   onLinkFolder: (item: InvoiceListItem) => void;
+  onUnmatch?: (item: InvoiceListItem) => void;
+  onViewHistory?: (item: InvoiceListItem) => void;
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
+  // Pagination
+  totalCount?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 type SortField = 'invoice_date' | 'invoice_number' | 'client_name' | 'total_amount';
 type SortDirection = 'asc' | 'desc';
+
+const PAGE_SIZE = 50;
 
 export function InvoiceListTable({
   items,
   onMatchItem,
   onCreateIncome,
   onLinkFolder,
+  onUnmatch,
+  onViewHistory,
   selectedIds,
   onSelectionChange,
+  totalCount,
+  page = 1,
+  pageSize = PAGE_SIZE,
+  onPageChange,
 }: InvoiceListTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -93,10 +88,10 @@ export function InvoiceListTable({
     }
   };
 
+  // Client-side filter on current page data
   const filteredItems = useMemo(() => {
     return items
       .filter(item => {
-        // Search filter
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
           const matchesSearch =
@@ -105,17 +100,11 @@ export function InvoiceListTable({
             item.client_vat?.includes(query);
           if (!matchesSearch) return false;
         }
-
-        // Status filter
-        if (statusFilter !== 'all' && item.match_status !== statusFilter) {
-          return false;
-        }
-
+        if (statusFilter !== 'all' && item.match_status !== statusFilter) return false;
         return true;
       })
       .sort((a, b) => {
         let comparison = 0;
-
         switch (sortField) {
           case 'invoice_date':
             comparison = (a.invoice_date || '').localeCompare(b.invoice_date || '');
@@ -130,31 +119,25 @@ export function InvoiceListTable({
             comparison = (a.total_amount || 0) - (b.total_amount || 0);
             break;
         }
-
         return sortDirection === 'asc' ? comparison : -comparison;
       });
   }, [items, searchQuery, statusFilter, sortField, sortDirection]);
 
   const allSelected = filteredItems.length > 0 && filteredItems.every(item => selectedIds.includes(item.id));
-
   const toggleAll = () => {
-    if (allSelected) {
-      onSelectionChange([]);
-    } else {
-      onSelectionChange(filteredItems.map(item => item.id));
-    }
+    onSelectionChange(allSelected ? [] : filteredItems.map(item => item.id));
   };
-
   const toggleItem = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onSelectionChange(selectedIds.filter(i => i !== id));
-    } else {
-      onSelectionChange([...selectedIds, id]);
-    }
+    onSelectionChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter(i => i !== id)
+        : [...selectedIds, id]
+    );
   };
 
-
-
+  const effectiveTotal = totalCount ?? items.length;
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
+  const hasPagination = onPageChange && effectiveTotal > pageSize;
 
   const renderSortableHeader = (field: SortField, children: React.ReactNode) => (
     <TableHead
@@ -181,7 +164,6 @@ export function InvoiceListTable({
             className="pl-10 rounded-xl"
           />
         </div>
-
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48 rounded-xl">
             <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -224,8 +206,7 @@ export function InvoiceListTable({
               filteredItems.map((item) => (
                 <TableRow
                   key={item.id}
-                  className={`hover:bg-muted/50 transition-colors ${selectedIds.includes(item.id) ? 'bg-primary/5' : ''
-                    }`}
+                  className={`hover:bg-muted/50 transition-colors ${selectedIds.includes(item.id) ? 'bg-primary/5' : ''}`}
                 >
                   <TableCell>
                     <Checkbox
@@ -271,19 +252,40 @@ export function InvoiceListTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onMatchItem(item)}>
-                          <Link2 className="h-4 w-4 mr-2" />
-                          Αντιστοίχιση σε Έσοδο
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onLinkFolder(item)}>
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Σύνδεση με Φάκελο
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onCreateIncome(item)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Δημιουργία Νέου Εσόδου
-                        </DropdownMenuItem>
+                        {item.match_status === 'matched' && onUnmatch ? (
+                          <>
+                            <DropdownMenuItem onClick={() => onUnmatch(item)}>
+                              <Undo2 className="h-4 w-4 mr-2" />
+                              Αναίρεση Αντιστοίχισης
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => onMatchItem(item)}>
+                              <Link2 className="h-4 w-4 mr-2" />
+                              Αντιστοίχιση σε Έσοδο
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onLinkFolder(item)}>
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              Σύνδεση με Φάκελο
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onCreateIncome(item)}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Δημιουργία Νέου Εσόδου
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {onViewHistory && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onViewHistory(item)}>
+                              <History className="h-4 w-4 mr-2" />
+                              Ιστορικό Ενεργειών
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -294,14 +296,40 @@ export function InvoiceListTable({
         </Table>
       </div>
 
-      {/* Summary footer */}
+      {/* Footer with pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
         <span>
           {selectedIds.length > 0
             ? `${selectedIds.length} επιλεγμένα`
-            : `${filteredItems.length} τιμολόγια`}
+            : `${filteredItems.length} τιμολόγια${effectiveTotal > filteredItems.length ? ` (${effectiveTotal} σύνολο)` : ''}`}
         </span>
+
         <div className="flex items-center gap-4">
+          {hasPagination && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                disabled={page <= 1}
+                onClick={() => onPageChange!(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs tabular-nums">
+                Σελ. {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                disabled={page >= totalPages}
+                onClick={() => onPageChange!(page + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <span>
             Σύνολο: <strong className="text-foreground">€{filteredItems.reduce((sum, i) => sum + (i.total_amount || 0), 0).toFixed(2)}</strong>
           </span>
