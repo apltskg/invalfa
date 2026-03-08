@@ -286,6 +286,39 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === 'mark_reviewed') {
+      const { invoiceId, commentText } = body;
+      if (!invoiceId || !isValidUUID(invoiceId)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid invoice reference', code: 'INVALID_INVOICE_ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Insert a "reviewed" comment (is_doubt = false, special marker)
+      const { error } = await supabase
+        .from('invoice_comments')
+        .insert({
+          invoice_id: invoiceId,
+          comment_text: commentText || '✓ Ελέγχθηκε από λογιστή',
+          is_doubt: false,
+          shareable_link_id: validatedLink.id,
+        });
+
+      if (error) {
+        console.error('Error marking reviewed');
+        return new Response(
+          JSON.stringify({ error: 'Unable to mark as reviewed', code: 'REVIEW_ERROR' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // ── GET FILE URL (signed download for portal) ──
     if (action === 'get_file_url') {
       const { bucket, filePath } = body;
