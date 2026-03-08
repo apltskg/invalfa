@@ -387,13 +387,13 @@ export default function PackageDetail() {
 
           <Tabs defaultValue="expenses" className="w-full">
             <TabsList className="w-full grid grid-cols-2 rounded-xl mb-4 bg-muted/50 p-1">
-              <TabsTrigger value="expenses" className="rounded-lg">Expenses (€{totalExpenses.toFixed(0)})</TabsTrigger>
-              <TabsTrigger value="income" className="rounded-lg">Income (€{totalIncome.toFixed(0)})</TabsTrigger>
+              <TabsTrigger value="expenses" className="rounded-lg">Έξοδα (€{totalExpenses.toFixed(0)})</TabsTrigger>
+              <TabsTrigger value="income" className="rounded-lg">Έσοδα (€{totalIncome.toFixed(0)})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="space-y-4">
               <Button className="w-full rounded-xl border-dashed border-2 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground h-12" variant="outline" onClick={() => { setUploadType("expense"); setUploadModalOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Expense
+                <Plus className="h-4 w-4 mr-2" /> Προσθήκη Εξόδου
               </Button>
               <InvoiceList items={expenseInvoicesAll} />
             </TabsContent>
