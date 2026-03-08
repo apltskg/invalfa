@@ -465,9 +465,9 @@ export default function InvoiceExchange() {
 
                         {/* Preview of what will be sent */}
                         {form.customer_email && (
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
-                                <p className="font-semibold text-slate-700">Προεπισκόπηση αποστολής</p>
-                                <p>📧 Προς: <span className="text-slate-800">{form.customer_email}</span></p>
+                            <div className="p-3 bg-muted/50 rounded-xl border border-border text-xs text-muted-foreground space-y-1">
+                                <p className="font-semibold text-foreground">Προεπισκόπηση αποστολής</p>
+                                <p>📧 Προς: <span className="text-foreground">{form.customer_email}</span></p>
                                 <p>Ο παραλήπτης θα λάβει email με ασφαλές link για να δει το τιμολόγιο.</p>
                             </div>
                         )}
