@@ -91,6 +91,8 @@ export default function Travellers() {
     const [form, setForm] = useState<Traveller>(EMPTY);
     const [showAdd, setShowAdd] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     useEffect(() => { fetchTravellers(); }, []);
 
