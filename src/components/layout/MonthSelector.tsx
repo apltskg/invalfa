@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-const VIEW_MODES: { value: ViewMode; label: string }[] = [
-  { value: 'day', label: 'Ημέρα' },
-  { value: 'week', label: 'Εβδομάδα' },
-  { value: 'month', label: 'Μήνας' },
-  { value: 'year', label: 'Έτος' },
+const VIEW_MODES: { value: ViewMode; label: string; short: string }[] = [
+  { value: 'day', label: 'Ημέρα', short: 'Η' },
+  { value: 'week', label: 'Εβδομάδα', short: 'Ε' },
+  { value: 'month', label: 'Μήνας', short: 'Μ' },
+  { value: 'year', label: 'Έτος', short: 'Ε' },
 ];
 
 export function MonthSelector() {
@@ -45,46 +45,51 @@ export function MonthSelector() {
     }
   })();
 
-  const currentModeLabel = VIEW_MODES.find(m => m.value === viewMode)?.label || 'Μήνας';
-
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
-      {/* View Mode Selector — hidden on mobile, shown on sm+ */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 sm:h-8 px-2.5 sm:px-3 rounded-xl gap-1 sm:gap-1.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50"
+      {/* View Mode Tabs */}
+      <div className="hidden sm:flex items-center h-8 rounded-lg border border-border bg-muted/50 p-0.5">
+        {VIEW_MODES.map(mode => (
+          <button
+            key={mode.value}
+            onClick={() => setViewMode(mode.value)}
+            className={cn(
+              "h-7 px-2.5 rounded-md text-xs font-medium transition-all",
+              viewMode === mode.value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <span className="hidden sm:inline">{currentModeLabel}</span>
-            <span className="sm:hidden">{currentModeLabel.charAt(0)}</span>
-            <ChevronDown className="h-3 w-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-36">
-          {VIEW_MODES.map(mode => (
-            <DropdownMenuItem
-              key={mode.value}
-              onClick={() => setViewMode(mode.value)}
-              className={cn(
-                "cursor-pointer text-sm",
-                viewMode === mode.value && "bg-blue-50 text-blue-700 font-medium"
-              )}
-            >
-              {mode.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {mode.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile: compact tabs */}
+      <div className="flex sm:hidden items-center h-9 rounded-lg border border-border bg-muted/50 p-0.5">
+        {VIEW_MODES.map(mode => (
+          <button
+            key={mode.value}
+            onClick={() => setViewMode(mode.value)}
+            className={cn(
+              "h-8 w-8 rounded-md text-xs font-medium transition-all flex items-center justify-center",
+              viewMode === mode.value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {mode.short}
+          </button>
+        ))}
+      </div>
 
       {/* Date Navigation */}
-      <div className="flex items-center gap-0.5 bg-white rounded-xl border border-slate-200 p-0.5">
+      <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-0.5">
         <Button
           variant="ghost"
           size="icon"
           onClick={goToPrevious}
-          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-slate-100 active:bg-slate-200"
+          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-accent active:bg-accent/80"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -94,8 +99,8 @@ export function MonthSelector() {
             <Button
               variant="ghost"
               className={cn(
-                "h-9 sm:h-7 px-2 sm:px-3 rounded-lg gap-1 sm:gap-1.5 font-medium capitalize text-xs sm:text-sm hover:bg-slate-100 active:bg-slate-200",
-                isCurrentPeriod && "text-blue-600"
+                "h-9 sm:h-7 px-2 sm:px-3 rounded-lg gap-1 sm:gap-1.5 font-medium capitalize text-xs sm:text-sm hover:bg-accent active:bg-accent/80",
+                isCurrentPeriod && "text-primary"
               )}
             >
               <Calendar className="h-3.5 w-3.5 hidden sm:block" />
@@ -113,7 +118,7 @@ export function MonthSelector() {
                   onClick={() => setSelectedDate(month)}
                   className={cn(
                     "capitalize cursor-pointer min-h-[44px] sm:min-h-0",
-                    isSelected && "bg-blue-50 text-blue-600 font-medium"
+                    isSelected && "bg-primary/10 text-primary font-medium"
                   )}
                 >
                   {format(month, "MMMM yyyy", { locale: el })}
@@ -131,7 +136,7 @@ export function MonthSelector() {
                       onClick={() => setSelectedDate(new Date(year, 0, 1))}
                       className={cn(
                         "cursor-pointer min-h-[44px] sm:min-h-0",
-                        isSelected && "bg-blue-50 text-blue-600 font-medium"
+                        isSelected && "bg-primary/10 text-primary font-medium"
                       )}
                     >
                       {year}
@@ -141,7 +146,7 @@ export function MonthSelector() {
               </>
             )}
             {(viewMode === 'day' || viewMode === 'week') && (
-              <div className="p-2 text-center text-sm text-slate-400">
+              <div className="p-2 text-center text-sm text-muted-foreground">
                 Χρησιμοποιήστε τα βέλη ← →
               </div>
             )}
@@ -152,7 +157,7 @@ export function MonthSelector() {
           variant="ghost"
           size="icon"
           onClick={goToNext}
-          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-slate-100 active:bg-slate-200"
+          className="h-9 w-9 sm:h-7 sm:w-7 rounded-lg hover:bg-accent active:bg-accent/80"
           disabled={isCurrentPeriod}
         >
           <ChevronRight className="h-4 w-4" />
