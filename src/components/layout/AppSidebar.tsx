@@ -134,7 +134,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-3 space-y-1">
         {/* My Company */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Η Εταιρεία μου
           </SidebarGroupLabel>
           <SidebarGroupContent>
