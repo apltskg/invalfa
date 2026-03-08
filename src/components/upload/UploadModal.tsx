@@ -236,6 +236,13 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         }
       }
 
+      // Auto-link contact if not already set
+      const autoLinked = await resolveContactIds(
+        data.merchant,
+        defaultType as "income" | "expense",
+        (uploadedFile.extractedData as any)?.tax_id
+      );
+
       const { error } = await (supabase as any).from("invoices").insert([{
         file_path: uploadedFile.path,
         file_name: uploadedFile.file?.name || "Manual Entry",
@@ -248,8 +255,8 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
         type: defaultType,
-        customer_id: data.customerId || null,
-        supplier_id: finalSupplierId
+        customer_id: data.customerId || autoLinked.customer_id || null,
+        supplier_id: finalSupplierId || autoLinked.supplier_id || null,
       }]);
 
       if (error) {

@@ -87,6 +87,11 @@ export default function QuickScan() {
 
         setStep("saving");
         try {
+            const autoLinked = await resolveContactIds(
+                extractedData?.merchant,
+                savedType as "income" | "expense",
+                extractedData?.tax_id
+            );
             const { error } = await (supabase as any).from("invoices").insert([{
                 file_path: filePath,
                 file_name: `scan-${Date.now()}.jpg`,
@@ -96,6 +101,7 @@ export default function QuickScan() {
                 category: extractedData?.category || "other",
                 extracted_data: extractedData as any,
                 type: savedType,
+                ...autoLinked,
             }]);
 
             if (error) throw error;

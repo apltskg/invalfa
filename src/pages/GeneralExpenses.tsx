@@ -730,6 +730,7 @@ export default function GeneralExpenses() {
                     if (amount > 999999) { toast.error("Μη έγκυρο ποσό"); return; }
                     setManualSaving(true);
                     try {
+                        const autoLinked = await resolveContactIds(merchant, "expense");
                         const { error } = await supabase.from("invoices").insert({
                             merchant,
                             amount,
@@ -739,6 +740,7 @@ export default function GeneralExpenses() {
                             file_path: `manual/${Date.now()}`,
                             file_name: "manual-entry",
                             category: "other",
+                            ...autoLinked,
                         } as any);
                         if (error) throw error;
                         toast.success("Καταχωρήθηκε επιτυχώς");
