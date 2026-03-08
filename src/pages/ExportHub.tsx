@@ -419,7 +419,7 @@ export default function ExportHub() {
                 exit={{ y: -20, opacity: 0 }}
                 className="flex items-center text-green-600"
               >
-                <Check className="h-4 w-4 mr-2" /> Sent!
+                <Check className="h-4 w-4 mr-2" /> Εστάλη!
               </motion.span>
             ) : (
               <motion.span
