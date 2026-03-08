@@ -448,7 +448,7 @@ export default function MonthlyClosing() {
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-slate-400 mt-0.5">{status.detail || step.description}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{status.detail || step.description}</p>
                                         </div>
 
                                         {/* Expand arrow */}
