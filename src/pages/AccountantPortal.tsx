@@ -713,7 +713,8 @@ export default function AccountantPortal() {
                     .map(inv => {
                       const txn = invoiceToTransaction.get(inv.id);
                       return (
-                        <tr key={inv.id}>
+                        <React.Fragment key={inv.id}>
+                        <tr>
                           <Td>{inv.merchant || inv.file_name || "—"}</Td>
                           <Td>
                             {(() => {
@@ -742,11 +743,12 @@ export default function AccountantPortal() {
                             ) : <span className="text-gray-300 text-xs">—</span>}
                           </Td>
                         </tr>
-                        <tr key={`${inv.id}-actions`}>
+                        <tr>
                           <td colSpan={7} className="px-3 pb-2">
                             <InvoiceActions invoiceId={inv.id} />
                           </td>
                         </tr>
+                        </React.Fragment>
                       );
                     })}
                 </tbody>
