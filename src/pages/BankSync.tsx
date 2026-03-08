@@ -512,6 +512,25 @@ export default function BankSync() {
                   </SelectContent>
                 </Select>
 
+                {/* Amount Range Filter */}
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    placeholder="Από €"
+                    value={amountMin}
+                    onChange={(e) => setAmountMin(e.target.value)}
+                    className="w-[90px] rounded-xl text-sm h-9"
+                  />
+                  <span className="text-xs text-muted-foreground">–</span>
+                  <Input
+                    type="number"
+                    placeholder="Έως €"
+                    value={amountMax}
+                    onChange={(e) => setAmountMax(e.target.value)}
+                    className="w-[90px] rounded-xl text-sm h-9"
+                  />
+                </div>
+
                 {/* Sort */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -552,7 +571,7 @@ export default function BankSync() {
                 </DropdownMenu>
 
                 {/* Clear Filters */}
-                {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all") && (
+                {(searchQuery || selectedBanks.length > 0 || statusFilter !== "all" || amountMin || amountMax) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -560,6 +579,8 @@ export default function BankSync() {
                       setSearchQuery("");
                       setSelectedBanks([]);
                       setStatusFilter("all");
+                      setAmountMin("");
+                      setAmountMax("");
                     }}
                     className="text-muted-foreground"
                   >
