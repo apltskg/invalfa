@@ -495,7 +495,7 @@ export default function MonthlyClosing() {
                                                         {/* External quick-access links */}
                                                         {step.links && step.links.length > 0 && (
                                                             <div>
-                                                                <p className="text-xs font-medium text-slate-500 mb-2">Γρήγορη πρόσβαση:</p>
+                                                                <p className="text-xs font-medium text-muted-foreground mb-2">Γρήγορη πρόσβαση:</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {step.links.map((link, li) => (
                                                                         <a
