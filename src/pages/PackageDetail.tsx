@@ -315,13 +315,13 @@ export default function PackageDetail() {
               </div>
             </Card>
 
-            <Card className="rounded-2xl border border-slate-200 bg-white col-span-2">
+            <Card className="rounded-2xl border border-border bg-card col-span-2">
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-slate-600">Είσπραξη</p>
-                  <p className="text-xs text-slate-400">€{totalPaid.toFixed(0)} / €{totalIncome.toFixed(0)}</p>
+                  <p className="text-xs font-semibold text-foreground">Είσπραξη</p>
+                  <p className="text-xs text-muted-foreground">€{totalPaid.toFixed(0)} / €{totalIncome.toFixed(0)}</p>
                 </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all"
                     style={{ width: `${totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0}%` }}
