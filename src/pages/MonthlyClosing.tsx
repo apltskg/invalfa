@@ -61,8 +61,16 @@ function getTargetPeriod() {
 export default function MonthlyClosing() {
     const navigate = useNavigate();
     const [period] = useState(getTargetPeriod);
-    const [statuses, setStatuses] = useState<Record<string, StepStatus>>({});
-    const [loading, setLoading] = useState(true);
+    // Persistence: load cached statuses from localStorage
+    const cacheKey = `monthly-closing-${period.monthKey}`;
+    const [statuses, setStatuses] = useState<Record<string, StepStatus>>(() => {
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            return cached ? JSON.parse(cached) : {};
+        } catch { return {}; }
+    });
+    const hasCached = Object.keys(statuses).length > 0;
+    const [loading, setLoading] = useState(!hasCached); // skip loading spinner if we have cache
     const [expandedStep, setExpandedStep] = useState<string | null>(null);
 
     // ── Step definitions ──
