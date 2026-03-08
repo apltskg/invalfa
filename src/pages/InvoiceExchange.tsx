@@ -355,10 +355,20 @@ export default function InvoiceExchange() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-44 rounded-xl">
-                                            <DropdownMenuItem className="gap-2 text-sm">
-                                                <Eye className="h-4 w-4" /> Προβολή Link
+                                            <DropdownMenuItem
+                                                className="gap-2 text-sm"
+                                                onClick={() => {
+                                                    const url = `${window.location.origin}/view-invoice/${(share as any).token}`;
+                                                    navigator.clipboard.writeText(url);
+                                                    toast.success("Link αντιγράφηκε!");
+                                                }}
+                                            >
+                                                <Eye className="h-4 w-4" /> Αντιγραφή Link
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="gap-2 text-sm">
+                                            <DropdownMenuItem
+                                                className="gap-2 text-sm"
+                                                onClick={() => handleResendEmail(share.id)}
+                                            >
                                                 <Mail className="h-4 w-4" /> Επανάληψη Email
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
