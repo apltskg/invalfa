@@ -295,6 +295,8 @@ export default function MonthlyClosing() {
             }
         }
         setStatuses(results);
+        // Persist to localStorage
+        try { localStorage.setItem(cacheKey, JSON.stringify(results)); } catch {}
         setLoading(false);
     }
 
