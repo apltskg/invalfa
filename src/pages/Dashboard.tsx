@@ -96,8 +96,9 @@ export default function Dashboard() {
             const pendingExp = (invoices || []).filter((i: any) => i.type === "expense" && !i.supplier_id).length;
             setPendingExpenses(pendingExp);
 
-            // Fetch 6-month trend
+            // Fetch 6-month trend + categories
             fetchTrend();
+            fetchCategories();
         } catch (error) {
             console.error("Dashboard fetch error:", error);
         } finally {
