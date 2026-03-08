@@ -354,7 +354,7 @@ export default function MonthlyClosing() {
                             <div>
                                 <p className={cn(
                                     "text-lg font-bold",
-                                    allDone ? "text-emerald-700" : "text-slate-900"
+                                    allDone ? "text-emerald-700 dark:text-emerald-400" : "text-foreground"
                                 )}>
                                     {allDone ? "Κλείσιμο Ολοκληρώθηκε! 🎉" : `${completedCount} / ${totalSteps} Βήματα`}
                                 </p>
