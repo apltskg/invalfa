@@ -393,7 +393,7 @@ export default function ExportHub() {
           className="rounded-xl gap-2"
         >
           <Archive className="h-4 w-4" />
-          {exporting ? "Generating..." : "Download ZIP + Excel"}
+          {exporting ? "Δημιουργία..." : "Λήψη ZIP + Excel"}
         </Button>
         <Button
           onClick={generateMagicLink}
