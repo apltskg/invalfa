@@ -122,21 +122,27 @@ export default function Travellers() {
     async function handleSave() {
         setSaving(true);
         const payload = {
-            first_name: form.first_name.trim(),
-            last_name: form.last_name.trim(),
-            passport_number: form.passport_number || null,
+            first_name: form.first_name.trim().slice(0, 50),
+            last_name: form.last_name.trim().slice(0, 50),
+            passport_number: form.passport_number?.trim().slice(0, 20) || null,
             passport_expiry: form.passport_expiry || null,
-            id_number: form.id_number || null,
+            id_number: form.id_number?.trim().slice(0, 20) || null,
             id_expiration: form.id_expiration || null,
             birth_date: form.birth_date || null,
-            miles_bonus_card: form.miles_bonus_card || null,
-            phone: form.phone || null,
-            email: form.email || null,
-            notes: form.notes || null,
+            miles_bonus_card: form.miles_bonus_card?.trim().slice(0, 30) || null,
+            phone: form.phone?.trim().slice(0, 20) || null,
+            email: form.email?.trim().slice(0, 255) || null,
+            notes: form.notes?.trim().slice(0, 500) || null,
         };
 
         if (!payload.first_name || !payload.last_name) {
             toast.error("Όνομα και Επώνυμο απαιτούνται");
+            setSaving(false);
+            return;
+        }
+
+        if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+            toast.error("Μη έγκυρο email");
             setSaving(false);
             return;
         }
