@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     FileText, TrendingDown, MoreVertical, Eye,
-    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar, ExternalLink
+    Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar, ExternalLink,
+    CheckSquare, Square, X, Tag
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/database";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { BulkUploadModal } from "@/components/upload/BulkUploadModal";
 import { format } from "date-fns";
@@ -68,7 +70,19 @@ export default function GeneralExpenses() {
     const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+    // Bulk selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    const [bulkCategoryId, setBulkCategoryId] = useState<string>("none");
+    const [bulkProcessing, setBulkProcessing] = useState(false);
+
+    const isSelecting = selectedIds.size > 0;
+
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
+
+    // Clear selection when data changes
+    useEffect(() => { setSelectedIds(new Set()); }, [monthKey]);
 
     async function fetchCategories() {
         const { data } = await supabase.from("expense_categories").select("id,name,name_el,color").order("sort_order");
@@ -114,13 +128,10 @@ export default function GeneralExpenses() {
 
         for (const entry of invoiceListEntries) {
             let score = 0;
-
-            // Amount match (within 1 cent)
             if (entry.total_amount && Math.abs(entry.total_amount - inv.amount) < 0.02) score += 50;
             else if (entry.total_amount && Math.abs(entry.total_amount - inv.amount) < 1) score += 20;
-            else continue; // amount must match somewhat
+            else continue;
 
-            // Date match (within 3 days)
             if (invDate && entry.invoice_date) {
                 const entryDate = new Date(entry.invoice_date).getTime();
                 const diffDays = Math.abs(invDate - entryDate) / (1000 * 60 * 60 * 24);
@@ -129,7 +140,6 @@ export default function GeneralExpenses() {
                 else if (diffDays <= 3) score += 10;
             }
 
-            // VAT match
             if (invVat && entry.client_vat && invVat === entry.client_vat) score += 20;
 
             if (score > bestScore) {
@@ -187,7 +197,6 @@ export default function GeneralExpenses() {
     const handleDelete = async () => {
         if (!selectedInvoice) return;
         try {
-            // Delete file from storage if exists
             if (selectedInvoice.file_path && !selectedInvoice.file_path.startsWith("manual/")) {
                 await supabase.storage.from("invoices").remove([selectedInvoice.file_path]);
             }
@@ -199,9 +208,68 @@ export default function GeneralExpenses() {
         finally { setDeleteDialogOpen(false); setSelectedInvoice(null); }
     };
 
+    // ── Bulk actions ──
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filtered.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filtered.map(i => i.id)));
+        }
+    };
+
+    const handleBulkCategoryChange = async () => {
+        setBulkProcessing(true);
+        try {
+            const newCatId = bulkCategoryId === "none" ? null : bulkCategoryId;
+            const ids = Array.from(selectedIds);
+            const { error } = await supabase.from("invoices")
+                .update({ expense_category_id: newCatId } as any)
+                .in("id", ids);
+            if (error) throw error;
+            toast.success(`${ids.length} εγγραφές ενημερώθηκαν`);
+            setSelectedIds(new Set());
+            setBulkCategoryDialogOpen(false);
+            fetchData();
+        } catch {
+            toast.error("Σφάλμα μαζικής ενημέρωσης");
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        setBulkProcessing(true);
+        try {
+            const ids = Array.from(selectedIds);
+            // Delete files from storage
+            const toDelete = invoices.filter(i => ids.includes(i.id) && i.file_path && !i.file_path.startsWith("manual/"));
+            if (toDelete.length > 0) {
+                await supabase.storage.from("invoices").remove(toDelete.map(i => i.file_path));
+            }
+            const { error } = await supabase.from("invoices").delete().in("id", ids);
+            if (error) throw error;
+            toast.success(`${ids.length} εγγραφές διαγράφηκαν`);
+            setSelectedIds(new Set());
+            setBulkDeleteDialogOpen(false);
+            fetchData();
+        } catch {
+            toast.error("Σφάλμα μαζικής διαγραφής");
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
     const totalAmount = invoices.reduce((s, i) => s + (i.amount || 0), 0);
 
-    // Group by category for the stat breakdown
     const byCategory = invoices.reduce((acc, inv) => {
         const catId = (inv as any).expense_category_id || "__none";
         acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
@@ -299,20 +367,65 @@ export default function GeneralExpenses() {
                 </div>
             )}
 
-            {/* Search */}
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                    placeholder="Αναζήτηση..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
-                />
+            {/* Search + Bulk Actions Bar */}
+            <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative max-w-sm flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="Αναζήτηση..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="pl-9 rounded-xl border-slate-200 bg-white text-sm h-9"
+                    />
+                </div>
+
+                {isSelecting && (
+                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-1.5 animate-in fade-in slide-in-from-top-1">
+                        <Badge className="bg-blue-600 text-white border-0 text-xs">{selectedIds.size}</Badge>
+                        <span className="text-xs text-blue-700 font-medium">επιλεγμένα</span>
+                        <div className="w-px h-4 bg-blue-200 mx-1" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded-lg px-2"
+                            onClick={() => setBulkCategoryDialogOpen(true)}
+                        >
+                            <Tag className="h-3.5 w-3.5" />
+                            Κατηγορία
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg px-2"
+                            onClick={() => setBulkDeleteDialogOpen(true)}
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Διαγραφή
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 rounded-lg"
+                            onClick={() => setSelectedIds(new Set())}
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Table */}
             <Card className="rounded-2xl border-slate-200 bg-white overflow-hidden">
-                <div className="grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                <div className="grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wide items-center">
+                    <button
+                        onClick={toggleSelectAll}
+                        className="flex items-center justify-center"
+                        title={selectedIds.size === filtered.length ? "Αποεπιλογή όλων" : "Επιλογή όλων"}
+                    >
+                        {filtered.length > 0 && selectedIds.size === filtered.length
+                            ? <CheckSquare className="h-4 w-4 text-blue-600" />
+                            : <Square className="h-4 w-4 text-slate-300" />}
+                    </button>
                     <span>Πληρωμή / Προμηθευτής</span>
                     <span>Κατηγορία</span>
                     <span>Ημερομηνία</span>
@@ -336,8 +449,21 @@ export default function GeneralExpenses() {
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
                             const cat = getCategoryById((inv as any).expense_category_id);
+                            const isSelected = selectedIds.has(inv.id);
                             return (
-                                <div key={inv.id} className="grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
+                                <div
+                                    key={inv.id}
+                                    className={`grid grid-cols-[32px_1fr_120px_120px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group ${isSelected ? "bg-blue-50/50" : ""}`}
+                                >
+                                    {/* Checkbox */}
+                                    <div className="flex items-center justify-center">
+                                        <Checkbox
+                                            checked={isSelected}
+                                            onCheckedChange={() => toggleSelect(inv.id)}
+                                            className="h-4 w-4"
+                                        />
+                                    </div>
+
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="h-8 w-8 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
                                             {hasFile
@@ -386,7 +512,6 @@ export default function GeneralExpenses() {
                                                         </span>
                                                     ) : (
                                                         <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200 border-dashed hover:bg-slate-200 transition-colors">
-                                                            {/* Show fallback string enum category if present, otherwise + */}
                                                             {inv.category && inv.category !== 'other' ? (
                                                                 <span className="capitalize">{inv.category}</span>
                                                             ) : "+ Κατηγορία"}
@@ -466,6 +591,7 @@ export default function GeneralExpenses() {
             <UploadModal open={uploadModalOpen} onOpenChange={setUploadModalOpen} onUploadComplete={fetchData} defaultType="expense" />
             <BulkUploadModal open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} onComplete={fetchData} defaultType="expense" />
 
+            {/* Edit Dialog */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogContent className="rounded-2xl max-w-sm">
                     <DialogHeader>
@@ -534,6 +660,7 @@ export default function GeneralExpenses() {
                 </DialogContent>
             </Dialog>
 
+            {/* Single Delete Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent className="rounded-2xl">
                     <AlertDialogHeader>
@@ -546,6 +673,64 @@ export default function GeneralExpenses() {
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-rose-600 hover:bg-rose-700">Διαγραφή</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Bulk Category Dialog */}
+            <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
+                <DialogContent className="rounded-2xl max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-base">Μαζική Αλλαγή Κατηγορίας</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-slate-500">
+                        Αλλαγή κατηγορίας για <strong>{selectedIds.size}</strong> επιλεγμένες εγγραφές.
+                    </p>
+                    <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                        <SelectTrigger className="rounded-xl border-slate-200 text-sm h-9">
+                            <SelectValue placeholder="Επιλέξτε κατηγορία..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Χωρίς κατηγορία</SelectItem>
+                            {categories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#ccc' }} />
+                                        {cat.name_el}
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setBulkCategoryDialogOpen(false)} className="rounded-xl text-sm border-slate-200">Ακύρωση</Button>
+                        <Button onClick={handleBulkCategoryChange} disabled={bulkProcessing} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700">
+                            {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                            Εφαρμογή
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Delete Dialog */}
+            <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+                <AlertDialogContent className="rounded-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Μαζική Διαγραφή</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Να διαγραφούν <strong>{selectedIds.size}</strong> εγγραφές; Η ενέργεια δεν αναιρείται.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl border-slate-200">Ακύρωση</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleBulkDelete}
+                            disabled={bulkProcessing}
+                            className="rounded-xl bg-rose-600 hover:bg-rose-700"
+                        >
+                            {bulkProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                            Διαγραφή {selectedIds.size} εγγραφών
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

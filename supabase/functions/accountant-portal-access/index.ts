@@ -7,10 +7,11 @@ const corsHeaders = {
 
 interface PortalRequest {
   token: string;
-  action?: 'validate' | 'get_data' | 'post_comment' | 'get_file_url';
+  action?: 'validate' | 'get_data' | 'post_comment' | 'get_comments' | 'mark_reviewed' | 'get_file_url';
   invoiceId?: string;
   commentText?: string;
   isDoubt?: boolean;
+  reviewed?: boolean;
   bucket?: string;
   filePath?: string;
 }
@@ -190,6 +191,21 @@ Deno.serve(async (req) => {
 
       const bankStatements = bankStatementsData || [];
 
+      // Fetch comments for all invoices in scope
+      const allInvoiceIds = [
+        ...invoices.map(i => i.id),
+        ...generalInvoices.map(i => i.id),
+      ];
+      let comments: any[] = [];
+      if (allInvoiceIds.length > 0) {
+        const { data: commentsData } = await supabase
+          .from('invoice_comments')
+          .select('*')
+          .in('invoice_id', allInvoiceIds)
+          .order('created_at', { ascending: true });
+        comments = commentsData || [];
+      }
+
       return new Response(
         JSON.stringify({
           authorized: true,
@@ -198,7 +214,8 @@ Deno.serve(async (req) => {
           transactions,
           generalInvoices,
           invoiceListImports: invoiceListImportsWithItems,
-          bankStatements
+          bankStatements,
+          comments,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -237,7 +254,8 @@ Deno.serve(async (req) => {
         .insert({
           invoice_id: invoiceId,
           comment_text: sanitizedComment,
-          is_doubt: Boolean(isDoubt)
+          is_doubt: Boolean(isDoubt),
+          shareable_link_id: validatedLink.id,
         });
 
       if (commentError) {
@@ -261,6 +279,39 @@ Deno.serve(async (req) => {
       } catch (notifError) {
         console.error('Notification creation failed');
         // Don't fail the request for notification error
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'mark_reviewed') {
+      const { invoiceId, commentText } = body;
+      if (!invoiceId || !isValidUUID(invoiceId)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid invoice reference', code: 'INVALID_INVOICE_ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Insert a "reviewed" comment (is_doubt = false, special marker)
+      const { error } = await supabase
+        .from('invoice_comments')
+        .insert({
+          invoice_id: invoiceId,
+          comment_text: commentText || '✓ Ελέγχθηκε από λογιστή',
+          is_doubt: false,
+          shareable_link_id: validatedLink.id,
+        });
+
+      if (error) {
+        console.error('Error marking reviewed');
+        return new Response(
+          JSON.stringify({ error: 'Unable to mark as reviewed', code: 'REVIEW_ERROR' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       return new Response(
