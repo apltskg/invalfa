@@ -96,7 +96,7 @@ export default function InvoiceExchange() {
         try {
             const { data, error } = await (supabase as any)
                 .from("hub_shares")
-                .select("*")
+                .select("*, invoice:invoices(merchant, amount, invoice_date)")
                 .order("created_at", { ascending: false });
             if (error) throw error;
             setShares((data as unknown as HubShare[]) || []);
@@ -327,11 +327,14 @@ export default function InvoiceExchange() {
                                             </div>
 
                                             {/* Invoice ref */}
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                <FileText className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                                                <span className="text-xs text-muted-foreground truncate">
-                                                    {invoices.find(i => i.id === share.invoice_id)?.merchant || share.invoice_id.slice(0, 8) + "…"}
-                                                </span>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">
+                                                    {share.invoice?.merchant || "—"}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {share.invoice?.amount != null ? `€${share.invoice.amount.toFixed(2)}` : ""}
+                                                    {share.invoice?.invoice_date ? ` · ${format(new Date(share.invoice.invoice_date), "dd/MM/yy")}` : ""}
+                                                </p>
                                             </div>
 
                                     {/* Date */}
