@@ -10,7 +10,7 @@ import {
     FileText, CreditCard, TrendingUp, TrendingDown,
     ArrowUpRight, ArrowDownRight, Calendar, Building2,
     Loader2, BarChart3, ClipboardCheck, ChevronRight, X,
-    AlertCircle, Receipt, ArrowLeftRight
+    AlertCircle, Receipt, ArrowLeftRight, LayoutDashboard
 } from "lucide-react";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { el } from "date-fns/locale";
