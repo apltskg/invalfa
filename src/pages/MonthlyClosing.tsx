@@ -326,10 +326,10 @@ export default function MonthlyClosing() {
                     variant="outline"
                     size="sm"
                     onClick={checkAllSteps}
-                    disabled={loading}
+                    disabled={refreshing}
                     className="rounded-xl gap-1.5 text-xs"
                 >
-                    {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                     {refreshing ? "Ενημέρωση..." : "Ανανέωση"}
                 </Button>
             </div>
