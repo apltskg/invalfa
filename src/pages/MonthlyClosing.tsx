@@ -119,7 +119,7 @@ export default function MonthlyClosing() {
 
                 const uniqueCats = new Set((cats || []).map(c => c.category).filter(Boolean));
                 const importantCats = ["tolls", "fuel", "rent", "utilities", "payroll"];
-                const missingCats = importantCats.filter(c => !uniqueCats.has(c));
+                const missingCats = importantCats.filter(c => !uniqueCats.has(c as any));
 
                 return {
                     done: (count || 0) >= 3,

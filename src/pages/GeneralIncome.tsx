@@ -55,8 +55,8 @@ export default function GeneralIncome() {
     useEffect(() => { fetchData(); fetchCategories(); }, [monthKey]);
 
     async function fetchCategories() {
-        const { data } = await supabase.from("income_categories").select("id,name_el,color,icon").order("sort_order");
-        setCategories((data as IncomeCategory[]) || []);
+        // income_categories table not yet available
+        setCategories([]);
     }
 
     async function fetchData() {
