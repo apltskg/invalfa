@@ -10,8 +10,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
-  Package, Truck, Users, Receipt, Building2, CreditCard,
-  FileText, Search, ArrowRight
+  Package, Truck, Users, Receipt, CreditCard,
+  Search, ArrowRight, LayoutDashboard, Banknote, FileDown,
+  Settings, TrendingDown, TrendingUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -177,11 +178,11 @@ export function GlobalSearch() {
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 h-8 px-3 rounded-lg border border-slate-200 bg-white/80 text-xs text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all"
+        className="flex items-center gap-2 h-8 px-3 rounded-lg border border-border bg-card/80 text-xs text-muted-foreground hover:bg-accent hover:border-border transition-all"
       >
         <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Αναζήτηση...</span>
-        <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] text-slate-400">
+        <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
           ⌘K
         </kbd>
       </button>
@@ -193,17 +194,40 @@ export function GlobalSearch() {
           onValueChange={setQuery}
         />
         <CommandList>
-          {query.length < 2 ? (
-            <CommandEmpty className="py-12 text-center">
-              <Search className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm text-slate-500">Πληκτρολογήστε για αναζήτηση</p>
-              <p className="text-xs text-slate-400 mt-1">Φάκελοι, προμηθευτές, πελάτες, τιμολόγια, συναλλαγές</p>
-            </CommandEmpty>
-          ) : loading ? (
+          {/* Quick navigation when no query */}
+          {query.length < 2 && (
+            <CommandGroup heading="Γρήγορη πλοήγηση">
+              {[
+                { label: "Αρχική", icon: LayoutDashboard, url: "/dashboard", shortcut: "Alt+D" },
+                { label: "Φάκελοι", icon: Package, url: "/packages", shortcut: "Alt+P" },
+                { label: "Γενικά Έξοδα", icon: TrendingDown, url: "/general-expenses", shortcut: "Alt+E" },
+                { label: "Γενικά Έσοδα", icon: TrendingUp, url: "/general-income", shortcut: "Alt+I" },
+                { label: "Τράπεζα", icon: Banknote, url: "/bank-sync", shortcut: "Alt+B" },
+                { label: "Εξαγωγές", icon: FileDown, url: "/export-hub", shortcut: "Alt+X" },
+                { label: "Ρυθμίσεις", icon: Settings, url: "/settings", shortcut: "Alt+S" },
+              ].map((item) => (
+                <CommandItem
+                  key={item.url}
+                  value={item.label}
+                  onSelect={() => { setOpen(false); navigate(item.url); }}
+                  className="flex items-center gap-3 py-2 px-3 cursor-pointer"
+                >
+                  <item.icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 text-sm">{item.label}</span>
+                  <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
+                    {item.shortcut}
+                  </kbd>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {query.length >= 2 && loading && (
             <CommandEmpty>Αναζήτηση...</CommandEmpty>
-          ) : results.length === 0 ? (
+          )}
+          {query.length >= 2 && !loading && results.length === 0 && (
             <CommandEmpty>Δεν βρέθηκαν αποτελέσματα</CommandEmpty>
-          ) : (
+          )}
+          {query.length >= 2 && !loading && results.length > 0 && (
             Object.entries(grouped).map(([type, items], idx) => {
               const config = typeConfig[type as keyof typeof typeConfig];
               const Icon = config.icon;
@@ -230,7 +254,7 @@ export function GlobalSearch() {
                           {item.badge}
                         </Badge>
                       )}
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     </CommandItem>
                   ))}
                 </CommandGroup>

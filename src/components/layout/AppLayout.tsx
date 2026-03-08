@@ -5,6 +5,8 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MonthSelector } from "./MonthSelector";
 import { MonthProvider } from "@/contexts/MonthContext";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { KeyboardShortcuts } from "@/components/shared/KeyboardShortcuts";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,6 +16,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <MonthProvider>
       <SidebarProvider>
+        <KeyboardShortcuts />
         <div className="flex min-h-svh w-full bg-background">
           <AppSidebar />
           <main className="flex-1 overflow-auto momentum-scroll">
@@ -30,6 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
             {/* Page content - bottom padding for FAB */}
             <div className="p-3 sm:p-4 md:p-6 pb-24 sm:pb-6">
+              <PageBreadcrumb />
               {children}
             </div>
           </main>
