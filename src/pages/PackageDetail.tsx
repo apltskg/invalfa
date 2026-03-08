@@ -412,7 +412,7 @@ export default function PackageDetail() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Bank Transactions
+              Τραπεζικές Κινήσεις
             </h2>
           </div>
 
