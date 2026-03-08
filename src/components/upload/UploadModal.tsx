@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InvoicePreview } from "./InvoicePreview";
 import { ExtractedData, InvoiceCategory } from "@/types/database";
+import { resolveContactIds } from "@/lib/auto-link-contact";
 import { Button } from "@/components/ui/button";
 import { ExtractionProgress } from "./ExtractionProgress";
 import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
