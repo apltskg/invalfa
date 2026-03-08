@@ -112,7 +112,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Κωδικός</Label>
               <div className="relative">
                 <Input
                   id="password"
