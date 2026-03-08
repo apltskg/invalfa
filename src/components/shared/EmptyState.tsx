@@ -34,7 +34,7 @@ export function EmptyState({
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="flex flex-col items-center"
       >
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 shadow-sm">
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-muted border border-border">
           <Icon className="h-8 w-8 text-primary" />
         </div>
         <p className="mb-2 text-lg font-semibold text-foreground">{title}</p>
