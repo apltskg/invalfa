@@ -197,7 +197,6 @@ export function NotificationBell() {
                 .from("invoices")
                 .select("*", { count: 'exact', head: true })
                 .is("expense_category_id", null)
-                .is("income_category_id", null)
                 .not("type", "is", null);
 
             if (noCategoryCount && noCategoryCount > 5) {

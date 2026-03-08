@@ -208,7 +208,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         invoice_date: data.date,
         category: data.category,
         expense_category_id: defaultType === "expense" ? (data.expenseCategoryId || null) : null,
-        income_category_id: defaultType === "income" ? (data.incomeCategoryId || null) : null,
+        
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
         type: defaultType,

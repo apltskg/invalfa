@@ -36,11 +36,22 @@ export default function ExportHub() {
   }, [selectedMonth]); // Re-fetch when month changes
 
   async function fetchData() {
+    // Compute date range from selectedMonth (yyyy-MM)
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const startDate = `${selectedMonth}-01`;
+    const endDate = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+
     const [{ data: pkgs }, { data: invs }, { data: logs }, { data: txns }, { data: matchData }] = await Promise.all([
-      supabase.from("packages").select("*"),
-      supabase.from("invoices").select("*"),
+      supabase.from("packages").select("*")
+        .gte("start_date", startDate)
+        .lte("start_date", endDate),
+      supabase.from("invoices").select("*")
+        .gte("invoice_date", startDate)
+        .lte("invoice_date", endDate),
       supabase.from("export_logs").select("*").order("sent_at", { ascending: false }).limit(10),
-      supabase.from("bank_transactions").select("*"),
+      supabase.from("bank_transactions").select("*")
+        .gte("transaction_date", startDate)
+        .lte("transaction_date", endDate),
       supabase.from("invoice_transaction_matches").select("*"),
     ]);
 
