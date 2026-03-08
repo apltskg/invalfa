@@ -432,7 +432,7 @@ export default function MonthlyClosing() {
                                             <div className="flex items-center gap-2">
                                                 <p className={cn(
                                                     "text-sm font-semibold",
-                                                    status.done ? "text-emerald-700" : "text-slate-800"
+                                                    status.done ? "text-emerald-700 dark:text-emerald-400" : "text-foreground"
                                                 )}>
                                                     {step.title}
                                                 </p>
