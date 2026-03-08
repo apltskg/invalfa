@@ -6,6 +6,7 @@ export interface AutoMatchResult {
     matched: number;
     suggested: number;
     failed: number;
+    autoLinkedSuppliers: number;
     matches: Array<{
         transactionId: string;
         invoiceId: string;
@@ -29,123 +30,181 @@ interface Invoice {
     merchant: string | null;
     type: 'income' | 'expense';
     package_id: string | null;
+    supplier_id: string | null;
+    customer_id: string | null;
     extracted_data: any;
 }
 
-/**
- * Calculate similarity between two strings (for vendor/merchant matching)
- */
-function stringSimilarity(str1: string, str2: string): number {
-    if (!str1 || !str2) return 0;
-
-    const s1 = str1.toLowerCase().trim();
-    const s2 = str2.toLowerCase().trim();
-
-    if (s1 === s2) return 1;
-
-    // Check if one contains the other
-    if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-
-    // Simple word overlap
-    const words1 = s1.split(/\s+/);
-    const words2 = s2.split(/\s+/);
-    const commonWords = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)));
-
-    return commonWords.length / Math.max(words1.length, words2.length);
+interface Supplier {
+    id: string;
+    name: string;
+    vat_number: string | null;
 }
 
-/**
- * Calculate match confidence between a transaction and invoice
- */
+interface Customer {
+    id: string;
+    name: string;
+    vat_number: string | null;
+}
+
+// ── Greek text normalization ──────────────────────────────────────────
+function normalizeGreek(str: string): string {
+    return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ς/g, 'σ')
+        .replace(/[^a-zα-ω0-9\s]/g, '')
+        .trim();
+}
+
+function stringSimilarity(str1: string, str2: string): number {
+    if (!str1 || !str2) return 0;
+    const s1 = normalizeGreek(str1);
+    const s2 = normalizeGreek(str2);
+    if (s1 === s2) return 1;
+    if (s1.includes(s2) || s2.includes(s1)) return 0.85;
+
+    // N-gram similarity
+    const ngrams = (text: string, n = 3) => {
+        const set = new Set<string>();
+        for (let i = 0; i <= text.length - n; i++) set.add(text.substring(i, i + n));
+        return set;
+    };
+    const ng1 = ngrams(s1);
+    const ng2 = ngrams(s2);
+    if (ng1.size === 0 || ng2.size === 0) return 0;
+    const intersection = [...ng1].filter(n => ng2.has(n)).length;
+    const union = new Set([...ng1, ...ng2]).size;
+    return intersection / union;
+}
+
 function calculateMatchConfidence(
     txn: Transaction,
-    inv: Invoice
+    inv: Invoice,
+    supplierMap: Map<string, Supplier>,
+    customerMap: Map<string, Customer>
 ): { confidence: number; reasons: string[] } {
     const reasons: string[] = [];
     let confidence = 0;
 
-    // 1. Amount match (most important - up to 50%)
+    // 1. Amount match (up to 50%)
     if (inv.amount && txn.amount) {
         const amountDiff = Math.abs(Math.abs(txn.amount) - inv.amount);
         const percentDiff = amountDiff / Math.max(Math.abs(txn.amount), inv.amount);
-
-        if (amountDiff < 0.01) {
-            confidence += 50;
-            reasons.push("Ακριβές ποσό");
-        } else if (percentDiff < 0.01) {
-            confidence += 45;
-            reasons.push("Ποσό ~99%");
-        } else if (percentDiff < 0.05) {
-            confidence += 30;
-            reasons.push("Ποσό ~95%");
-        }
+        if (amountDiff < 0.01) { confidence += 50; reasons.push("Ακριβές ποσό"); }
+        else if (percentDiff < 0.01) { confidence += 45; reasons.push("Ποσό ~99%"); }
+        else if (percentDiff < 0.02) { confidence += 38; reasons.push("Ποσό ±2%"); }
+        else if (percentDiff < 0.05) { confidence += 28; reasons.push("Ποσό ±5%"); }
     }
 
     // 2. Date proximity (up to 25%)
     if (inv.invoice_date && txn.transaction_date) {
-        const invDate = new Date(inv.invoice_date);
-        const txnDate = new Date(txn.transaction_date);
-        const daysDiff = Math.abs((txnDate.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (daysDiff <= 3) {
-            confidence += 25;
-            reasons.push("Ημερομηνία ±3 ημέρες");
-        } else if (daysDiff <= 7) {
-            confidence += 20;
-            reasons.push("Ημερομηνία ±7 ημέρες");
-        } else if (daysDiff <= 30) {
-            confidence += 10;
-            reasons.push("Ημερομηνία ±30 ημέρες");
-        }
+        const daysDiff = Math.abs(
+            (new Date(txn.transaction_date).getTime() - new Date(inv.invoice_date).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (daysDiff <= 1) { confidence += 25; reasons.push("Ίδια ημ/νία"); }
+        else if (daysDiff <= 3) { confidence += 22; reasons.push("Ημ/νία ±3 ημ."); }
+        else if (daysDiff <= 7) { confidence += 18; reasons.push("Ημ/νία ±7 ημ."); }
+        else if (daysDiff <= 14) { confidence += 12; reasons.push("Ημ/νία ±14 ημ."); }
+        else if (daysDiff <= 30) { confidence += 6; reasons.push("Ημ/νία ±30 ημ."); }
     }
 
     // 3. Description/Merchant match (up to 15%)
-    if (txn.description && inv.merchant) {
-        const similarity = stringSimilarity(txn.description, inv.merchant);
-        if (similarity > 0.7) {
-            confidence += 15;
-            reasons.push("Ταίριασμα ονόματος");
-        } else if (similarity > 0.4) {
-            confidence += 10;
-            reasons.push("Μερικό ταίριασμα ονόματος");
-        }
+    const merchantName = inv.merchant
+        || (inv.supplier_id && supplierMap.get(inv.supplier_id)?.name)
+        || (inv.customer_id && customerMap.get(inv.customer_id)?.name)
+        || '';
+    if (txn.description && merchantName) {
+        const similarity = stringSimilarity(txn.description, merchantName);
+        if (similarity > 0.7) { confidence += 15; reasons.push("Ταίριασμα ονόματος"); }
+        else if (similarity > 0.4) { confidence += 10; reasons.push("Μερικό ταίριασμα"); }
+        else if (similarity > 0.2) { confidence += 5; reasons.push("Αδύναμο ταίριασμα"); }
     }
 
-    // 4. Same package (up to 10%)
+    // 4. Same package bonus (up to 10%)
     if (txn.package_id && inv.package_id && txn.package_id === inv.package_id) {
         confidence += 10;
         reasons.push("Ίδιος φάκελος");
     }
 
-    // 5. VAT/ΑΦΜ-based matching (bonus up to 15%)
-    if (inv.extracted_data) {
-        const extracted = inv.extracted_data?.extracted || inv.extracted_data;
-        const taxId = extracted?.tax_id as string;
-        const buyerVat = extracted?.buyer_vat as string;
-        const descLower = (txn.description || "").toLowerCase().replace(/\s/g, "");
+    // 5. VAT/ΑΦΜ-based matching (bonus up to 20%)
+    const extracted = inv.extracted_data?.extracted || inv.extracted_data;
+    const descLower = (txn.description || "").replace(/\s/g, "").toLowerCase();
+    
+    // Check supplier VAT from extracted data AND from supplier record
+    const supplierVat = extracted?.tax_id || (inv.supplier_id && supplierMap.get(inv.supplier_id)?.vat_number);
+    const customerVat = extracted?.buyer_vat || (inv.customer_id && customerMap.get(inv.customer_id)?.vat_number);
+    
+    if (supplierVat && String(supplierVat).length === 9 && descLower.includes(String(supplierVat))) {
+        confidence += 20;
+        reasons.push("ΑΦΜ προμηθευτή στην περιγραφή");
+    } else if (customerVat && String(customerVat).length === 9 && descLower.includes(String(customerVat))) {
+        confidence += 15;
+        reasons.push("ΑΦΜ πελάτη στην περιγραφή");
+    }
 
-        // Check if the bank transaction description contains the supplier/buyer VAT
-        if (taxId && taxId.length === 9 && descLower.includes(taxId)) {
-            confidence += 15;
-            reasons.push("ΑΦΜ πωλητή στην περιγραφή");
-        } else if (buyerVat && buyerVat.length === 9 && descLower.includes(buyerVat)) {
-            confidence += 10;
-            reasons.push("ΑΦΜ αγοραστή στην περιγραφή");
-        }
-
-        // Also check if invoice number appears in bank description
-        const invoiceNum = (extracted?.invoice_number || "").toString().trim();
-        if (invoiceNum.length >= 3 && descLower.includes(invoiceNum.toLowerCase())) {
-            confidence += 10;
-            reasons.push("Αρ. τιμολογίου στην περιγραφή");
-        }
+    // 6. Invoice number in bank description (bonus up to 12%)
+    const invoiceNum = (extracted?.invoice_number || "").toString().trim();
+    if (invoiceNum.length >= 3 && descLower.includes(invoiceNum.toLowerCase().replace(/\s/g, ""))) {
+        confidence += 12;
+        reasons.push("Αρ. τιμολογίου στην περιγραφή");
     }
 
     return { confidence, reasons };
 }
 
 /**
- * Run automatic matching for all unmatched transactions
+ * Auto-link invoices to suppliers/customers by VAT number
+ */
+async function autoLinkByVat(invoices: Invoice[], suppliers: Supplier[], customers: Customer[]): Promise<number> {
+    let linked = 0;
+    const updates: { id: string; supplier_id?: string; customer_id?: string }[] = [];
+
+    for (const inv of invoices) {
+        const extracted = inv.extracted_data?.extracted || inv.extracted_data;
+        if (!extracted) continue;
+
+        // Link expense invoices to suppliers by tax_id
+        if (inv.type === 'expense' && !inv.supplier_id && extracted.tax_id) {
+            const vatClean = String(extracted.tax_id).replace(/\D/g, '');
+            if (vatClean.length === 9) {
+                const match = suppliers.find(s => s.vat_number && s.vat_number.replace(/\D/g, '') === vatClean);
+                if (match) {
+                    updates.push({ id: inv.id, supplier_id: match.id });
+                    linked++;
+                }
+            }
+        }
+
+        // Link income invoices to customers by buyer_vat
+        if (inv.type === 'income' && !inv.customer_id && extracted.buyer_vat) {
+            const vatClean = String(extracted.buyer_vat).replace(/\D/g, '');
+            if (vatClean.length === 9) {
+                const match = customers.find(c => c.vat_number && c.vat_number.replace(/\D/g, '') === vatClean);
+                if (match) {
+                    updates.push({ id: inv.id, customer_id: match.id });
+                    linked++;
+                }
+            }
+        }
+    }
+
+    // Batch update
+    for (const upd of updates) {
+        if (upd.supplier_id) {
+            await supabase.from("invoices").update({ supplier_id: upd.supplier_id }).eq("id", upd.id);
+        }
+        if (upd.customer_id) {
+            await supabase.from("invoices").update({ customer_id: upd.customer_id }).eq("id", upd.id);
+        }
+    }
+
+    return linked;
+}
+
+/**
+ * Run automatic matching for all unmatched transactions (v2 — enhanced)
  */
 export async function runAutoMatching(
     options: {
@@ -154,86 +213,66 @@ export async function runAutoMatching(
         packageId?: string;
     } = {}
 ): Promise<AutoMatchResult> {
-    const { minConfidence = 80, dryRun = false, packageId } = options;
+    const { minConfidence = 75, dryRun = false, packageId } = options;
 
     const result: AutoMatchResult = {
-        totalProcessed: 0,
-        matched: 0,
-        suggested: 0,
-        failed: 0,
-        matches: [],
+        totalProcessed: 0, matched: 0, suggested: 0, failed: 0, autoLinkedSuppliers: 0, matches: [],
     };
 
     try {
-        // 1. Fetch unmatched transactions
-        let txnQuery = supabase
-            .from("bank_transactions")
-            .select("id, transaction_date, description, amount, package_id");
+        // 1. Fetch all data in parallel
+        let txnQuery = supabase.from("bank_transactions").select("id, transaction_date, description, amount, package_id");
+        if (packageId) txnQuery = txnQuery.eq("package_id", packageId);
 
-        if (packageId) {
-            txnQuery = txnQuery.eq("package_id", packageId);
-        }
+        const [
+            { data: transactions },
+            { data: existingMatches },
+            { data: invoices },
+            { data: invoiceMatches },
+            { data: suppliers },
+            { data: customers },
+        ] = await Promise.all([
+            txnQuery,
+            supabase.from("invoice_transaction_matches").select("transaction_id"),
+            supabase.from("invoices").select("id, amount, invoice_date, merchant, type, package_id, supplier_id, customer_id, extracted_data"),
+            supabase.from("invoice_transaction_matches").select("invoice_id"),
+            supabase.from("suppliers").select("id, name, vat_number"),
+            supabase.from("customers").select("id, name, vat_number"),
+        ]);
 
-        const { data: transactions, error: txnError } = await txnQuery;
-
-        if (txnError) throw txnError;
-        if (!transactions || transactions.length === 0) {
-            return result;
-        }
-
-        // 2. Fetch existing matches to exclude already matched
-        const { data: existingMatches } = await supabase
-            .from("invoice_transaction_matches")
-            .select("transaction_id");
+        if (!transactions || transactions.length === 0) return result;
 
         const matchedTxnIds = new Set((existingMatches || []).map(m => m.transaction_id));
         const unmatchedTxns = transactions.filter(t => !matchedTxnIds.has(t.id));
-
         result.totalProcessed = unmatchedTxns.length;
+        if (unmatchedTxns.length === 0) return result;
 
-        if (unmatchedTxns.length === 0) {
-            return result;
-        }
+        if (!invoices || invoices.length === 0) return result;
 
-        // 3. Fetch invoices for matching
-        const { data: invoices, error: invError } = await supabase
-            .from("invoices")
-            .select("id, amount, invoice_date, merchant, type, package_id, extracted_data");
-
-        if (invError) throw invError;
-        if (!invoices || invoices.length === 0) {
-            return result;
-        }
-
-        // 4. Fetch existing invoice matches to exclude
-        const { data: invoiceMatches } = await supabase
-            .from("invoice_transaction_matches")
-            .select("invoice_id");
+        // 2. Auto-link invoices to suppliers/customers by VAT
+        const autoLinked = await autoLinkByVat(
+            invoices as Invoice[],
+            (suppliers || []) as Supplier[],
+            (customers || []) as Customer[]
+        );
+        result.autoLinkedSuppliers = autoLinked;
 
         const matchedInvIds = new Set((invoiceMatches || []).map(m => m.invoice_id));
         const unmatchedInvoices = invoices.filter(i => !matchedInvIds.has(i.id));
 
-        // 5. Find matches
-        const matchesToCreate: Array<{
-            invoice_id: string;
-            transaction_id: string;
-            status: string;
-            confidence: number;
-            match_reason: string;
-        }> = [];
+        const supplierMap = new Map((suppliers || []).map(s => [s.id, s as Supplier]));
+        const customerMap = new Map((customers || []).map(c => [c.id, c as Customer]));
+
+        // 3. Find matches
+        const matchesToCreate: Array<{ invoice_id: string; transaction_id: string; status: string }> = [];
 
         for (const txn of unmatchedTxns) {
             let bestMatch: { invoice: Invoice; confidence: number; reasons: string[] } | null = null;
-
-            // Determine expected invoice type based on transaction amount
             const expectedType = txn.amount > 0 ? 'income' : 'expense';
 
             for (const inv of unmatchedInvoices) {
-                // Only match income transactions with income invoices, etc.
                 if (inv.type !== expectedType) continue;
-
-                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice);
-
+                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap);
                 if (confidence > (bestMatch?.confidence || 0)) {
                     bestMatch = { invoice: inv as Invoice, confidence, reasons };
                 }
@@ -244,24 +283,17 @@ export async function runAutoMatching(
                     invoice_id: bestMatch.invoice.id,
                     transaction_id: txn.id,
                     status: "confirmed",
-                    confidence: bestMatch.confidence,
-                    match_reason: bestMatch.reasons.join(", "),
                 });
-
                 result.matches.push({
                     transactionId: txn.id,
                     invoiceId: bestMatch.invoice.id,
                     confidence: bestMatch.confidence,
                     reason: bestMatch.reasons.join(", "),
                 });
-
-                // Remove from pool to avoid double-matching
                 const invIndex = unmatchedInvoices.findIndex(i => i.id === bestMatch!.invoice.id);
                 if (invIndex > -1) unmatchedInvoices.splice(invIndex, 1);
-
                 result.matched++;
-            } else if (bestMatch && bestMatch.confidence >= 50) {
-                // Lower confidence - suggest but don't auto-confirm
+            } else if (bestMatch && bestMatch.confidence >= 45) {
                 result.matches.push({
                     transactionId: txn.id,
                     invoiceId: bestMatch.invoice.id,
@@ -272,15 +304,11 @@ export async function runAutoMatching(
             }
         }
 
-        // 6. Create matches in database (if not dry run)
+        // 4. Create matches
         if (!dryRun && matchesToCreate.length > 0) {
             const { error: insertError } = await supabase
                 .from("invoice_transaction_matches")
-                .insert(matchesToCreate.map(m => ({
-                    invoice_id: m.invoice_id,
-                    transaction_id: m.transaction_id,
-                    status: m.status,
-                })));
+                .insert(matchesToCreate);
 
             if (insertError) {
                 console.error("Error creating matches:", insertError);
@@ -290,7 +318,6 @@ export async function runAutoMatching(
         }
 
         return result;
-
     } catch (error) {
         console.error("Auto-matching error:", error);
         throw error;
@@ -307,16 +334,13 @@ export function useAutoMatching() {
 
             const result = await runAutoMatching(options);
 
-            if (result.matched > 0) {
-                toast.success(
-                    `Ταιριάστηκαν ${result.matched} συναλλαγές αυτόματα!`,
-                    { id: "auto-match" }
-                );
-            } else if (result.suggested > 0) {
-                toast.info(
-                    `Βρέθηκαν ${result.suggested} πιθανές αντιστοιχίσεις για επισκόπηση.`,
-                    { id: "auto-match" }
-                );
+            const parts: string[] = [];
+            if (result.matched > 0) parts.push(`${result.matched} ταιριάστηκαν`);
+            if (result.suggested > 0) parts.push(`${result.suggested} προτάσεις`);
+            if (result.autoLinkedSuppliers > 0) parts.push(`${result.autoLinkedSuppliers} συνδέσεις ΑΦΜ`);
+
+            if (parts.length > 0) {
+                toast.success(parts.join(" · "), { id: "auto-match" });
             } else {
                 toast.info("Δεν βρέθηκαν νέες αντιστοιχίσεις.", { id: "auto-match" });
             }
