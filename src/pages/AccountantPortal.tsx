@@ -168,6 +168,10 @@ export default function AccountantPortal() {
   const [transactions, setTransactions] = useState<PortalTransaction[]>([]);
   const [invoiceListImports, setInvoiceListImports] = useState<InvoiceListImport[]>([]);
   const [bankStatements, setBankStatements] = useState<any[]>([]);
+  const [comments, setComments] = useState<InvoiceComment[]>([]);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentSubmitting, setCommentSubmitting] = useState<Record<string, boolean>>({});
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => { verifyAndFetch(); }, [token]);
 
