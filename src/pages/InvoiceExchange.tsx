@@ -409,9 +409,9 @@ export default function InvoiceExchange() {
                                         {customers.map(c => (
                                             <SelectItem key={c.id} value={c.id}>
                                                 <div className="flex items-center gap-2">
-                                                    <Users className="h-3.5 w-3.5 text-slate-400" />
+                                                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
                                                     <span>{c.name}</span>
-                                                    {c.email && <span className="text-xs text-slate-400">{c.email}</span>}
+                                                    {c.email && <span className="text-xs text-muted-foreground">{c.email}</span>}
                                                 </div>
                                             </SelectItem>
                                         ))}
