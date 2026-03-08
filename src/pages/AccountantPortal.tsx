@@ -587,7 +587,8 @@ export default function AccountantPortal() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {[...incomes, ...expenses].map(inv => (
-                        <tr key={inv.id}>
+                        <React.Fragment key={inv.id}>
+                        <tr>
                           <Td>
                             <span className={`inline-block w-2 h-2 rounded-full mr-2 ${(inv.type || "expense") === "income" ? "bg-green-500" : "bg-red-400"}`} />
                             {(inv.type || "expense") === "income" ? "Έσοδο" : "Έξοδο"}
@@ -602,11 +603,12 @@ export default function AccountantPortal() {
                             ) : <span className="text-gray-300 text-xs">—</span>}
                           </Td>
                         </tr>
-                        <tr key={`${inv.id}-actions`}>
+                        <tr>
                           <td colSpan={6} className="px-3 pb-2">
                             <InvoiceActions invoiceId={inv.id} />
                           </td>
                         </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
