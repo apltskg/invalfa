@@ -304,7 +304,9 @@ export default function Travellers() {
             <div className="flex-1 bg-muted/30 overflow-y-auto">
                 {!selected ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40">
-                        <User className="h-16 w-16 mb-4 opacity-20" />
+                        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                            <User className="h-7 w-7 text-muted-foreground/30" />
+                        </div>
                         <p className="text-sm">Επιλέξτε ταξιδιώτη</p>
                     </div>
                 ) : editing ? (
