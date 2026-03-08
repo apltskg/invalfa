@@ -205,7 +205,7 @@ export function BulkUploadModal({
         invoice_date: f.extractedData?.date || null,
         category: (f.extractedData?.category as string) || 'other',
         expense_category_id: defaultType === 'expense' ? (selectedCategory || null) : null,
-        income_category_id: defaultType === 'income' ? (selectedCategory || null) : null,
+        
         package_id: selectedPackage || null,
         extracted_data: f.extractedData as any,
         type: defaultType,

@@ -92,10 +92,10 @@ export default function GeneralIncome() {
     const updateCategory = async (invoiceId: string, newCategoryId: string | null) => {
         try {
             const { error } = await supabase.from("invoices")
-                .update({ income_category_id: newCategoryId } as any)
+                .update({ expense_category_id: newCategoryId })
                 .eq("id", invoiceId);
             if (error) throw error;
-            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, income_category_id: newCategoryId } as any : inv));
+            setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, expense_category_id: newCategoryId } : inv));
             toast.success("Η κατηγορία ενημερώθηκε", { duration: 1500 });
         } catch {
             toast.error("Σφάλμα κατά την ενημέρωση κατηγορίας", { duration: 2500 });
@@ -111,7 +111,7 @@ export default function GeneralIncome() {
                     merchant: editingInvoice.merchant,
                     amount: editingInvoice.amount,
                     invoice_date: editingInvoice.invoice_date,
-                    income_category_id: (editingInvoice as any).income_category_id || null,
+                    expense_category_id: (editingInvoice as any).expense_category_id || null,
                 })
                 .eq("id", editingInvoice.id);
             if (error) throw error;
@@ -137,14 +137,14 @@ export default function GeneralIncome() {
 
     // Per-category breakdown
     const byCategory = invoices.reduce((acc, inv) => {
-        const catId = (inv as any).income_category_id || "__none";
+        const catId = (inv as any).expense_category_id || "__none";
         acc[catId] = (acc[catId] || 0) + (inv.amount || 0);
         return acc;
     }, {} as Record<string, number>);
 
     const filtered = invoices.filter(i => {
         const matchSearch = !search || (i.merchant || "").toLowerCase().includes(search.toLowerCase());
-        const matchCat = !activeCategory || (inv => (inv as any).income_category_id === activeCategory)(i);
+        const matchCat = !activeCategory || (i as any).expense_category_id === activeCategory;
         return matchSearch && matchCat;
     });
 
@@ -260,7 +260,7 @@ export default function GeneralIncome() {
                     <div className="divide-y divide-slate-100">
                         {filtered.map(inv => {
                             const hasFile = inv.file_path && !inv.file_path.startsWith("manual/");
-                            const cat = getCategoryById((inv as any).income_category_id);
+                            const cat = getCategoryById((inv as any).expense_category_id);
                             return (
                                 <div key={inv.id} className="grid grid-cols-[1fr_130px_100px_120px_44px] gap-4 items-center px-5 py-3.5 hover:bg-slate-50 transition-colors group">
                                     {/* Name */}
@@ -400,10 +400,10 @@ export default function GeneralIncome() {
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold text-slate-500">Κατηγορία</Label>
                                 <Select
-                                    value={(editingInvoice as any).income_category_id || "none"}
+                                    value={(editingInvoice as any).expense_category_id || "none"}
                                     onValueChange={v => setEditingInvoice({
                                         ...editingInvoice, ...({
-                                            income_category_id: v === "none" ? null : v
+                                            expense_category_id: v === "none" ? null : v
                                         } as any)
                                     })}
                                 >
