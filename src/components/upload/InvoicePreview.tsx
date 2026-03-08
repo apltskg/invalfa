@@ -380,6 +380,10 @@ export function InvoicePreview({ fileUrl, fileName, extractedData, onSave, onCan
                                 setMerchant(currentValue);
                                 setSelectedEntityId(entity.id);
                                 setOpenCombobox(false);
+                                // Supplier Intelligence: auto-suggest category
+                                if (type === "expense") {
+                                  applySupplierIntelligence(entity.id);
+                                }
                               }}
                             >
                               <Check
