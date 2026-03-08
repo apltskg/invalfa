@@ -1,18 +1,31 @@
 import * as React from "react";
-import { format, parse, isValid } from "date-fns";
+import { format, parse, isValid, setMonth, setYear } from "date-fns";
 import { el } from "date-fns/locale";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DayPicker } from "react-day-picker";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+const MONTHS_EL = [
+    "Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος",
+    "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος",
+    "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος",
+];
 
 interface DatePickerInputProps {
-    value?: string;           // ISO date string: "2025-03-15" or ""
+    value?: string;
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
@@ -33,12 +46,17 @@ export function DatePickerInput({
     id,
 }: DatePickerInputProps) {
     const [open, setOpen] = React.useState(false);
+    const [viewMonth, setViewMonth] = React.useState<Date>(new Date());
 
     const selected = React.useMemo(() => {
         if (!value) return undefined;
         const d = parse(value, "yyyy-MM-dd", new Date());
         return isValid(d) ? d : undefined;
     }, [value]);
+
+    React.useEffect(() => {
+        if (selected) setViewMonth(selected);
+    }, [selected]);
 
     const displayValue = selected
         ? format(selected, "dd/MM/yyyy")
@@ -56,6 +74,33 @@ export function DatePickerInput({
         onChange("");
     };
 
+    const handleMonthChange = (monthStr: string) => {
+        setViewMonth(prev => setMonth(prev, parseInt(monthStr)));
+    };
+
+    const handleYearChange = (yearStr: string) => {
+        setViewMonth(prev => setYear(prev, parseInt(yearStr)));
+    };
+
+    const handlePrevMonth = () => {
+        setViewMonth(prev => {
+            const d = new Date(prev);
+            d.setMonth(d.getMonth() - 1);
+            return d;
+        });
+    };
+
+    const handleNextMonth = () => {
+        setViewMonth(prev => {
+            const d = new Date(prev);
+            d.setMonth(d.getMonth() + 1);
+            return d;
+        });
+    };
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -64,16 +109,16 @@ export function DatePickerInput({
                     type="button"
                     disabled={disabled}
                     className={cn(
-                        "w-full flex items-center gap-2 h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm",
-                        "hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500",
+                        "w-full flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-card text-sm",
+                        "hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
                         "transition-all duration-150 cursor-pointer",
-                        !displayValue && "text-gray-400",
-                        displayValue && "text-gray-900",
-                        disabled && "opacity-50 cursor-not-allowed bg-gray-50",
+                        !displayValue && "text-muted-foreground",
+                        displayValue && "text-foreground",
+                        disabled && "opacity-50 cursor-not-allowed bg-muted",
                         className
                     )}
                 >
-                    <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="flex-1 text-left">
                         {displayValue || placeholder}
                     </span>
@@ -81,7 +126,7 @@ export function DatePickerInput({
                         <span
                             role="button"
                             onClick={handleClear}
-                            className="h-4 w-4 flex items-center justify-center rounded-full text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+                            className="h-4 w-4 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors shrink-0"
                         >
                             <X className="h-3 w-3" />
                         </span>
@@ -89,63 +134,140 @@ export function DatePickerInput({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 shadow-xl border border-gray-100 rounded-xl overflow-hidden"
+                className="w-auto p-0 rounded-2xl border border-border shadow-xl overflow-hidden pointer-events-auto"
                 align="start"
             >
-                {/* Month/Year header with gradient */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3">
-                    <p className="text-xs text-blue-100 font-medium uppercase tracking-widest">
-                        {locale === "el" ? "Επιλογή Ημερομηνίας" : "Select Date"}
+                {/* Selected date preview */}
+                <div className="bg-primary px-4 py-3">
+                    <p className="text-[10px] text-primary-foreground/70 font-medium uppercase tracking-widest">
+                        {locale === "el" ? "Επιλεγμένη Ημερομηνία" : "Selected Date"}
                     </p>
-                    <p className="text-white text-lg font-bold mt-0.5">
+                    <p className="text-primary-foreground text-lg font-bold mt-0.5">
                         {selected ? format(selected, "dd MMMM yyyy", { locale: el }) : "—"}
                     </p>
                 </div>
-                <Calendar
+
+                {/* Month/Year navigation with dropdowns */}
+                <div className="flex items-center gap-1 px-3 pt-3 pb-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                        onClick={handlePrevMonth}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <div className="flex-1 flex items-center justify-center gap-1.5">
+                        <Select
+                            value={viewMonth.getMonth().toString()}
+                            onValueChange={handleMonthChange}
+                        >
+                            <SelectTrigger className="h-8 w-[120px] text-xs font-semibold border-none bg-muted/50 rounded-lg focus:ring-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl pointer-events-auto">
+                                {MONTHS_EL.map((m, i) => (
+                                    <SelectItem key={i} value={i.toString()} className="text-xs">
+                                        {m}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select
+                            value={viewMonth.getFullYear().toString()}
+                            onValueChange={handleYearChange}
+                        >
+                            <SelectTrigger className="h-8 w-[76px] text-xs font-semibold border-none bg-muted/50 rounded-lg focus:ring-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl pointer-events-auto">
+                                {years.map(y => (
+                                    <SelectItem key={y} value={y.toString()} className="text-xs">
+                                        {y}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                        onClick={handleNextMonth}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                {/* Calendar grid */}
+                <DayPicker
                     mode="single"
                     selected={selected}
                     onSelect={handleSelect}
-                    defaultMonth={selected ?? new Date()}
+                    month={viewMonth}
+                    onMonthChange={setViewMonth}
                     locale={el}
                     weekStartsOn={1}
-                    initialFocus
+                    showOutsideDays
+                    className="p-3 pointer-events-auto"
                     classNames={{
                         months: "flex flex-col",
-                        month: "space-y-3 p-3",
-                        caption: "flex justify-center relative items-center h-8",
-                        caption_label: "text-sm font-semibold text-gray-700",
-                        nav: "flex items-center gap-1",
-                        nav_button:
-                            "h-7 w-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors",
-                        nav_button_previous: "absolute left-0",
-                        nav_button_next: "absolute right-0",
+                        month: "space-y-1",
+                        caption: "hidden",
                         table: "w-full border-collapse",
                         head_row: "flex mb-1",
                         head_cell:
-                            "text-gray-400 rounded-md w-9 font-medium text-[0.72rem] text-center",
+                            "text-muted-foreground rounded-md w-10 font-medium text-[0.7rem] text-center uppercase",
                         row: "flex w-full",
-                        cell: "h-9 w-9 text-center text-sm p-0 relative",
-                        day: "h-9 w-9 p-0 font-normal rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors aria-selected:opacity-100 text-sm",
-                        day_selected:
-                            "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white rounded-lg font-semibold",
+                        cell: "h-10 w-10 text-center text-sm p-0 relative",
+                        day: cn(
+                            "h-10 w-10 p-0 font-normal rounded-xl text-foreground",
+                            "hover:bg-accent hover:text-accent-foreground",
+                            "transition-all duration-100 aria-selected:opacity-100 text-sm",
+                            "focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        ),
+                        day_selected: cn(
+                            "bg-primary text-primary-foreground",
+                            "hover:bg-primary/90 hover:text-primary-foreground",
+                            "focus:bg-primary focus:text-primary-foreground",
+                            "rounded-xl font-semibold shadow-sm"
+                        ),
                         day_today:
-                            "border border-blue-300 text-blue-600 font-semibold",
-                        day_outside: "text-gray-300 hover:bg-gray-50",
-                        day_disabled: "text-gray-200 cursor-not-allowed hover:bg-transparent",
-                        day_range_middle: "aria-selected:bg-blue-50 aria-selected:text-blue-900",
+                            "ring-1 ring-primary/40 text-primary font-semibold",
+                        day_outside: "text-muted-foreground/40 hover:bg-muted/50",
+                        day_disabled: "text-muted-foreground/30 cursor-not-allowed hover:bg-transparent",
+                        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
                         day_hidden: "invisible",
                     }}
+                    components={{
+                        IconLeft: () => <ChevronLeft className="h-4 w-4" />,
+                        IconRight: () => <ChevronRight className="h-4 w-4" />,
+                    }}
                 />
-                {/* Today shortcut */}
-                <div className="border-t border-gray-100 p-2">
+
+                {/* Quick actions */}
+                <div className="border-t border-border px-3 py-2 flex gap-1.5">
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-7"
+                        className="flex-1 text-xs text-primary hover:text-primary hover:bg-primary/10 h-8 rounded-lg font-medium"
                         onClick={() => handleSelect(new Date())}
                     >
                         {locale === "el" ? "Σήμερα" : "Today"}
                     </Button>
+                    {clearable && selected && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 rounded-lg"
+                            onClick={(e) => { handleClear(e); setOpen(false); }}
+                        >
+                            {locale === "el" ? "Καθαρισμός" : "Clear"}
+                        </Button>
+                    )}
                 </div>
             </PopoverContent>
         </Popover>
