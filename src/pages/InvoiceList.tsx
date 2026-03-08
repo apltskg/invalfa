@@ -245,11 +245,14 @@ export default function InvoiceList() {
   const handleCreateIncome = async (item: InvoiceListItem) => {
     try {
       let customerId: string | null = null;
-      if (item.client_vat?.trim()) {
+      const cleanVat = (item.client_vat || '').replace(/\D/g, '');
+      const isValidVat = /^\d{9}$/.test(cleanVat);
+      
+      if (isValidVat) {
         const { data: existingCustomer } = await supabase
           .from('customers')
           .select('id')
-          .eq('vat_number', item.client_vat.trim())
+          .eq('vat_number', cleanVat)
           .maybeSingle();
 
         if (existingCustomer) {
