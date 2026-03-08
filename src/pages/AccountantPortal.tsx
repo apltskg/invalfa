@@ -740,6 +740,11 @@ export default function AccountantPortal() {
                             ) : <span className="text-gray-300 text-xs">—</span>}
                           </Td>
                         </tr>
+                        <tr key={`${inv.id}-actions`}>
+                          <td colSpan={7} className="px-3 pb-2">
+                            <InvoiceActions invoiceId={inv.id} />
+                          </td>
+                        </tr>
                       );
                     })}
                 </tbody>
