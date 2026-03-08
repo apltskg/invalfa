@@ -664,6 +664,11 @@ export default function BankSync() {
         onOpenChange={setUploadModalOpen}
         onSuccess={fetchData}
       />
+      <BankCSVUploadModal
+        open={csvModalOpen}
+        onOpenChange={setCsvModalOpen}
+        onSuccess={fetchData}
+      />
 
       <InvoiceSelectorDialog
         open={invoiceSelectorOpen}
