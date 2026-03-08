@@ -32,8 +32,8 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
       setLoading(true);
 
       try {
-        // Fetch invoices + supplier/customer data in parallel
-        const [{ data: invoices }, { data: suppliers }, { data: customers }] = await Promise.all([
+        // Fetch invoices + supplier/customer + invoice list items data in parallel
+        const [{ data: invoices }, { data: suppliers }, { data: customers }, { data: listItems }] = await Promise.all([
           supabase
             .from("invoices")
             .select("id, type, amount, invoice_date, merchant, extracted_data, file_name, package_id, supplier_id, customer_id")
@@ -41,6 +41,10 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
             .limit(500),
           supabase.from("suppliers").select("id, name, vat_number").limit(500),
           supabase.from("customers").select("id, name, vat_number").limit(500),
+          supabase.from("invoice_list_items")
+            .select("id, invoice_number, client_name, client_vat, invoice_date, net_amount, total_amount, match_status")
+            .neq("match_status", "matched")
+            .limit(500),
         ]);
 
         const supplierMap = new Map((suppliers || []).map(s => [s.id, s]));
