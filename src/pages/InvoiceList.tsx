@@ -261,8 +261,8 @@ export default function InvoiceList() {
           const { data: newCustomer, error: custError } = await supabase
             .from('customers')
             .insert({
-              name: item.client_name || `Πελάτης ${item.client_vat}`,
-              vat_number: item.client_vat.trim(),
+              name: item.client_name || `Πελάτης ${cleanVat}`,
+              vat_number: cleanVat,
             })
             .select('id')
             .single();
