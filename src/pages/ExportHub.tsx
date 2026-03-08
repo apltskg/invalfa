@@ -354,7 +354,7 @@ export default function ExportHub() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Export Hub</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Κέντρο Εξαγωγών</h1>
         <p className="mt-1 text-muted-foreground">
           Δημιουργία μηνιαίων αναφορών για τον λογιστή - <span className="font-medium capitalize">{currentMonthLabel}</span>
         </p>
@@ -384,7 +384,7 @@ export default function ExportHub() {
           className="rounded-xl gap-2"
         >
           <FileSpreadsheet className="h-4 w-4" />
-          {exportingXlsx ? "Generating..." : "Download XLSX Report"}
+          {exportingXlsx ? "Δημιουργία..." : "Λήψη XLSX Αναφοράς"}
         </Button>
         <Button
           onClick={generateZip}
@@ -393,7 +393,7 @@ export default function ExportHub() {
           className="rounded-xl gap-2"
         >
           <Archive className="h-4 w-4" />
-          {exporting ? "Generating..." : "Download ZIP + Excel"}
+          {exporting ? "Δημιουργία..." : "Λήψη ZIP + Excel"}
         </Button>
         <Button
           onClick={generateMagicLink}
@@ -419,7 +419,7 @@ export default function ExportHub() {
                 exit={{ y: -20, opacity: 0 }}
                 className="flex items-center text-green-600"
               >
-                <Check className="h-4 w-4 mr-2" /> Sent!
+                <Check className="h-4 w-4 mr-2" /> Εστάλη!
               </motion.span>
             ) : (
               <motion.span
@@ -429,7 +429,7 @@ export default function ExportHub() {
                 exit={{ y: -20, opacity: 0 }}
                 className="flex items-center"
               >
-                <Send className="h-4 w-4 mr-2" /> Mark as Sent
+                <Send className="h-4 w-4 mr-2" /> Σήμανση ως Απεσταλμένο
               </motion.span>
             )}
           </AnimatePresence>
@@ -449,8 +449,8 @@ export default function ExportHub() {
             <div>
               <p className="font-medium">Γενικά Έξοδα & Έσοδα</p>
               <div className="mt-1 flex items-center gap-2">
-                <Badge variant="outline" className="rounded-lg border-amber-200 bg-amber-50 text-amber-700">
-                  {filteredGeneralInvoices.length} invoices
+                    <Badge variant="outline" className="rounded-lg border-amber-200 bg-amber-50 text-amber-700">
+                  {filteredGeneralInvoices.length} παραστατικά
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   Εκτός ταξιδιωτικών φακέλων
@@ -475,7 +475,7 @@ export default function ExportHub() {
                   <p className="font-medium">{pkg.client_name}</p>
                   <div className="mt-1 flex items-center gap-2">
                     <Badge variant="secondary" className="rounded-lg">
-                      {pkg.invoices.length} invoices
+                      {pkg.invoices.length} παραστατικά
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {format(new Date(pkg.start_date), "dd MMM")} - {format(new Date(pkg.end_date), "dd MMM")}
@@ -515,7 +515,7 @@ export default function ExportHub() {
                   {log.month_year}
                 </Badge>
                 <span className="text-muted-foreground">
-                  {log.packages_included} packages, {log.invoices_included} invoices
+                  {log.packages_included} πακέτα, {log.invoices_included} παραστατικά
                 </span>
                 <span className="text-muted-foreground">{format(new Date(log.sent_at), "dd MMM yyyy, HH:mm")}</span>
               </div>

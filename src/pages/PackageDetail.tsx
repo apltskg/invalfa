@@ -221,13 +221,13 @@ export default function PackageDetail() {
   const InvoiceList = ({ items }: { items: InvoiceWithMatch[] }) => (
     <div className="space-y-3">
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-xl">No items found</p>
+        <p className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-xl">Δεν βρέθηκαν εγγραφές</p>
       ) : (
         items.map(inv => (
           <Card key={inv.id} className="p-4 rounded-xl hover:bg-muted/50 transition-colors flex justify-between items-center group cursor-pointer" onClick={() => openPreview(inv)}>
             <div>
               <div className="font-medium flex items-center gap-2">
-                {inv.merchant || "Unknown"}
+                {inv.merchant || "Άγνωστος"}
                 {inv.matchedTransaction && <CheckCircle2 className="h-3 w-3 text-green-500" />}
               </div>
               <div className="text-xs text-muted-foreground flex gap-2">
@@ -237,7 +237,7 @@ export default function PackageDetail() {
             </div>
             <div className="text-right">
               <div className="font-semibold">€{(inv.amount || 0).toFixed(2)}</div>
-              <div className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">View</div>
+              <div className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">Προβολή</div>
             </div>
           </Card>
         ))
@@ -265,7 +265,7 @@ export default function PackageDetail() {
       <div className="flex flex-col gap-4">
         <Button variant="ghost" onClick={() => navigate("/packages")} className="self-start -ml-2 rounded-xl gap-2 text-slate-600 hover:bg-slate-100 h-9 text-sm">
           <ArrowLeft className="h-4 w-4" />
-          Βεπ στους Φακέλους
+          Πίσω στους Φακέλους
         </Button>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -358,28 +358,28 @@ export default function PackageDetail() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Financials
+              Οικονομικά
             </h2>
 
             <Dialog open={linkInvoiceOpen} onOpenChange={setLinkInvoiceOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="rounded-xl">
-                  <LinkIcon className="h-4 w-4 mr-2" /> Link Existing
+                  <LinkIcon className="h-4 w-4 mr-2" /> Σύνδεση Υπάρχοντος
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Link Existing Invoice</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Σύνδεση Υπάρχοντος Παραστατικού</DialogTitle></DialogHeader>
                 <div className="max-h-[300px] overflow-auto space-y-2">
                   {unassignedInvoices.map(inv => (
                     <div key={inv.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted cursor-pointer" onClick={() => handleLinkInvoice(inv.id)}>
                       <div>
-                        <p className="font-medium">{inv.merchant || "Unknown"}</p>
+                        <p className="font-medium">{inv.merchant || "Άγνωστος"}</p>
                         <p className="text-xs text-muted-foreground">€{inv.amount} • {inv.invoice_date}</p>
                       </div>
                       <Plus className="h-4 w-4" />
                     </div>
                   ))}
-                  {unassignedInvoices.length === 0 && <p className="text-center py-4 text-muted-foreground">No unassigned invoices found.</p>}
+                  {unassignedInvoices.length === 0 && <p className="text-center py-4 text-muted-foreground">Δεν βρέθηκαν ασύνδετα παραστατικά.</p>}
                 </div>
               </DialogContent>
             </Dialog>
@@ -387,20 +387,20 @@ export default function PackageDetail() {
 
           <Tabs defaultValue="expenses" className="w-full">
             <TabsList className="w-full grid grid-cols-2 rounded-xl mb-4 bg-muted/50 p-1">
-              <TabsTrigger value="expenses" className="rounded-lg">Expenses (€{totalExpenses.toFixed(0)})</TabsTrigger>
-              <TabsTrigger value="income" className="rounded-lg">Income (€{totalIncome.toFixed(0)})</TabsTrigger>
+              <TabsTrigger value="expenses" className="rounded-lg">Έξοδα (€{totalExpenses.toFixed(0)})</TabsTrigger>
+              <TabsTrigger value="income" className="rounded-lg">Έσοδα (€{totalIncome.toFixed(0)})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="space-y-4">
               <Button className="w-full rounded-xl border-dashed border-2 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground h-12" variant="outline" onClick={() => { setUploadType("expense"); setUploadModalOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Expense
+                <Plus className="h-4 w-4 mr-2" /> Προσθήκη Εξόδου
               </Button>
               <InvoiceList items={expenseInvoicesAll} />
             </TabsContent>
 
             <TabsContent value="income" className="space-y-4">
               <Button className="w-full rounded-xl border-dashed border-2 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground h-12" variant="outline" onClick={() => { setUploadType("income"); setUploadModalOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Income
+                <Plus className="h-4 w-4 mr-2" /> Προσθήκη Εσόδου
               </Button>
               <InvoiceList items={incomeInvoices} />
             </TabsContent>
@@ -412,7 +412,7 @@ export default function PackageDetail() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Bank Transactions
+              Τραπεζικές Κινήσεις
             </h2>
           </div>
 
@@ -421,14 +421,14 @@ export default function PackageDetail() {
             <Card className="rounded-3xl overflow-hidden border-primary/20 bg-primary/5 mb-4">
               <div className="p-3 border-b border-primary/10 bg-primary/10 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Smart Suggestions</span>
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Έξυπνες Προτάσεις</span>
               </div>
               <div className="divide-y divide-primary/10">
                 {suggestedMatches.map(({ transaction, invoice }) => (
                   <div key={transaction.id} className="p-4 flex items-center justify-between gap-3">
                     <div className="flex-1">
                       <p className="font-medium text-sm">{transaction.description}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Matches {invoice.merchant} (€{invoice.amount})</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Ταιριάζει με {invoice.merchant} (€{invoice.amount})</p>
                     </div>
                     <Button
                       size="sm"
@@ -437,7 +437,7 @@ export default function PackageDetail() {
                       disabled={linking === transaction.id}
                     >
                       <LinkIcon className="h-3 w-3" />
-                      Link
+                      Σύνδεση
                     </Button>
                   </div>
                 ))}
@@ -449,7 +449,7 @@ export default function PackageDetail() {
           <div className="space-y-3">
             {transactions.length === 0 ? (
               <Card className="flex flex-col items-center justify-center rounded-3xl border-dashed p-12 bg-muted/20">
-                <p className="text-muted-foreground">No transactions found</p>
+                <p className="text-muted-foreground">Δεν βρέθηκαν κινήσεις</p>
               </Card>
             ) : (
               transactions.map((txn) => {
