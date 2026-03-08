@@ -57,6 +57,50 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     });
   };
 
+  const runExtraction = async (filePath: string, fileName: string): Promise<ExtractedData | null> => {
+    try {
+      const response = await supabase.functions.invoke('extract-invoice', {
+        body: { filePath, fileName }
+      });
+      if (response.error) {
+        console.error('Edge Function error:', response.error);
+        toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
+        return null;
+      }
+      if (response.data && typeof response.data === 'object') {
+        const rawData = response.data as any;
+        return (rawData.extracted || rawData) as ExtractedData;
+      }
+      toast.info("Το AI δεν κατάφερε να διαβάσει κάποια πεδία. Συμπληρώστε χειροκίνητα.");
+      return null;
+    } catch (e) {
+      console.error('Extraction error:', e);
+      toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
+      return null;
+    }
+  };
+
+  const handleRetryExtraction = async () => {
+    if (!lastUploadedPath || !lastUploadedFile) return;
+    setExtracting(true);
+    setExtractionFailed(false);
+    toast.info("Επανάληψη ανάγνωσης AI...");
+
+    const extractedData = await runExtraction(lastUploadedPath, lastUploadedFile.name);
+
+    setExtracting(false);
+    if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+      setExtractionFailed(true);
+      toast.error("Η ανάγνωση απέτυχε ξανά. Συμπληρώστε χειροκίνητα.");
+    } else {
+      toast.success("Επιτυχής ανάγνωση!");
+    }
+
+    if (uploadedFile) {
+      setUploadedFile({ ...uploadedFile, extractedData });
+    }
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
