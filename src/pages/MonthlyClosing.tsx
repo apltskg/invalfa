@@ -69,8 +69,12 @@ export default function MonthlyClosing() {
             return cached ? JSON.parse(cached) : {};
         } catch { return {}; }
     });
-    const hasCached = Object.keys(statuses).length > 0;
-    const [loading, setLoading] = useState(!hasCached); // skip loading spinner if we have cache
+    const [loading, setLoading] = useState(() => {
+        try {
+            return !localStorage.getItem(cacheKey);
+        } catch { return true; }
+    });
+    const [refreshing, setRefreshing] = useState(false);
     const [expandedStep, setExpandedStep] = useState<string | null>(null);
 
     // ── Step definitions ──
