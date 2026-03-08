@@ -324,7 +324,7 @@ export default function MonthlyClosing() {
                     className="rounded-xl gap-1.5 text-xs"
                 >
                     {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    Ανανέωση
+                    {loading && hasCached ? "Ενημέρωση..." : "Ανανέωση"}
                 </Button>
             </div>
 
