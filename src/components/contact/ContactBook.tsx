@@ -23,6 +23,7 @@ import { format, parseISO } from "date-fns";
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAfmVerification, validateAfmChecksum } from "@/hooks/useAfmVerification";
+import { FormDialog, FormInput, FormRow, FormField, FormTextarea, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 /* ─── types ────────────────────────────────────────────────────────── */
 type Mode = "customers" | "suppliers";
