@@ -401,7 +401,7 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
               vat_rate: typeof parsed.vat_rate === 'number' ? parsed.vat_rate : null,
               invoice_number: parsed.invoice_number || null,
               document_type: parsed.document_type || "invoice",
-              confidence: 0.9
+              confidence: calculateConfidence(parsed)
             }
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
