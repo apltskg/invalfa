@@ -88,7 +88,7 @@ export default function Login() {
             Always <span className="text-blue-600">First</span>
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Sign in to manage your invoices
+            Συνδεθείτε για να διαχειριστείτε τα παραστατικά σας
           </CardDescription>
         </CardHeader>
         <CardContent>
