@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
     Upload, FileText, TrendingUp, MoreVertical, Eye,
     Edit, Trash2, FileUp, Loader2, Plus, Search, Calendar, Tag
@@ -24,12 +23,9 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-    Dialog, DialogContent, DialogHeader,
-    DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider } from "@/components/shared/FormDialog";
 
 interface IncomeCategory {
     id: string;
