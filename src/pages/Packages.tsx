@@ -322,19 +322,19 @@ export default function Packages() {
                       <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
                     </div>
 
-                    <div className="mb-6 space-y-4">
+                    <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-start">
-                        <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm">
+                        <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="rounded-lg capitalize shadow-sm text-[10px] sm:text-xs">
                           {pkg.status === "active" ? "Ενεργό" : "Ολοκληρωμένο"}
                         </Badge>
                       </div>
 
                       <div>
-                        <h3 className="font-bold text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-base sm:text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors line-clamp-2">
                           {pkg.client_name}
                         </h3>
-                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
+                        <div className="mt-1.5 sm:mt-2 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                           <span>
                             {pkg.start_date ? format(new Date(pkg.start_date), "dd/MM") : "?"} -{" "}
                             {pkg.end_date ? format(new Date(pkg.end_date), "dd/MM/yyyy") : "?"}
