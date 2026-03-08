@@ -86,6 +86,26 @@ export function useMatchingSuggestions(transactions: BankTransaction[]) {
           }
         }
 
+        // Add invoice list items as matchable records (income type)
+        if (listItems) {
+          for (const item of listItems) {
+            matchableRecords.push({
+              id: item.id,
+              type: 'income',
+              amount: item.total_amount || item.net_amount,
+              date: item.invoice_date,
+              vendor_or_client: item.client_name,
+              invoice_number: item.invoice_number,
+              description: item.client_name || '',
+              tax_id: null,
+              buyer_vat: item.client_vat,
+              package_id: null,
+              supplier_id: null,
+              customer_id: null,
+            });
+          }
+        }
+
         setRecords(matchableRecords);
       } catch (error) {
         console.error("Error fetching matchable records:", error);
