@@ -474,7 +474,7 @@ export default function InvoiceExchange() {
                     </div>
 
                     <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setSendDialogOpen(false)} className="rounded-xl text-sm border-slate-200">
+                        <Button variant="outline" onClick={() => setSendDialogOpen(false)} className="rounded-xl text-sm border-border">
                             Ακύρωση
                         </Button>
                         <Button onClick={handleSend} disabled={sending} className="rounded-xl text-sm bg-blue-600 hover:bg-blue-700 gap-2">
