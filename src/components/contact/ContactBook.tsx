@@ -181,27 +181,44 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setDuplicateWarning(existing || null);
     }
 
+    function validateForm(): boolean {
+        const errors: Record<string, string> = {};
+        if (!formData.name.trim()) errors.name = "Το όνομα είναι υποχρεωτικό";
+        if (formData.name.trim().length > 100) errors.name = "Μέγιστο 100 χαρακτήρες";
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Μη έγκυρο email";
+        if (formData.vat_number) {
+            const clean = formData.vat_number.replace(/\D/g, '');
+            if (clean && clean.length !== 9) errors.vat_number = "Το ΑΦΜ πρέπει να έχει 9 ψηφία";
+        }
+        if (formData.phone && !/^[+\d\s()-]{6,20}$/.test(formData.phone)) errors.phone = "Μη έγκυρο τηλέφωνο";
+        if (formData.iban && formData.iban.replace(/\s/g, '').length > 0 && formData.iban.replace(/\s/g, '').length < 15) errors.iban = "Μη έγκυρο IBAN";
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    }
+
     async function handleSave() {
-        if (!formData.name.trim()) { toast.error("Το όνομα είναι υποχρεωτικό"); return; }
+        if (!validateForm()) return;
         if (duplicateWarning && !editingId) { toast.error("Υπάρχει ήδη με αυτό το ΑΦΜ"); return; }
 
         setSaving(true);
         const table = isCustomers ? "customers" : "suppliers";
         const payload: any = {
-            name: formData.name, contact_person: formData.contact_person || null,
-            email: formData.email || null, phone: formData.phone || null,
-            address: formData.address || null,
+            name: formData.name.trim().slice(0, 100),
+            contact_person: formData.contact_person?.trim().slice(0, 100) || null,
+            email: formData.email?.trim().slice(0, 255) || null,
+            phone: formData.phone?.trim().slice(0, 20) || null,
+            address: formData.address?.trim().slice(0, 255) || null,
             vat_number: (() => {
                 const clean = (formData.vat_number || '').replace(/\D/g, '');
                 return /^\d{9}$/.test(clean) ? clean : (formData.vat_number?.trim() || null);
             })(),
-            notes: formData.notes || null,
+            notes: formData.notes?.trim().slice(0, 1000) || null,
         };
         if (!isCustomers) {
-            payload.tax_office = formData.tax_office || null;
-            payload.iban = formData.iban || null;
+            payload.tax_office = formData.tax_office?.trim().slice(0, 100) || null;
+            payload.iban = formData.iban?.trim().slice(0, 34) || null;
             payload.default_category_id = formData.default_category_id || null;
-            payload.invoice_instructions = formData.invoice_instructions || null;
+            payload.invoice_instructions = formData.invoice_instructions?.trim().slice(0, 500) || null;
         }
 
         try {
@@ -218,12 +235,19 @@ export default function ContactBook({ mode }: ContactBookProps) {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Διαγραφή; Η ενέργεια δεν αναιρείται.")) return;
+        setDeleteTargetId(id);
+        setDeleteConfirmOpen(true);
+    }
+
+    async function confirmDelete() {
+        if (!deleteTargetId) return;
         const table = isCustomers ? "customers" : "suppliers";
-        const { error } = await supabase.from(table).delete().eq("id", id);
+        const { error } = await supabase.from(table).delete().eq("id", deleteTargetId);
         if (error) { toast.error("Αποτυχία διαγραφής"); return; }
         toast.success("Διαγράφηκε");
-        if (selectedId === id) setSelectedId(null);
+        if (selectedId === deleteTargetId) setSelectedId(null);
+        setDeleteConfirmOpen(false);
+        setDeleteTargetId(null);
         fetchAll();
     }
 
