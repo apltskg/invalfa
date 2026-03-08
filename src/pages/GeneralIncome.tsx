@@ -111,7 +111,7 @@ export default function GeneralIncome() {
                     merchant: editingInvoice.merchant,
                     amount: editingInvoice.amount,
                     invoice_date: editingInvoice.invoice_date,
-                    income_category_id: (editingInvoice as any).income_category_id || null,
+                    expense_category_id: (editingInvoice as any).expense_category_id || null,
                 })
                 .eq("id", editingInvoice.id);
             if (error) throw error;
