@@ -720,15 +720,16 @@ export default function GeneralExpenses() {
                 icon={Edit}
                 iconClassName="bg-rose-500/10 text-rose-600"
                 onSubmit={async () => {
-                    if (!manualEntry.merchant || !manualEntry.amount) {
-                        toast.error("Συμπληρώστε Προμηθευτή και Ποσό");
-                        return;
-                    }
+                    const merchant = manualEntry.merchant.trim().slice(0, 100);
+                    const amount = parseFloat(manualEntry.amount);
+                    if (!merchant) { toast.error("Συμπληρώστε Προμηθευτή"); return; }
+                    if (!manualEntry.amount || isNaN(amount) || amount <= 0) { toast.error("Το ποσό πρέπει να είναι μεγαλύτερο από 0"); return; }
+                    if (amount > 999999) { toast.error("Μη έγκυρο ποσό"); return; }
                     setManualSaving(true);
                     try {
                         const { error } = await supabase.from("invoices").insert({
-                            merchant: manualEntry.merchant,
-                            amount: parseFloat(manualEntry.amount),
+                            merchant,
+                            amount,
                             invoice_date: manualEntry.invoice_date || null,
                             expense_category_id: manualEntry.category_id === "none" ? null : manualEntry.category_id,
                             type: "expense",

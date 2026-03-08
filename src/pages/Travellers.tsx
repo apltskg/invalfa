@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { FormDialog, FormInput, FormRow, FormField, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 interface Traveller {
     id: string;
@@ -91,6 +91,8 @@ export default function Travellers() {
     const [form, setForm] = useState<Traveller>(EMPTY);
     const [showAdd, setShowAdd] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     useEffect(() => { fetchTravellers(); }, []);
 
@@ -120,21 +122,27 @@ export default function Travellers() {
     async function handleSave() {
         setSaving(true);
         const payload = {
-            first_name: form.first_name.trim(),
-            last_name: form.last_name.trim(),
-            passport_number: form.passport_number || null,
+            first_name: form.first_name.trim().slice(0, 50),
+            last_name: form.last_name.trim().slice(0, 50),
+            passport_number: form.passport_number?.trim().slice(0, 20) || null,
             passport_expiry: form.passport_expiry || null,
-            id_number: form.id_number || null,
+            id_number: form.id_number?.trim().slice(0, 20) || null,
             id_expiration: form.id_expiration || null,
             birth_date: form.birth_date || null,
-            miles_bonus_card: form.miles_bonus_card || null,
-            phone: form.phone || null,
-            email: form.email || null,
-            notes: form.notes || null,
+            miles_bonus_card: form.miles_bonus_card?.trim().slice(0, 30) || null,
+            phone: form.phone?.trim().slice(0, 20) || null,
+            email: form.email?.trim().slice(0, 255) || null,
+            notes: form.notes?.trim().slice(0, 500) || null,
         };
 
         if (!payload.first_name || !payload.last_name) {
             toast.error("Όνομα και Επώνυμο απαιτούνται");
+            setSaving(false);
+            return;
+        }
+
+        if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+            toast.error("Μη έγκυρο email");
             setSaving(false);
             return;
         }
@@ -158,10 +166,17 @@ export default function Travellers() {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Σίγουρα θέλετε να διαγράψετε;")) return;
-        const { error } = await (supabase as any).from("travellers").delete().eq("id", id);
+        setDeleteTargetId(id);
+        setDeleteConfirmOpen(true);
+    }
+
+    async function confirmDelete() {
+        if (!deleteTargetId) return;
+        const { error } = await (supabase as any).from("travellers").delete().eq("id", deleteTargetId);
         if (error) toast.error("Αποτυχία διαγραφής");
-        else { toast.success("Διαγράφηκε!"); setSelected(null); }
+        else { toast.success("Διαγράφηκε!"); if (selected?.id === deleteTargetId) setSelected(null); }
+        setDeleteConfirmOpen(false);
+        setDeleteTargetId(null);
         await fetchTravellers();
     }
 
@@ -185,17 +200,14 @@ export default function Travellers() {
         );
     };
 
-    // ── Form Field ──
-    const FormField = ({ label, field, type = "text" }: { label: string; field: keyof Traveller; type?: string }) => (
-        <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
-            <Input
-                type={type}
-                value={(form[field] as string) || ""}
-                onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value || null }))}
-                className="rounded-xl h-9 text-sm"
-            />
-        </div>
+    // ── Inline Form Field for edit mode ──
+    const InlineFormField = ({ label, field, type = "text" }: { label: string; field: keyof Traveller; type?: string }) => (
+        <FormInput
+            label={label}
+            type={type}
+            value={(form[field] as string) || ""}
+            onChange={v => setForm(prev => ({ ...prev, [field]: v || null }))}
+        />
     );
 
     if (loading) {
@@ -309,31 +321,30 @@ export default function Travellers() {
                         </div>
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Όνομα" field="first_name" />
-                                <FormField label="Επώνυμο" field="last_name" />
+                                <InlineFormField label="Όνομα" field="first_name" />
+                                <InlineFormField label="Επώνυμο" field="last_name" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Αρ. Διαβατηρίου" field="passport_number" />
-                                <FormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
+                                <InlineFormField label="Αρ. Διαβατηρίου" field="passport_number" />
+                                <InlineFormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Αρ. Ταυτότητας" field="id_number" />
-                                <FormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
+                                <InlineFormField label="Αρ. Ταυτότητας" field="id_number" />
+                                <InlineFormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
                             </div>
-                            <FormField label="Ημ. Γέννησης" field="birth_date" type="date" />
-                            <FormField label="Miles & Bonus" field="miles_bonus_card" />
+                            <InlineFormField label="Ημ. Γέννησης" field="birth_date" type="date" />
+                            <InlineFormField label="Miles & Bonus" field="miles_bonus_card" />
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Τηλέφωνο" field="phone" />
-                                <FormField label="Email" field="email" type="email" />
+                                <InlineFormField label="Τηλέφωνο" field="phone" />
+                                <InlineFormField label="Email" field="email" type="email" />
                             </div>
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Σημειώσεις</label>
+                            <FormField label="Σημειώσεις">
                                 <textarea
                                     value={form.notes || ""}
                                     onChange={e => setForm(prev => ({ ...prev, notes: e.target.value || null }))}
-                                    className="w-full rounded-xl border border-border bg-background p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full rounded-xl border border-border/50 bg-muted/30 p-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors"
                                 />
-                            </div>
+                            </FormField>
                         </div>
                     </div>
                 ) : (
@@ -443,41 +454,49 @@ export default function Travellers() {
             </div>
 
             {/* ── Add Dialog ── */}
-            <Dialog open={showAdd} onOpenChange={setShowAdd}>
-                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Νέος Ταξιδιώτης</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Όνομα *" field="first_name" />
-                            <FormField label="Επώνυμο *" field="last_name" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Αρ. Διαβατηρίου" field="passport_number" />
-                            <FormField label="Λήξη Διαβατηρίου" field="passport_expiry" type="date" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Αρ. Ταυτότητας" field="id_number" />
-                            <FormField label="Λήξη Ταυτότητας" field="id_expiration" type="date" />
-                        </div>
-                        <FormField label="Ημ. Γέννησης" field="birth_date" type="date" />
-                        <FormField label="Miles & Bonus" field="miles_bonus_card" />
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField label="Τηλέφωνο" field="phone" />
-                            <FormField label="Email" field="email" type="email" />
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowAdd(false)}>
-                                Ακύρωση
-                            </Button>
-                            <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving}>
-                                {saving ? "Αποθήκευση..." : "Αποθήκευση"}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <FormDialog
+                open={showAdd}
+                onOpenChange={setShowAdd}
+                title="Νέος Ταξιδιώτης"
+                icon={User}
+                iconClassName="bg-blue-500/10 text-blue-600"
+                onSubmit={handleSave}
+                submitLabel="Αποθήκευση"
+                loading={saving}
+                disabled={!form.first_name.trim() || !form.last_name.trim()}
+                maxWidth="sm:max-w-[520px]"
+            >
+                <FormRow>
+                    <FormInput label="Όνομα *" value={form.first_name} onChange={v => setForm(prev => ({ ...prev, first_name: v }))} placeholder="Όνομα" />
+                    <FormInput label="Επώνυμο *" value={form.last_name} onChange={v => setForm(prev => ({ ...prev, last_name: v }))} placeholder="Επώνυμο" />
+                </FormRow>
+                <FormDivider />
+                <FormRow>
+                    <FormInput label="Αρ. Διαβατηρίου" value={form.passport_number || ""} onChange={v => setForm(prev => ({ ...prev, passport_number: v || null }))} />
+                    <FormInput label="Λήξη Διαβατηρίου" type="date" value={form.passport_expiry || ""} onChange={v => setForm(prev => ({ ...prev, passport_expiry: v || null }))} icon={Calendar} />
+                </FormRow>
+                <FormRow>
+                    <FormInput label="Αρ. Ταυτότητας" value={form.id_number || ""} onChange={v => setForm(prev => ({ ...prev, id_number: v || null }))} />
+                    <FormInput label="Λήξη Ταυτότητας" type="date" value={form.id_expiration || ""} onChange={v => setForm(prev => ({ ...prev, id_expiration: v || null }))} icon={Calendar} />
+                </FormRow>
+                <FormInput label="Ημ. Γέννησης" type="date" value={form.birth_date || ""} onChange={v => setForm(prev => ({ ...prev, birth_date: v || null }))} icon={Calendar} />
+                <FormInput label="Miles & Bonus" value={form.miles_bonus_card || ""} onChange={v => setForm(prev => ({ ...prev, miles_bonus_card: v || null }))} icon={CreditCard} />
+                <FormDivider />
+                <FormRow>
+                    <FormInput label="Τηλέφωνο" value={form.phone || ""} onChange={v => setForm(prev => ({ ...prev, phone: v || null }))} icon={Phone} />
+                    <FormInput label="Email" type="email" value={form.email || ""} onChange={v => setForm(prev => ({ ...prev, email: v || null }))} icon={Mail} />
+                </FormRow>
+            </FormDialog>
+
+            {/* Delete Confirmation */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+                title="Διαγραφή Ταξιδιώτη"
+                description="Η ενέργεια δεν μπορεί να αναιρεθεί."
+                icon={Trash2}
+                onConfirm={confirmDelete}
+            />
         </div>
     );
 }

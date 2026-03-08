@@ -23,6 +23,7 @@ import { format, parseISO } from "date-fns";
 import { el } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAfmVerification, validateAfmChecksum } from "@/hooks/useAfmVerification";
+import { FormDialog, FormInput, FormRow, FormField, FormTextarea, FormDivider, ConfirmDialog } from "@/components/shared/FormDialog";
 
 /* ─── types ────────────────────────────────────────────────────────── */
 type Mode = "customers" | "suppliers";
@@ -92,6 +93,9 @@ export default function ContactBook({ mode }: ContactBookProps) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [duplicateWarning, setDuplicateWarning] = useState<any | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     const emptyForm = {
         name: "", contact_person: "", email: "", phone: "",
@@ -177,27 +181,44 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setDuplicateWarning(existing || null);
     }
 
+    function validateForm(): boolean {
+        const errors: Record<string, string> = {};
+        if (!formData.name.trim()) errors.name = "Το όνομα είναι υποχρεωτικό";
+        if (formData.name.trim().length > 100) errors.name = "Μέγιστο 100 χαρακτήρες";
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Μη έγκυρο email";
+        if (formData.vat_number) {
+            const clean = formData.vat_number.replace(/\D/g, '');
+            if (clean && clean.length !== 9) errors.vat_number = "Το ΑΦΜ πρέπει να έχει 9 ψηφία";
+        }
+        if (formData.phone && !/^[+\d\s()-]{6,20}$/.test(formData.phone)) errors.phone = "Μη έγκυρο τηλέφωνο";
+        if (formData.iban && formData.iban.replace(/\s/g, '').length > 0 && formData.iban.replace(/\s/g, '').length < 15) errors.iban = "Μη έγκυρο IBAN";
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    }
+
     async function handleSave() {
-        if (!formData.name.trim()) { toast.error("Το όνομα είναι υποχρεωτικό"); return; }
+        if (!validateForm()) return;
         if (duplicateWarning && !editingId) { toast.error("Υπάρχει ήδη με αυτό το ΑΦΜ"); return; }
 
         setSaving(true);
         const table = isCustomers ? "customers" : "suppliers";
         const payload: any = {
-            name: formData.name, contact_person: formData.contact_person || null,
-            email: formData.email || null, phone: formData.phone || null,
-            address: formData.address || null,
+            name: formData.name.trim().slice(0, 100),
+            contact_person: formData.contact_person?.trim().slice(0, 100) || null,
+            email: formData.email?.trim().slice(0, 255) || null,
+            phone: formData.phone?.trim().slice(0, 20) || null,
+            address: formData.address?.trim().slice(0, 255) || null,
             vat_number: (() => {
                 const clean = (formData.vat_number || '').replace(/\D/g, '');
                 return /^\d{9}$/.test(clean) ? clean : (formData.vat_number?.trim() || null);
             })(),
-            notes: formData.notes || null,
+            notes: formData.notes?.trim().slice(0, 1000) || null,
         };
         if (!isCustomers) {
-            payload.tax_office = formData.tax_office || null;
-            payload.iban = formData.iban || null;
+            payload.tax_office = formData.tax_office?.trim().slice(0, 100) || null;
+            payload.iban = formData.iban?.trim().slice(0, 34) || null;
             payload.default_category_id = formData.default_category_id || null;
-            payload.invoice_instructions = formData.invoice_instructions || null;
+            payload.invoice_instructions = formData.invoice_instructions?.trim().slice(0, 500) || null;
         }
 
         try {
@@ -214,12 +235,19 @@ export default function ContactBook({ mode }: ContactBookProps) {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Διαγραφή; Η ενέργεια δεν αναιρείται.")) return;
+        setDeleteTargetId(id);
+        setDeleteConfirmOpen(true);
+    }
+
+    async function confirmDelete() {
+        if (!deleteTargetId) return;
         const table = isCustomers ? "customers" : "suppliers";
-        const { error } = await supabase.from(table).delete().eq("id", id);
+        const { error } = await supabase.from(table).delete().eq("id", deleteTargetId);
         if (error) { toast.error("Αποτυχία διαγραφής"); return; }
         toast.success("Διαγράφηκε");
-        if (selectedId === id) setSelectedId(null);
+        if (selectedId === deleteTargetId) setSelectedId(null);
+        setDeleteConfirmOpen(false);
+        setDeleteTargetId(null);
         fetchAll();
     }
 
@@ -241,6 +269,7 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setEditingId(null);
         setDuplicateWarning(null);
         setFormData(emptyForm);
+        setFormErrors({});
     }
 
     /* ── render ─────────────────────────────────────────────────────── */
@@ -681,167 +710,162 @@ export default function ContactBook({ mode }: ContactBookProps) {
             )}
 
             {/* ═══ DIALOG: Add / Edit ══════════════════════════════════ */}
-            <Dialog open={dialogOpen} onOpenChange={open => { setDialogOpen(open); if (!open) resetForm(); }}>
-                <DialogContent className="sm:max-w-[520px] rounded-3xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-bold">
-                            {editingId
-                                ? `Επεξεργασία ${isCustomers ? "Πελάτη" : "Προμηθευτή"}`
-                                : `Νέος ${isCustomers ? "Πελάτης" : "Προμηθευτής"}`}
-                        </DialogTitle>
-                    </DialogHeader>
+            <FormDialog
+                open={dialogOpen}
+                onOpenChange={open => { setDialogOpen(open); if (!open) resetForm(); }}
+                title={editingId
+                    ? `Επεξεργασία ${isCustomers ? "Πελάτη" : "Προμηθευτή"}`
+                    : `Νέος ${isCustomers ? "Πελάτης" : "Προμηθευτής"}`}
+                icon={isCustomers ? Users : Building2}
+                iconClassName={isCustomers ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}
+                onSubmit={handleSave}
+                submitLabel={editingId ? "Ενημέρωση" : "Δημιουργία"}
+                loading={saving}
+                disabled={saving || (!!duplicateWarning && !editingId)}
+                maxWidth="sm:max-w-[520px]"
+            >
+                {/* Name */}
+                <FormField label="Επωνυμία *" hint={formErrors.name}>
+                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        placeholder={isCustomers ? "π.χ., Γιώργος Παπαδόπουλος" : "π.χ., Aegean Airlines"}
+                        className={cn("rounded-xl h-10 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors", formErrors.name && "border-destructive")}
+                        maxLength={100} />
+                </FormField>
 
-                    <div className="space-y-4 pt-2">
-                        {/* Name */}
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Επωνυμία *</Label>
-                            <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                placeholder={isCustomers ? "π.χ., Γιώργος Παπαδόπουλος" : "π.χ., Aegean Airlines"}
-                                className="h-11 rounded-xl" />
+                <FormRow>
+                    {/* VAT */}
+                    <FormField label="ΑΦΜ" hint={formErrors.vat_number}>
+                        <div className="flex gap-2">
+                            <Input
+                                value={formData.vat_number}
+                                onChange={e => { setFormData({ ...formData, vat_number: e.target.value }); checkDuplicate(e.target.value); }}
+                                placeholder="000000000"
+                                maxLength={12}
+                                className={cn("rounded-xl h-10 text-sm bg-muted/30 border-border/50 font-mono flex-1",
+                                    duplicateWarning ? "border-amber-400" : "",
+                                    formErrors.vat_number && "border-destructive"
+                                )} />
+                            <Button
+                                type="button" variant="outline" size="sm"
+                                disabled={afmLoading || !formData.vat_number || formData.vat_number.length < 9}
+                                onClick={async () => {
+                                    const cleanAfm = formData.vat_number.replace(/\s/g, '').replace(/^EL/i, '');
+                                    if (!validateAfmChecksum(cleanAfm)) { toast.error("Μη έγκυρο checksum ΑΦΜ"); return; }
+                                    const result = await verifyAfm(cleanAfm);
+                                    if (result?.found) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            name: prev.name || result.name || prev.name,
+                                            address: prev.address || (result.address ? `${result.address.street} ${result.address.number}, ${result.address.zip} ${result.address.city}`.trim() : prev.address),
+                                            tax_office: prev.tax_office || result.doy || prev.tax_office,
+                                        }));
+                                    }
+                                }}
+                                className="h-10 px-3 rounded-xl text-xs shrink-0"
+                            >
+                                {afmLoading ? <span className="animate-spin">⏳</span> : "ΑΑΔΕ"}
+                            </Button>
                         </div>
+                        {afmResult?.found && <p className="text-[10px] text-emerald-600 mt-1">✓ {afmResult.name} ({afmResult.doy})</p>}
+                        {afmResult && !afmResult.found && afmResult.error && <p className="text-[10px] text-amber-600 mt-1">⚠ {afmResult.error}</p>}
+                    </FormField>
+                    {/* Contact */}
+                    <FormInput
+                        label="Υπεύθυνος"
+                        value={formData.contact_person}
+                        onChange={v => setFormData({ ...formData, contact_person: v })}
+                        placeholder="Όνομα"
+                    />
+                </FormRow>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            {/* VAT */}
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">ΑΦΜ</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={formData.vat_number}
-                                        onChange={e => { setFormData({ ...formData, vat_number: e.target.value }); checkDuplicate(e.target.value); }}
-                                        placeholder="000000000"
-                                        className={cn("h-11 rounded-xl font-mono flex-1", duplicateWarning ? "border-amber-400" : "")}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={afmLoading || !formData.vat_number || formData.vat_number.length < 9}
-                                        onClick={async () => {
-                                            const cleanAfm = formData.vat_number.replace(/\s/g, '').replace(/^EL/i, '');
-                                            if (!validateAfmChecksum(cleanAfm)) {
-                                                toast.error("Μη έγκυρο checksum ΑΦΜ");
-                                                return;
-                                            }
-                                            const result = await verifyAfm(cleanAfm);
-                                            if (result?.found) {
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    name: prev.name || result.name || prev.name,
-                                                    address: prev.address || (
-                                                        result.address
-                                                            ? `${result.address.street} ${result.address.number}, ${result.address.zip} ${result.address.city}`.trim()
-                                                            : prev.address
-                                                    ),
-                                                    tax_office: prev.tax_office || result.doy || prev.tax_office,
-                                                }));
-                                            }
-                                        }}
-                                        className="h-11 px-3 rounded-xl text-xs shrink-0"
-                                    >
-                                        {afmLoading ? <span className="animate-spin">⏳</span> : "ΑΑΔΕ"}
-                                    </Button>
-                                </div>
-                                {afmResult?.found && (
-                                    <p className="text-[10px] text-emerald-600 mt-1">
-                                        ✓ {afmResult.name} ({afmResult.doy})
-                                    </p>
-                                )}
-                                {afmResult && !afmResult.found && afmResult.error && (
-                                    <p className="text-[10px] text-amber-600 mt-1">
-                                        ⚠ {afmResult.error}
-                                    </p>
-                                )}
-                            </div>
-                            {/* Contact */}
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Υπεύθυνος</Label>
-                                <Input value={formData.contact_person} onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
-                                    placeholder="Όνομα" className="h-11 rounded-xl" />
-                            </div>
-                        </div>
-
-                        {/* Duplicate warning */}
-                        {duplicateWarning && (
-                            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-start gap-2">
-                                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                                <p className="text-xs text-amber-700 dark:text-amber-400">
-                                    Υπάρχει ήδη <strong>{duplicateWarning.name}</strong> με αυτό το ΑΦΜ.
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</Label>
-                                <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    type="email" placeholder="email@example.com" className="h-11 rounded-xl" />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Τηλέφωνο</Label>
-                                <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                    placeholder="+30 690 000 0000" className="h-11 rounded-xl" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Διεύθυνση</Label>
-                            <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Οδός, Αριθμός, Πόλη" className="h-11 rounded-xl" />
-                        </div>
-
-                        {/* Supplier-only fields */}
-                        {!isCustomers && (
-                            <>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Δ.Ο.Υ.</Label>
-                                        <Input value={formData.tax_office} onChange={e => setFormData({ ...formData, tax_office: e.target.value })}
-                                            placeholder="Α' Αθηνών" className="h-11 rounded-xl" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IBAN</Label>
-                                        <Input value={formData.iban} onChange={e => setFormData({ ...formData, iban: e.target.value })}
-                                            placeholder="GR..." className="h-11 rounded-xl font-mono" />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Προεπιλεγμένη κατηγορία εξόδου</Label>
-                                    <Select value={formData.default_category_id} onValueChange={v => setFormData({ ...formData, default_category_id: v })}>
-                                        <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Επιλέξτε..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {expenseCategories.map(cat => (
-                                                <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Οδηγίες τιμολογίων</Label>
-                                    <Textarea value={formData.invoice_instructions}
-                                        onChange={e => setFormData({ ...formData, invoice_instructions: e.target.value })}
-                                        placeholder="π.χ., Αποστολή με email στο invoices@..." className="rounded-xl min-h-[60px]" />
-                                </div>
-                            </>
-                        )}
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Σημειώσεις</Label>
-                            <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                                placeholder="Πρόσθετες πληροφορίες..." className="rounded-xl min-h-[80px]" />
-                        </div>
+                {/* Duplicate warning */}
+                {duplicateWarning && (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                            Υπάρχει ήδη <strong>{duplicateWarning.name}</strong> με αυτό το ΑΦΜ.
+                        </p>
                     </div>
+                )}
 
-                    <DialogFooter className="pt-4 gap-2">
-                        <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-11 flex-1">
-                            Ακύρωση
-                        </Button>
-                        <Button onClick={handleSave} disabled={saving || (!!duplicateWarning && !editingId)}
-                            className="rounded-xl h-11 flex-1 bg-primary hover:bg-primary/90">
-                            {saving ? "Αποθήκευση..." : (editingId ? "Ενημέρωση" : "Δημιουργία")}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                <FormDivider />
+
+                <FormRow>
+                    <FormField label="Email" hint={formErrors.email}>
+                        <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                            type="email" placeholder="email@example.com" maxLength={255}
+                            className={cn("rounded-xl h-10 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors", formErrors.email && "border-destructive")} />
+                    </FormField>
+                    <FormField label="Τηλέφωνο" hint={formErrors.phone}>
+                        <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="+30 690 000 0000" maxLength={20}
+                            className={cn("rounded-xl h-10 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors", formErrors.phone && "border-destructive")} />
+                    </FormField>
+                </FormRow>
+
+                <FormInput
+                    label="Διεύθυνση"
+                    value={formData.address}
+                    onChange={v => setFormData({ ...formData, address: v })}
+                    placeholder="Οδός, Αριθμός, Πόλη"
+                    icon={MapPin}
+                />
+
+                {/* Supplier-only fields */}
+                {!isCustomers && (
+                    <>
+                        <FormDivider />
+                        <FormRow>
+                            <FormInput
+                                label="Δ.Ο.Υ."
+                                value={formData.tax_office}
+                                onChange={v => setFormData({ ...formData, tax_office: v })}
+                                placeholder="Α' Αθηνών"
+                            />
+                            <FormField label="IBAN" hint={formErrors.iban}>
+                                <Input value={formData.iban} onChange={e => setFormData({ ...formData, iban: e.target.value })}
+                                    placeholder="GR..." maxLength={34}
+                                    className={cn("rounded-xl h-10 text-sm bg-muted/30 border-border/50 font-mono focus:bg-background transition-colors", formErrors.iban && "border-destructive")} />
+                            </FormField>
+                        </FormRow>
+                        <FormField label="Προεπιλεγμένη κατηγορία εξόδου">
+                            <Select value={formData.default_category_id} onValueChange={v => setFormData({ ...formData, default_category_id: v })}>
+                                <SelectTrigger className="rounded-xl h-10 text-sm bg-muted/30 border-border/50"><SelectValue placeholder="Επιλέξτε..." /></SelectTrigger>
+                                <SelectContent>
+                                    {expenseCategories.map(cat => (
+                                        <SelectItem key={cat.id} value={cat.id}>{cat.name_el}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                        <FormTextarea
+                            label="Οδηγίες τιμολογίων"
+                            value={formData.invoice_instructions}
+                            onChange={v => setFormData({ ...formData, invoice_instructions: v })}
+                            placeholder="π.χ., Αποστολή με email στο invoices@..."
+                            rows={2}
+                        />
+                    </>
+                )}
+
+                <FormTextarea
+                    label="Σημειώσεις"
+                    value={formData.notes}
+                    onChange={v => setFormData({ ...formData, notes: v })}
+                    placeholder="Πρόσθετες πληροφορίες..."
+                    rows={2}
+                />
+            </FormDialog>
+
+            {/* Delete Confirmation */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+                title={`Διαγραφή ${isCustomers ? "Πελάτη" : "Προμηθευτή"}`}
+                description={<>Η διαγραφή δεν μπορεί να αναιρεθεί.<br/>Τα τιμολόγια δεν θα διαγραφούν.</>}
+                icon={Trash2}
+                onConfirm={confirmDelete}
+            />
         </div>
     );
 }

@@ -466,15 +466,16 @@ export default function GeneralIncome() {
                 icon={Edit}
                 iconClassName="bg-emerald-500/10 text-emerald-600"
                 onSubmit={async () => {
-                    if (!manualEntry.merchant || !manualEntry.amount) {
-                        toast.error("Συμπληρώστε Πελάτη και Ποσό");
-                        return;
-                    }
+                    const merchant = manualEntry.merchant.trim().slice(0, 100);
+                    const amount = parseFloat(manualEntry.amount);
+                    if (!merchant) { toast.error("Συμπληρώστε Πελάτη"); return; }
+                    if (!manualEntry.amount || isNaN(amount) || amount <= 0) { toast.error("Το ποσό πρέπει να είναι μεγαλύτερο από 0"); return; }
+                    if (amount > 999999) { toast.error("Μη έγκυρο ποσό"); return; }
                     setManualSaving(true);
                     try {
                         const { error } = await supabase.from("invoices").insert({
-                            merchant: manualEntry.merchant,
-                            amount: parseFloat(manualEntry.amount),
+                            merchant,
+                            amount,
                             invoice_date: manualEntry.invoice_date || null,
                             expense_category_id: manualEntry.category_id === "none" ? null : manualEntry.category_id,
                             type: "income",
