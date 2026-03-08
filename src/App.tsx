@@ -54,6 +54,7 @@ const App = () => (
             <Route path="/accountant/:token" element={<AccountantPortal />} />
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/invoice-request" element={<InvoiceRequest />} />
+            <Route path="/view-invoice/:token" element={<ViewInvoice />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />
