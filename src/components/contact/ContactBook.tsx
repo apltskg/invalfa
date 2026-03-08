@@ -126,20 +126,38 @@ export default function ContactBook({ mode }: ContactBookProps) {
         setLoading(false);
     }
 
-    /* ── helpers: match invoices by ID or merchant name ──────────── */
+    /* ── helpers: match invoices by ID, merchant name, or VAT ──────── */
     function matchesEntity(inv: any, entity: any): boolean {
-        const idKey = isCustomers ? "customer_id" : "supplier_id";
-        if (inv[idKey] === entity.id) return true;
-        // Fallback: match by merchant name (case-insensitive, trimmed)
+        // 1. Direct ID match (customer_id or supplier_id)
+        if (isCustomers && inv.customer_id === entity.id) return true;
+        if (!isCustomers && inv.supplier_id === entity.id) return true;
+        
+        // 2. VAT number matching (entity VAT vs extracted_data tax_id/buyer_vat)
+        const entityVat = ((entity as any).vat_number || '').replace(/\D/g, '');
+        if (entityVat && entityVat.length >= 9 && inv.extracted_data) {
+            const ed = typeof inv.extracted_data === 'object' ? inv.extracted_data : {};
+            // Check nested "extracted" format too
+            const data = ed.extracted || ed;
+            const taxId = (data.tax_id || '').replace(/\D/g, '');
+            const buyerVat = (data.buyer_vat || '').replace(/\D/g, '');
+            if (taxId === entityVat || buyerVat === entityVat) return true;
+        }
+        
+        // 3. Merchant name matching (case-insensitive)
         if (inv.merchant && entity.name) {
             const invName = inv.merchant.trim().toLowerCase();
             const entName = entity.name.trim().toLowerCase();
             if (invName === entName) return true;
-            // Also check if one contains the other (for partial matches like "ALFA Travel" vs "ALFA ΜΟΝΟΠΡΟΣΩΠΗ ΙΚΕ")
             if (invName.length > 3 && entName.length > 3) {
                 if (invName.includes(entName) || entName.includes(invName)) return true;
             }
+            // Also try first significant word match (e.g. "ΠΙΕΡΙΚΟΣ" in both)
+            const invWords = invName.split(/\s+/).filter(w => w.length > 3);
+            const entWords = entName.split(/\s+/).filter(w => w.length > 3);
+            const commonWords = invWords.filter(w => entWords.some(ew => ew === w));
+            if (commonWords.length >= 2) return true;
         }
+        
         return false;
     }
 
