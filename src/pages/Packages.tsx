@@ -183,8 +183,8 @@ export default function Packages() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Φάκελοι Ταξιδιών</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Φάκελοι Ταξιδιών</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Διαχείριση ταξιδιών, εξόδων και κερδοφορίας.</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
