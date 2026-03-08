@@ -354,8 +354,8 @@ export default function BankSync() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Συγχρονισμός Τράπεζας</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-foreground">Συγχρονισμός Τράπεζας</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Διαχείριση τραπεζικών κινήσεων και αντιστοίχιση με παραστατικά
           </p>
         </div>
