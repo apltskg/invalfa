@@ -421,10 +421,10 @@ export default function InvoiceExchange() {
 
                             <div className="relative mb-3">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-slate-100" />
+                                    <div className="w-full border-t border-border" />
                                 </div>
                                 <div className="relative flex justify-center">
-                                    <span className="text-[10px] text-slate-400 bg-white px-2">ή εισάγετε χειροκίνητα</span>
+                                    <span className="text-[10px] text-muted-foreground bg-background px-2">ή εισάγετε χειροκίνητα</span>
                                 </div>
                             </div>
 
