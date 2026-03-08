@@ -218,6 +218,38 @@ export default function Dashboard() {
         </Card>
     );
 
+    if (loading) {
+        return <PageSkeleton variant="dashboard" />;
+    }
+
+    // Onboarding empty state when no data exists
+    const hasNoData = items.length === 0 && trendData.every(t => t.income === 0 && t.expenses === 0);
+    if (hasNoData) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Αρχική</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5 capitalize">{displayLabel}</p>
+                </div>
+                <EmptyState
+                    icon={LayoutDashboard}
+                    title="Καλωσήρθατε στο Always First!"
+                    description="Ξεκινήστε δημιουργώντας τον πρώτο σας φάκελο ταξιδιού ή ανεβάζοντας τα πρώτα παραστατικά."
+                    actionLabel="Δημιουργία Φακέλου"
+                    onAction={() => navigate("/packages")}
+                    secondaryLabel="Ανέβασμα Εξόδου"
+                    onSecondary={() => navigate("/general-expenses")}
+                    hints={[
+                        "Δημιουργήστε φακέλους ταξιδιών για κάθε γκρουπ",
+                        "Ανεβάστε παραστατικά (PDF/JPG) — η AI τα αναγνωρίζει αυτόματα",
+                        "Εισάγετε extrait τράπεζας και αντιστοιχίστε κινήσεις",
+                        "Στείλτε τα πάντα στον λογιστή με ένα κλικ"
+                    ]}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Page header */}
