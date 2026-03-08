@@ -505,7 +505,7 @@ export default function MonthlyClosing() {
                                                                             rel="noopener noreferrer"
                                                                             className={cn(
                                                                                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                                                                                link.color || "text-slate-600 bg-slate-50 border-slate-200 hover:bg-slate-100"
+                                                                                link.color || "text-muted-foreground bg-muted border-border hover:bg-muted/80"
                                                                             )}
                                                                         >
                                                                             <ExternalLink className="h-3 w-3" />
