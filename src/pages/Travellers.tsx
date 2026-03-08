@@ -200,17 +200,14 @@ export default function Travellers() {
         );
     };
 
-    // ── Form Field ──
-    const FormField = ({ label, field, type = "text" }: { label: string; field: keyof Traveller; type?: string }) => (
-        <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
-            <Input
-                type={type}
-                value={(form[field] as string) || ""}
-                onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value || null }))}
-                className="rounded-xl h-9 text-sm"
-            />
-        </div>
+    // ── Inline Form Field for edit mode ──
+    const InlineFormField = ({ label, field, type = "text" }: { label: string; field: keyof Traveller; type?: string }) => (
+        <FormInput
+            label={label}
+            type={type}
+            value={(form[field] as string) || ""}
+            onChange={v => setForm(prev => ({ ...prev, [field]: v || null }))}
+        />
     );
 
     if (loading) {
