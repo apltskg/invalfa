@@ -52,13 +52,13 @@ function initials(name: string) {
 
 function avatarColor(name: string) {
     const colors = [
-        "from-blue-500 to-blue-600",
-        "from-violet-500 to-purple-600",
-        "from-emerald-500 to-teal-600",
-        "from-amber-500 to-orange-600",
-        "from-rose-500 to-pink-600",
-        "from-cyan-500 to-blue-600",
-        "from-indigo-500 to-blue-600",
+        "bg-primary/10 text-primary",
+        "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+        "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+        "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+        "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
     ];
     const i = name.charCodeAt(0) % colors.length;
     return colors[i];
@@ -335,9 +335,11 @@ export default function ContactBook({ mode }: ContactBookProps) {
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-                            {isCustomers
-                                ? <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                                : <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />}
+                     <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                                {isCustomers
+                                    ? <Users className="h-5 w-5 text-muted-foreground/50" />
+                                    : <Building2 className="h-5 w-5 text-muted-foreground/50" />}
+                             </div>
                             <p className="text-sm font-medium text-muted-foreground mb-1">
                                 {searchQuery ? "Δεν βρέθηκαν αποτελέσματα" : `Δεν υπάρχουν ${isCustomers ? "πελάτες" : "προμηθευτές"}`}
                             </p>
@@ -367,12 +369,12 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                             : "hover:bg-muted/50 text-foreground"
                                     )}
                                 >
-                                    {/* Avatar */}
+                                     {/* Avatar */}
                                     <div className={cn(
-                                        "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold",
+                                        "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold tracking-tight",
                                         selectedId === entity.id
-                                            ? "bg-white/20"
-                                            : `bg-gradient-to-br ${avatarColor(entity.name)}`
+                                            ? "bg-primary-foreground/20 text-primary-foreground"
+                                            : avatarColor(entity.name)
                                     )}>
                                         {initials(entity.name)}
                                     </div>
@@ -427,8 +429,8 @@ export default function ContactBook({ mode }: ContactBookProps) {
                                 <div className="flex items-center gap-4">
                                     {/* Big avatar */}
                                     <div className={cn(
-                                        "h-14 w-14 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-lg shrink-0",
-                                        `bg-gradient-to-br ${avatarColor(selected.name)}`
+                                        "h-14 w-14 rounded-xl flex items-center justify-center text-base font-bold tracking-tight border border-border",
+                                        avatarColor(selected.name)
                                     )}>
                                         {initials(selected.name)}
                                     </div>
