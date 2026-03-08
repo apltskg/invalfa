@@ -422,7 +422,7 @@ export default function MonthlyClosing() {
                                                     : <StepIcon className={cn("h-5 w-5", step.color)} />
                                                 }
                                             </div>
-                                            <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                            <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-card border border-border flex items-center justify-center text-[10px] font-bold text-muted-foreground">
                                                 {idx + 1}
                                             </span>
                                         </div>
