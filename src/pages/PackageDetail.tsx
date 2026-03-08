@@ -333,8 +333,8 @@ export default function PackageDetail() {
                 </div>
 
                 {recentPayments.length > 0 && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Τελευταίες Πληρωμές</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Τελευταίες Πληρωμές</p>
                     <div className="space-y-1">
                       {recentPayments.slice(0, 3).map((p, i) => (
                         <div key={i} className="flex justify-between text-xs">
