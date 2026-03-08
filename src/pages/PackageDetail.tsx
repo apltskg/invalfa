@@ -400,7 +400,7 @@ export default function PackageDetail() {
 
             <TabsContent value="income" className="space-y-4">
               <Button className="w-full rounded-xl border-dashed border-2 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground h-12" variant="outline" onClick={() => { setUploadType("income"); setUploadModalOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Income
+                <Plus className="h-4 w-4 mr-2" /> Προσθήκη Εσόδου
               </Button>
               <InvoiceList items={incomeInvoices} />
             </TabsContent>
