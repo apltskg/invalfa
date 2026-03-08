@@ -449,8 +449,8 @@ export default function ExportHub() {
             <div>
               <p className="font-medium">Γενικά Έξοδα & Έσοδα</p>
               <div className="mt-1 flex items-center gap-2">
-                <Badge variant="outline" className="rounded-lg border-amber-200 bg-amber-50 text-amber-700">
-                  {filteredGeneralInvoices.length} invoices
+                    <Badge variant="outline" className="rounded-lg border-amber-200 bg-amber-50 text-amber-700">
+                  {filteredGeneralInvoices.length} παραστατικά
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   Εκτός ταξιδιωτικών φακέλων
