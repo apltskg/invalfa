@@ -65,15 +65,23 @@ export default function Packages() {
   async function fetchData() {
     try {
       setLoading(true);
-      const [{ data: pkgs }, { data: invs }, { data: matches }] = await Promise.all([
-        supabase
+      const { data: pkgs } = await supabase
           .from("packages")
           .select("*")
           .gte("start_date", startDate)
           .lte("start_date", endDate)
-          .order("created_at", { ascending: false }),
-        supabase.from("invoices").select("*"),
-        supabase.from("invoice_transaction_matches").select("invoice_id"),
+          .order("created_at", { ascending: false });
+
+      const pkgIds = (pkgs || []).map(p => p.id);
+
+      // Only fetch invoices & matches for these packages (not ALL)
+      const [{ data: invs }, { data: matches }] = await Promise.all([
+        pkgIds.length > 0
+          ? supabase.from("invoices").select("*").in("package_id", pkgIds)
+          : Promise.resolve({ data: [] as any[] }),
+        pkgIds.length > 0
+          ? supabase.from("invoice_transaction_matches").select("invoice_id")
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
       const matchedInvoiceIds = new Set(((matches as any[]) || []).map(m => m.invoice_id));
