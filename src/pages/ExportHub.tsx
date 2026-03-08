@@ -475,7 +475,7 @@ export default function ExportHub() {
                   <p className="font-medium">{pkg.client_name}</p>
                   <div className="mt-1 flex items-center gap-2">
                     <Badge variant="secondary" className="rounded-lg">
-                      {pkg.invoices.length} invoices
+                      {pkg.invoices.length} παραστατικά
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {format(new Date(pkg.start_date), "dd MMM")} - {format(new Date(pkg.end_date), "dd MMM")}
