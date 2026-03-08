@@ -368,7 +368,7 @@ export default function MonthlyClosing() {
                         </div>
                         <span className={cn(
                             "text-3xl font-black tabular-nums",
-                            allDone ? "text-emerald-600" : progressPct >= 50 ? "text-blue-600" : "text-slate-400"
+                            allDone ? "text-emerald-600" : progressPct >= 50 ? "text-blue-600" : "text-muted-foreground"
                         )}>
                             {progressPct}%
                         </span>
