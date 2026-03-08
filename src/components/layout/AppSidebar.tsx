@@ -148,7 +148,7 @@ export function AppSidebar() {
 
         {/* Analytics */}
         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <SidebarGroupLabel className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Αναλύσεις
           </SidebarGroupLabel>
           <SidebarGroupContent>
