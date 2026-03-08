@@ -335,9 +335,11 @@ export default function ContactBook({ mode }: ContactBookProps) {
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-                            {isCustomers
-                                ? <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                                : <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />}
+                     <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                                {isCustomers
+                                    ? <Users className="h-5 w-5 text-muted-foreground/50" />
+                                    : <Building2 className="h-5 w-5 text-muted-foreground/50" />}
+                             </div>
                             <p className="text-sm font-medium text-muted-foreground mb-1">
                                 {searchQuery ? "Δεν βρέθηκαν αποτελέσματα" : `Δεν υπάρχουν ${isCustomers ? "πελάτες" : "προμηθευτές"}`}
                             </p>
