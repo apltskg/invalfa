@@ -453,12 +453,12 @@ export default function InvoiceExchange() {
 
                         {/* Message */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500">ΜΗΝΥΜΑ (ΠΡΟΑΙΡΕΤΙΚΟ)</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground">ΜΗΝΥΜΑ (ΠΡΟΑΙΡΕΤΙΚΟ)</Label>
                             <Textarea
                                 value={form.message}
                                 onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                                 placeholder="π.χ. Σας αποστέλλουμε το τιμολόγιο για τις υπηρεσίες μας..."
-                                className="rounded-xl border-slate-200 text-sm resize-none"
+                                className="rounded-xl border-border text-sm resize-none"
                                 rows={3}
                             />
                         </div>
