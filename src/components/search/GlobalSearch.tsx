@@ -178,11 +178,11 @@ export function GlobalSearch() {
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 h-8 px-3 rounded-lg border border-slate-200 bg-white/80 text-xs text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all"
+        className="flex items-center gap-2 h-8 px-3 rounded-lg border border-border bg-card/80 text-xs text-muted-foreground hover:bg-accent hover:border-border transition-all"
       >
         <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Αναζήτηση...</span>
-        <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] text-slate-400">
+        <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
           ⌘K
         </kbd>
       </button>
