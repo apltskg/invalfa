@@ -7,10 +7,11 @@ const corsHeaders = {
 
 interface PortalRequest {
   token: string;
-  action?: 'validate' | 'get_data' | 'post_comment' | 'get_file_url';
+  action?: 'validate' | 'get_data' | 'post_comment' | 'get_comments' | 'mark_reviewed' | 'get_file_url';
   invoiceId?: string;
   commentText?: string;
   isDoubt?: boolean;
+  reviewed?: boolean;
   bucket?: string;
   filePath?: string;
 }
