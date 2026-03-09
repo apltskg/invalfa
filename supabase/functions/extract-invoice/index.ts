@@ -275,7 +275,7 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: selectedModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: contentPayload }
