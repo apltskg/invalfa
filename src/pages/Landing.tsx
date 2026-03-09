@@ -53,6 +53,7 @@ function Nav() {
 
                 {/* CTA */}
                 <div className="hidden md:flex items-center gap-3">
+                    <Link to="/landing/en" className="text-xs text-slate-500 hover:text-slate-300 transition-colors border border-white/10 px-2 py-1 rounded-lg">🇬🇧 English</Link>
                     <Link to="/login" className="text-sm text-slate-400 hover:text-white transition-colors">
                         Σύνδεση
                     </Link>
