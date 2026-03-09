@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://invalfa.lovable.app/landing</loc>
+    <xhtml:link rel="alternate" hreflang="el" href="https://invalfa.lovable.app/landing" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://invalfa.lovable.app/landing/en" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://invalfa.lovable.app/landing/en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://invalfa.lovable.app/landing/en" />
+    <xhtml:link rel="alternate" hreflang="el" href="https://invalfa.lovable.app/landing" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://invalfa.lovable.app/privacy?lang=el</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://invalfa.lovable.app/privacy?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://invalfa.lovable.app/terms?lang=el</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://invalfa.lovable.app/terms?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
