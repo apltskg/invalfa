@@ -230,7 +230,7 @@ export function InvoiceListTable({
                   <TableCell className="max-w-48" title={item.client_name || ''}>
                     <div className="flex items-center gap-1.5">
                       {item.client_id && (
-                        <User className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                        <User className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                       )}
                       <span className="truncate">{item.client_name || '-'}</span>
                     </div>
