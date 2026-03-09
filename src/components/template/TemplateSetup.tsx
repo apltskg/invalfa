@@ -155,7 +155,7 @@ export type AppConfig = typeof APP_CONFIG;
                   </p>
                 </div>
                 <Switch
-                  checked={enabled}
+                  checked={Boolean(enabled)}
                   onCheckedChange={() => toggleFeature(key as keyof typeof config.features)}
                 />
               </div>
