@@ -157,6 +157,17 @@ export default function Dashboard() {
     if (loading) return <PageSkeleton variant="dashboard" />;
 
     const hasNoData = items.length === 0 && trendData.every(t => t.income === 0 && t.expenses === 0);
+    if (hasNoData && showOnboarding) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Αρχική</h1>
+                    <p className="text-sm text-muted-foreground mt-1 capitalize">{displayLabel}</p>
+                </div>
+                <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+            </div>
+        );
+    }
     if (hasNoData) {
         return (
             <div className="space-y-6">
