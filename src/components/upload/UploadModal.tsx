@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Upload, Edit3, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { ExtractionProgress } from "./ExtractionProgress";
 import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
 import { runAutoMatching } from "@/lib/auto-matching";
+import { runExtractionWithRetry, ExtractionResult } from "@/lib/extraction-utils";
+import { ExtractionDiagnostics, DiagnosticsData } from "./ExtractionDiagnostics";
 
 interface UploadedFile {
   file?: File;
@@ -19,6 +21,7 @@ interface UploadedFile {
   url: string;
   extractedData: ExtractedData | null;
   isManual?: boolean;
+  diagnostics?: DiagnosticsData;
 }
 
 interface UploadModalProps {
@@ -59,47 +62,42 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
     });
   };
 
-  const runExtraction = async (filePath: string, fileName: string): Promise<ExtractedData | null> => {
-    try {
-      const response = await supabase.functions.invoke('extract-invoice', {
-        body: { filePath, fileName }
-      });
-      if (response.error) {
-        console.error('Edge Function error:', response.error);
-        toast.error("Αποτυχία αυτόματης ανάγνωσης. Συμπληρώστε χειροκίνητα.");
-        return null;
-      }
-      if (response.data && typeof response.data === 'object') {
-        const rawData = response.data as any;
-        return (rawData.extracted || rawData) as ExtractedData;
-      }
-      toast.info("Το AI δεν κατάφερε να διαβάσει κάποια πεδία. Συμπληρώστε χειροκίνητα.");
-      return null;
-    } catch (e) {
-      console.error('Extraction error:', e);
-      toast.error("Αδυναμία επικοινωνίας με AI. Συμπληρώστε χειροκίνητα.");
-      return null;
-    }
+  const runExtraction = async (filePath: string, fileName: string, fallbackMode = false): Promise<ExtractionResult> => {
+    return runExtractionWithRetry({
+      filePath,
+      fileName,
+      fallbackMode,
+      maxRetries: 3,
+    });
   };
 
-  const handleRetryExtraction = async () => {
+  const handleRetryExtraction = async (useFallback = true) => {
     if (!lastUploadedPath || !lastUploadedFile) return;
     setExtracting(true);
     setExtractionFailed(false);
-    toast.info("Επανάληψη ανάγνωσης AI...");
+    toast.info(useFallback ? "Επανάληψη με Pro model..." : "Επανάληψη ανάγνωσης...");
 
-    const extractedData = await runExtraction(lastUploadedPath, lastUploadedFile.name);
+    const result = await runExtraction(lastUploadedPath, lastUploadedFile.name, useFallback);
 
     setExtracting(false);
-    if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+    if (!result.extracted || (result.diagnostics?.confidence ?? 0) <= 0.1) {
       setExtractionFailed(true);
-      toast.error("Η ανάγνωση απέτυχε ξανά. Συμπληρώστε χειροκίνητα.");
+      toast.error("Η ανάγνωση απέτυχε. Συμπληρώστε χειροκίνητα.");
     } else {
-      toast.success("Επιτυχής ανάγνωση!");
+      const conf = result.diagnostics?.confidence ?? 0;
+      if (conf >= 0.7) {
+        toast.success(`Επιτυχής ανάγνωση! (${Math.round(conf * 100)}%)`);
+      } else {
+        toast.info(`Μερική ανάγνωση (${Math.round(conf * 100)}%). Ελέγξτε τα πεδία.`);
+      }
     }
 
     if (uploadedFile) {
-      setUploadedFile({ ...uploadedFile, extractedData });
+      setUploadedFile({
+        ...uploadedFile,
+        extractedData: result.extracted,
+        diagnostics: result.diagnostics,
+      });
     }
   };
 
@@ -134,18 +132,22 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
       setLastUploadedPath(filePath);
       setLastUploadedFile(file);
 
-      const extractedData = await runExtraction(filePath, file.name);
+      const result = await runExtraction(filePath, file.name);
 
       setExtracting(false);
-      if (!extractedData || (extractedData as any)?.confidence <= 0.1) {
+      const confidence = result.diagnostics?.confidence ?? (result.extracted?.confidence as number) ?? 0;
+      
+      if (!result.extracted || confidence <= 0.1) {
         setExtractionFailed(true);
       }
+      
       setUploadedFile({
         file,
         path: filePath,
         url: publicUrl,
-        extractedData,
-        isManual: false
+        extractedData: result.extracted,
+        isManual: false,
+        diagnostics: result.diagnostics,
       });
 
     } catch (error) {
@@ -209,6 +211,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         );
         if (!confirmed) return;
       }
+      
       // Auto-create supplier for expenses if no supplier is linked
       let finalSupplierId = data.supplierId || null;
       if (defaultType === "expense" && !finalSupplierId && data.merchant) {
@@ -223,7 +226,6 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
           finalSupplierId = existingSupp.id;
         } else {
           // Create new supplier with VAT if available
-          const extractedVat = (uploadedFile.extractedData as any)?.tax_id || null;
           const { data: newSupp, error: suppErr } = await supabase
             .from("suppliers")
             .insert({ name: data.merchant.trim() })
@@ -370,18 +372,29 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              className="space-y-3"
             >
+              {/* Diagnostics Panel */}
+              {uploadedFile.diagnostics && !uploadedFile.isManual && (
+                <ExtractionDiagnostics
+                  diagnostics={uploadedFile.diagnostics}
+                  onRetry={() => handleRetryExtraction(true)}
+                  isRetrying={extracting}
+                />
+              )}
+
               {extractionFailed && !extracting && (
-                <div className="flex items-center gap-2 mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                   <span className="text-sm text-amber-700 dark:text-amber-300 flex-1">
                     Η AI ανάγνωση ήταν ατελής. Μπορείτε να δοκιμάσετε ξανά ή να συμπληρώσετε χειροκίνητα.
                   </span>
-                  <Button size="sm" variant="outline" onClick={handleRetryExtraction} className="shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => handleRetryExtraction(true)} className="shrink-0">
                     <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                     Επανάληψη
                   </Button>
                 </div>
               )}
+              
               <InvoicePreview
                 fileName={uploadedFile.file?.name || "Manual Entry"}
                 fileUrl={uploadedFile.url}
