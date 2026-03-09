@@ -78,6 +78,43 @@ export default function MonthlyClosing() {
     });
     const [refreshing, setRefreshing] = useState(false);
     const [expandedStep, setExpandedStep] = useState<string | null>(null);
+    const [reminderEmail, setReminderEmail] = useState("");
+    const [reminderName, setReminderName] = useState("");
+    const [sendingReminder, setSendingReminder] = useState(false);
+
+    async function handleSendReminder() {
+        if (!reminderEmail) {
+            toast.error("Εισάγετε email παραλήπτη");
+            return;
+        }
+        setSendingReminder(true);
+        try {
+            const pendingTasks = steps
+                .filter(s => !statuses[s.id]?.done)
+                .map(s => s.title);
+
+            const { error } = await supabase.functions.invoke("send-monthly-reminder", {
+                body: {
+                    recipientEmail: reminderEmail,
+                    recipientName: reminderName || "Λογιστή",
+                    monthLabel: period.label,
+                    completedSteps: completedCount,
+                    totalSteps: steps.length,
+                    pendingTasks,
+                },
+            });
+
+            if (error) throw error;
+            toast.success("Η υπενθύμιση στάλθηκε επιτυχώς!");
+            setReminderEmail("");
+            setReminderName("");
+        } catch (err) {
+            console.error(err);
+            toast.error("Σφάλμα αποστολής υπενθύμισης");
+        } finally {
+            setSendingReminder(false);
+        }
+    }
 
     // ── Step definitions ──
     const steps: ClosingStep[] = [
