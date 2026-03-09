@@ -39,6 +39,9 @@ import QuickScan from "./pages/QuickScan";
 import ViewInvoice from "./pages/ViewInvoice";
 import Demo from "./pages/Demo";
 import TemplateLanding from "./pages/TemplateLanding";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import { CookieConsent } from "./components/shared/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +64,8 @@ const App = () => (
             <Route path="/view-invoice/:token" element={<ViewInvoice />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/template" element={<TemplateLanding />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />
@@ -102,6 +107,7 @@ const App = () => (
             />
           </Routes>
         </BrowserRouter>
+        <CookieConsent />
       </TooltipProvider>
       </ThemeProvider>
     </AuthProvider>
