@@ -411,6 +411,9 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
         console.log("[EXTRACTED] tax_id (clean):", cleanTaxId);
         console.log("[EXTRACTED] buyer_vat (clean):", cleanBuyerVat);
 
+        const confidence = calculateConfidence(parsed);
+        const duration_ms = Date.now() - startTime;
+
         return new Response(
           JSON.stringify({
             extracted: {
@@ -427,7 +430,14 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
               vat_rate: typeof parsed.vat_rate === 'number' ? parsed.vat_rate : null,
               invoice_number: parsed.invoice_number || null,
               document_type: parsed.document_type || "invoice",
-              confidence: calculateConfidence(parsed)
+              confidence
+            },
+            _diagnostics: {
+              model: selectedModel,
+              duration_ms,
+              confidence,
+              raw_args: toolCall.function.arguments,
+              is_fallback: useFallback
             }
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
