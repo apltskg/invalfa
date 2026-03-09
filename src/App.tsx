@@ -41,6 +41,7 @@ import Demo from "./pages/Demo";
 import TemplateLanding from "./pages/TemplateLanding";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import LandingRedirect from "./pages/LandingRedirect";
 import { CookieConsent } from "./components/shared/CookieConsent";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/landing/auto" element={<LandingRedirect />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/landing/en" element={<LandingEN />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
