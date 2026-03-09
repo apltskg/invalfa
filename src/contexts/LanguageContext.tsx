@@ -19,7 +19,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const formatCurrency = (amount: number): string => {
         return new Intl.NumberFormat(language === "el" ? "el-GR" : "en-US", {
             style: "currency",
-            currency: APP_CONFIG.currency,
+            currency: APP_CONFIG.locale.currency,
         }).format(amount);
     };
 
@@ -27,7 +27,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         const dateObj = typeof date === "string" ? new Date(date) : date;
         return dateObj.toLocaleDateString(
             language === "el" ? "el-GR" : "en-US",
-            APP_CONFIG.dateFormat
+            APP_CONFIG.locale.dateFormat
         );
     };
 
