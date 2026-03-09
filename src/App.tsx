@@ -36,6 +36,7 @@ import Travellers from "./pages/Travellers";
 import MonthlyClosing from "./pages/MonthlyClosing";
 import QuickScan from "./pages/QuickScan";
 import ViewInvoice from "./pages/ViewInvoice";
+import Demo from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/invoice-request" element={<InvoiceRequest />} />
             <Route path="/view-invoice/:token" element={<ViewInvoice />} />
+            <Route path="/demo" element={<Demo />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />

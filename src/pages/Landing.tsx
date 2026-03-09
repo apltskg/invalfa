@@ -56,10 +56,10 @@ function Nav() {
                     <Link to="/login" className="text-sm text-slate-400 hover:text-white transition-colors">
                         Σύνδεση
                     </Link>
-                    <a href="#contact"
+                    <Link to="/demo"
                         className="text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-600/25">
-                        Δωρεάν Demo
-                    </a>
+                        Live Demo
+                    </Link>
                 </div>
 
                 {/* Mobile */}
