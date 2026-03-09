@@ -64,6 +64,8 @@ const App = () => (
             <Route path="/view-invoice/:token" element={<ViewInvoice />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/template" element={<TemplateLanding />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />
