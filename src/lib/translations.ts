@@ -1,3 +1,52 @@
+// English translations (default for template)
+export const en = {
+    // Navigation
+    nav: {
+        packages: "Travel Packages",
+        dashboard: "Dashboard",
+        suppliers: "Suppliers",
+        customers: "Customers", 
+        bankSync: "Bank Sync",
+        exportHub: "Export Hub",
+        analytics: "Analytics",
+        proforma: "New Proforma",
+        manageProformas: "Manage Proformas",
+        settings: "Settings",
+    },
+
+    // Common
+    common: {
+        save: "Save",
+        cancel: "Cancel",
+        delete: "Delete",
+        edit: "Edit",
+        add: "Add",
+        search: "Search",
+        filter: "Filter",
+        export: "Export",
+        import: "Import",
+        upload: "Upload",
+        download: "Download",
+        loading: "Loading...",
+        noData: "No data available",
+        confirm: "Confirm",
+        actions: "Actions",
+        date: "Date",
+        amount: "Amount",
+        status: "Status",
+        type: "Type",
+        notes: "Notes",
+    },
+
+    // Template-specific
+    template: {
+        companyPlaceholder: "Your Company Name",
+        logoAlt: "Company Logo",
+        brandName: "Travel Business Manager",
+        tagline: "Streamline Your Travel Business Operations",
+    },
+};
+
 // Greek translations for the entire app
 export const el = {
     // Navigation
