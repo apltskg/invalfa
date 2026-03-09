@@ -37,6 +37,7 @@ import MonthlyClosing from "./pages/MonthlyClosing";
 import QuickScan from "./pages/QuickScan";
 import ViewInvoice from "./pages/ViewInvoice";
 import Demo from "./pages/Demo";
+import TemplateLanding from "./pages/TemplateLanding";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/invoice-request" element={<InvoiceRequest />} />
             <Route path="/view-invoice/:token" element={<ViewInvoice />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/template" element={<TemplateLanding />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />
