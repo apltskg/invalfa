@@ -41,6 +41,7 @@ import Demo from "./pages/Demo";
 import TemplateLanding from "./pages/TemplateLanding";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import LandingRedirect from "./pages/LandingRedirect";
 import { CookieConsent } from "./components/shared/CookieConsent";
 
 const queryClient = new QueryClient();
