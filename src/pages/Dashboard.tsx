@@ -20,6 +20,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { RecurringExpensesWidget } from "@/components/dashboard/RecurringExpensesWidget";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 interface TimelineItem {
     id: string;
@@ -34,6 +35,7 @@ export default function Dashboard() {
     const [items, setItems] = useState<TimelineItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [dismissedBanner, setDismissedBanner] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("traveldocs_onboarded"));
     const [unmatchedCount, setUnmatchedCount] = useState(0);
     const [pendingExpenses, setPendingExpenses] = useState(0);
     const [trendData, setTrendData] = useState<{ month: string; income: number; expenses: number }[]>([]);
@@ -155,6 +157,17 @@ export default function Dashboard() {
     if (loading) return <PageSkeleton variant="dashboard" />;
 
     const hasNoData = items.length === 0 && trendData.every(t => t.income === 0 && t.expenses === 0);
+    if (hasNoData && showOnboarding) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Αρχική</h1>
+                    <p className="text-sm text-muted-foreground mt-1 capitalize">{displayLabel}</p>
+                </div>
+                <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+            </div>
+        );
+    }
     if (hasNoData) {
         return (
             <div className="space-y-6">
