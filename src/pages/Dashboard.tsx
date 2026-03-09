@@ -36,6 +36,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [dismissedBanner, setDismissedBanner] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("traveldocs_onboarded"));
+    const [unmatchedCount, setUnmatchedCount] = useState(0);
     const [pendingExpenses, setPendingExpenses] = useState(0);
     const [trendData, setTrendData] = useState<{ month: string; income: number; expenses: number }[]>([]);
     const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
