@@ -30,6 +30,7 @@ import ClientPortal from "./pages/ClientPortal";
 import InvoiceExchange from "./pages/InvoiceExchange";
 import BusinessIntelligence from "./pages/BusinessIntelligence";
 import Landing from "./pages/Landing";
+import LandingEN from "./pages/LandingEN";
 import InvoiceRequest from "./pages/InvoiceRequest";
 import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 import Travellers from "./pages/Travellers";
