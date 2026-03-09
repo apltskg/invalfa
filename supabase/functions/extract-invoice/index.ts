@@ -459,7 +459,7 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
-          console.log("[FALLBACK] Extracted data from content");
+          const duration_ms = Date.now() - startTime;
           return new Response(
             JSON.stringify({
               extracted: {
@@ -471,6 +471,13 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
                 currency: parsed.currency || "EUR",
                 invoice_number: parsed.invoice_number || null,
                 confidence: 0.7
+              },
+              _diagnostics: {
+                model: selectedModel,
+                duration_ms,
+                confidence: 0.7,
+                raw_args: jsonMatch[0],
+                is_fallback: useFallback
               }
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
