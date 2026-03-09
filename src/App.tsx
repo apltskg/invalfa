@@ -56,6 +56,7 @@ const App = () => (
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/invoice-request" element={<InvoiceRequest />} />
             <Route path="/view-invoice/:token" element={<ViewInvoice />} />
+            <Route path="/demo" element={<Demo />} />
             <Route path="/quick-scan" element={
               <ProtectedRoute><QuickScan /></ProtectedRoute>
             } />
