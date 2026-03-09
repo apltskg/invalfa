@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.send-monthly-reminder]
 verify_jwt = false
+
+[functions.notify-team-invoice]
+verify_jwt = false
+
+[functions.send-payment-reminder]
+verify_jwt = false

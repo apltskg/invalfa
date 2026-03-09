@@ -90,30 +90,123 @@ Deno.serve(async (req) => {
     const emailHtml = `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; padding: 40px 20px;">
-  <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-    <div style="background: #2563eb; padding: 28px 32px;">
-      <h1 style="margin: 0; color: #fff; font-size: 18px; font-weight: 600;">${companyName}</h1>
-      <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">Νέο τιμολόγιο διαθέσιμο</p>
-    </div>
-    <div style="padding: 32px;">
-      <p style="margin: 0 0 16px; color: #1a1a1a; font-size: 15px;">
-        Αγαπητέ/ή <strong>${share.customer_name || "πελάτη"}</strong>,
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Νέο Παραστατικό</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 40px 32px; text-align: center;">
+      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">
+        ${companyName}
+      </h1>
+      <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 15px; font-weight: 400;">
+        📧 Νέο παραστατικό διαθέσιμο για εσάς
       </p>
-      ${share.message ? `<p style="margin: 0 0 16px; color: #555; font-size: 14px;">${share.message}</p>` : ""}
-      <div style="background: #f0f4ff; border-radius: 12px; padding: 16px 20px; margin: 0 0 24px;">
-        <p style="margin: 0 0 4px; color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Στοιχεία τιμολογίου</p>
-        <p style="margin: 0; color: #1a1a1a; font-size: 15px; font-weight: 600;">${merchantStr} ${amountStr ? `— ${amountStr}` : ""}</p>
-        ${invoice?.invoice_date ? `<p style="margin: 4px 0 0; color: #888; font-size: 13px;">Ημ/νία: ${invoice.invoice_date}</p>` : ""}
+    </div>
+
+    <!-- Main Content -->
+    <div style="padding: 40px 32px;">
+      
+      <!-- Greeting -->
+      <div style="margin-bottom: 32px;">
+        <p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+          Γεια σας <strong style="color: #2563eb;">${share.customer_name || "αγαπητέ πελάτη"}</strong>! 👋
+        </p>
+        <p style="margin: 12px 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+          Σας στέλνουμε ένα νέο παραστατικό που ίσως σας ενδιαφέρει.
+        </p>
       </div>
-      <a href="${viewUrl}" style="display: block; text-align: center; background: #2563eb; color: #fff; text-decoration: none; padding: 14px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-        Προβολή Τιμολογίου →
-      </a>
-      <p style="margin: 24px 0 0; color: #999; font-size: 11px; text-align: center;">
-        Αυτό το email στάλθηκε από το ${companyName}. Αν δεν αναγνωρίζετε αυτό το μήνυμα, αγνοήστε το.
+
+      ${share.message ? `
+      <!-- Personal Message -->
+      <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 20px 24px; margin-bottom: 32px; border-radius: 0 8px 8px 0;">
+        <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6; font-style: italic;">
+          "${share.message}"
+        </p>
+      </div>
+      ` : ""}
+
+      <!-- Invoice Details Card -->
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+        <div style="display: flex; align-items: center; margin-bottom: 16px;">
+          <div style="width: 40px; height: 40px; background: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+            <span style="color: white; font-size: 18px;">📄</span>
+          </div>
+          <div>
+            <h3 style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+              Στοιχεία Παραστατικού
+            </h3>
+            <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">
+              Κλικ για προβολή και λήψη
+            </p>
+          </div>
+        </div>
+        
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 16px;">
+          ${merchantStr ? `
+          <div style="margin-bottom: 8px;">
+            <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Εκδότης:</span>
+            <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${merchantStr}</span>
+          </div>
+          ` : ""}
+          
+          ${amountStr ? `
+          <div style="margin-bottom: 8px;">
+            <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Ποσό:</span>
+            <span style="color: #059669; font-size: 16px; font-weight: 600;">${amountStr}</span>
+          </div>
+          ` : ""}
+          
+          ${invoice?.invoice_date ? `
+          <div>
+            <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Ημερομηνία:</span>
+            <span style="color: #1f2937; font-size: 14px;">${invoice.invoice_date}</span>
+          </div>
+          ` : ""}
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <div style="text-align: center; margin-bottom: 32px;">
+        <a href="${viewUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s;">
+          📱 Προβολή Παραστατικού
+        </a>
+      </div>
+
+      <!-- Help Text -->
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
+          Μπορείτε να προβάλετε το παραστατικό στον browser σας και να το κατεβάσετε σε PDF μορφή.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px; color: #374151; font-size: 14px; font-weight: 500;">
+        ${companyName}
+      </p>
+      ${agency?.email ? `
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">
+        📧 ${agency.email}
+      </p>
+      ` : ""}
+      ${agency?.phone ? `
+      <p style="margin: 0 0 12px; color: #6b7280; font-size: 13px;">
+        📞 ${agency.phone}
+      </p>
+      ` : ""}
+      <p style="margin: 0; color: #9ca3af; font-size: 11px; line-height: 1.4;">
+        Αυτό το email στάλθηκε από τη διεύθυνση ${share.customer_email}.<br>
+        Αν δεν αναμένατε αυτό το μήνυμα, μπορείτε να το αγνοήσετε.
       </p>
     </div>
+    
   </div>
 </body>
 </html>`;
