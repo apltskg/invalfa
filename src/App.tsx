@@ -57,6 +57,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/landing/auto" element={<LandingRedirect />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/landing/en" element={<LandingEN />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
