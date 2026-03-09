@@ -20,6 +20,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { RecurringExpensesWidget } from "@/components/dashboard/RecurringExpensesWidget";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 interface TimelineItem {
     id: string;
