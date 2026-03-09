@@ -230,7 +230,7 @@ export function InvoiceListTable({
                   <TableCell className="max-w-48" title={item.client_name || ''}>
                     <div className="flex items-center gap-1.5">
                       {item.client_id && (
-                        <User className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                        <User className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                       )}
                       <span className="truncate">{item.client_name || '-'}</span>
                     </div>
@@ -247,9 +247,9 @@ export function InvoiceListTable({
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors">
                           <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {item.match_status === 'matched' && onUnmatch ? (
