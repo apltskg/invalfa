@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CategoryManager } from "@/components/categories/CategoryManager";
 import { IncomeCategoryManager } from "@/components/categories/IncomeCategoryManager";
+import { BatchReExtraction } from "@/components/upload/BatchReExtraction";
 
 /* ─── Types ─── */
 interface AgencySettings {
@@ -654,6 +655,9 @@ export default function Settings() {
                     <IncomeCategoryManager />
                 </CardContent>
             </Card>
+
+            {/* ── Batch AI Re-extraction ── */}
+            <BatchReExtraction />
         </div>
     );
 }
