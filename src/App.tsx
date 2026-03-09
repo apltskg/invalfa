@@ -37,6 +37,7 @@ import MonthlyClosing from "./pages/MonthlyClosing";
 import QuickScan from "./pages/QuickScan";
 import ViewInvoice from "./pages/ViewInvoice";
 import Demo from "./pages/Demo";
+import TemplateLanding from "./pages/TemplateLanding";
 
 const queryClient = new QueryClient();
 
