@@ -41,7 +41,10 @@ serve(async (req) => {
       );
     }
 
-    const { filePath, fileName } = await req.json();
+    const { filePath, fileName, fallbackMode } = await req.json();
+    const useFallback = fallbackMode === true;
+    const selectedModel = useFallback ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    const startTime = Date.now();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
