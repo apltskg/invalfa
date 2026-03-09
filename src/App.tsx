@@ -39,6 +39,9 @@ import QuickScan from "./pages/QuickScan";
 import ViewInvoice from "./pages/ViewInvoice";
 import Demo from "./pages/Demo";
 import TemplateLanding from "./pages/TemplateLanding";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import { CookieConsent } from "./components/shared/CookieConsent";
 
 const queryClient = new QueryClient();
 
