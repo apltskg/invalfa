@@ -1,149 +1,149 @@
-# 🎉 INVALFA Project - COMPLETE & DEPLOYED!
+# TravelDocs — Travel Business Management Template
 
-## 📦 Everything Pushed to Production
+> Complete, production-ready React application for managing travel business operations. Invoice tracking, bank reconciliation, AI extraction, client portals, and accountant exports — all in one template.
 
-**Status:** ✅ All commits pushed to `main` branch  
-**Completion:** 100%  
-**Production Ready:** YES
-
----
-
-## 🆕 New in v2.1 (Jan 30, 2026)
-- **Accountant Portal**: Expanded with **General Income** & **General Expenses** for unassigned invoices.
-- **Bank Extraction**: Upgraded AI (Gemini 2.0) + robustness fixes for Greek statements.
-- **Dynamic Categories**: Manage expense categories in Settings & use them in Invoice Upload.
-- **Client Selection**: "Smart Select" for existing Customers/Suppliers.
+[![License](https://img.shields.io/badge/license-Commercial-blue.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](./CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://typescriptlang.org)
 
 ---
 
-## 🚀 What's Live Right Now
+## ⚡ Quick Start
 
-### Core Features
-✅ **Dashboard** - Timeline view of all transactions  
-✅ **Package Management** - Create & manage travel packages  
-✅ **Invoice System** - Full CRUD (Create/Read/Update/Delete)  
-✅ **Manual Entry** - Add expenses without PDF files  
-✅ **File Upload** - AI-powered data extraction  
-✅ **Analytics** - Financial charts and reports  
-✅ **Bank Sync** - Import bank transactions  
-✅ **Export Hub** - Generate reports  
+```bash
+# 1. Install
+npm install
 
-### Magic Link System
-✅ **AccountantPortal** - ALFA Μονοπρόσωπη Ι.Κ.Ε. branding  
-✅ **Contact Info** - +30 694 207 2312, business@atravel.gr  
-✅ **2-Month Expiration** - Secure time-limited links  
-✅ **Monthly Reports** - Automatic report generation  
+# 2. Configure your business
+#    Edit src/config/app.config.ts with your company details
 
-### Database
-✅ **expense_categories** - 8 default categories  
-✅ **shareable_links** - Magic link system  
-✅ **invoice_comments** - Client feedback  
-✅ **notifications** - Admin alerts  
-✅ **customers** - Customer management  
+# 3. Set up database
+#    Create a Supabase project → copy credentials to .env
+#    Run supabase_setup.sql in the SQL Editor
 
-### UI/UX
-✅ **Notification Bell** - Smart alerts  
-✅ **Clean Design** - Minimal, Apple-style  
-✅ **Responsive** - Works on all devices  
-✅ **Greek Language** - Full localization  
+# 4. Launch
+npm run dev
+```
+
+📖 **[Full Setup Guide →](./docs/SETUP.md)**
 
 ---
 
-## 📊 Feature Breakdown
+## ✨ Features
 
-| Feature | Status | Details |
-|---------|--------|---------|
-| Dashboard | ✅ | Timeline with all transactions |
-| Packages | ✅ | Create, view, edit packages |
-| Expenses | ✅ | View, edit, delete with categories |
-| Income | ✅ | Track all income sources |
-| Manual Entry | ✅ | Create without PDF |
-| File Upload | ✅ | PDF/Image with AI extraction |
-| Categories | ✅ | 8 operational categories |
-| Magic Links | ✅ | 2-month expiration |
-| AccountantPortal | ✅ | ALFA branding + contact |
-| Analytics | ✅ | Charts with proper sorting |
-| Bank Sync | ✅ | Import & match transactions |
-| Exports | ✅ | CSV & PDF generation |
-| Notifications | ✅ | Smart reminders |
-| Settings | ✅ | Agency info management |
+| Feature | Description |
+|---------|-------------|
+| 📦 **Package Management** | Create & track travel packages with customer linking |
+| 🧾 **Invoice System** | Upload, AI-extract, categorize, and match invoices |
+| 🏦 **Bank Sync** | Import CSV/PDF bank statements, match transactions |
+| 📊 **Analytics** | Revenue, expenses, profitability charts |
+| 📤 **Export Hub** | Monthly reports, Excel exports, accountant portal |
+| 👥 **Contact Book** | Customers, suppliers, travellers database |
+| 🔗 **Client Portal** | Shareable links for customer document access |
+| 📄 **Proforma Invoices** | Generate and email professional proformas |
+| 🤖 **AI Extraction** | Auto-parse invoices & bank statements with Gemini |
+| 🌍 **Multi-Language** | English + Greek (extensible) |
+| 🔐 **Role-Based Auth** | Admin/Staff roles with RLS |
+| 📱 **Responsive** | Works perfectly on mobile & desktop |
 
 ---
 
-## 💡 How to Use
+## 🎨 Customization
 
-### 1. Create a Package
-- Go to "Φάκελοι Ταξιδιών"
-- Click "Νέος Φάκελος"
-- Enter customer name & dates
-- Save
+Everything is configurable from one file:
 
-### 2. Add Expenses
-- Click "Γενικά Έξοδα"
-- Click "Νέο Έξοδο"
-- Choose "Upload File" or "Manual Entry"
-- Fill details & save
+```typescript
+// src/config/app.config.ts
+export const APP_CONFIG = {
+  company: {
+    name: "Your Travel Agency",
+    vatNumber: "123456789",
+    email: "info@youragency.com",
+  },
+  features: {
+    aiExtraction: true,
+    bankSync: true,
+    greekIntegrations: false, // Disable for non-Greek businesses
+  },
+  locale: {
+    defaultLanguage: "en", // or "el"
+    currency: "EUR",
+  }
+}
+```
 
-### 3. Generate Reports
-- Go to "Κέντρο Εξαγωγών"
-- Select month
-- Click "Generate Report"
-- Share magic link with accountant
-
-### 4. View Analytics
-- Go to "Αναλύσεις"
-- See charts & trends
-- Filter by period
-
----
-
-## 🎯 Default Categories
-
-**Operational Expenses:**
-1. 🛣️ Διόδια (Tolls)
-2. ⛽ Βενζίνη (Petrol)
-3. 👤 Προσωπική Χρήση (Personal Use)
-4. 🔧 Υπηρεσίες (Services)
-5. ⭕ Αλλαγή Ελαστικών (Tire Changes)
-6. 🔨 Συνεργεία (Workshops)
-7. 🚌 Μεταφορές Επιβατών (Passenger Transport)
-8. ➕ Άλλα (Other)
+📖 **[Customization Guide →](./docs/CUSTOMIZE.md)** | **[Configuration Reference →](./docs/CONFIG.md)**
 
 ---
 
-## 🔔 Smart Notifications
+## 🛠 Tech Stack
 
-The system automatically notifies you:
-- 📅 Bank sync reminder (1st of month)
-- ⚠️ Unmatched transactions
-- ℹ️ Incomplete invoices (missing amount/date)
-
----
-
-## 🌟 What You Can Do
-
-✅ Track all travel expenses  
-✅ Manage multiple packages simultaneously  
-✅ Generate professional reports  
-✅ Share secure links with accountants  
-✅ Sync bank transactions  
-✅ Categorize expenses automatically  
-✅ Export data to CSV/PDF  
-✅ Monitor cash flow  
-✅ Track profitability per package  
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS, shadcn/ui, Framer Motion |
+| Backend | Supabase (Postgres, Auth, Storage, Edge Functions) |
+| AI | Google Gemini for document extraction |
+| Charts | Recharts |
+| Exports | ExcelJS, JSZip, jsPDF |
 
 ---
 
-## 🎊 READY TO USE!
+## 📁 Project Structure
 
-Your complete travel agency management system is:
-- ✅ Fully functional
-- ✅ Production-ready
-- ✅ Deployed to GitHub
-- ✅ All features working
-- ✅ Database configured
-- ✅ UI polished
+```
+src/
+├── config/          # App configuration (branding, features, locale)
+├── components/      # UI components (shadcn/ui based)
+│   ├── ui/          # Base UI primitives
+│   ├── layout/      # App shell, sidebar, navigation
+│   ├── bank/        # Bank sync components
+│   ├── upload/      # File upload & AI extraction
+│   └── shared/      # Reusable utilities
+├── pages/           # Route pages
+├── hooks/           # Custom React hooks
+├── lib/             # Business logic & utilities
+├── contexts/        # React contexts (Language, Month)
+└── integrations/    # Supabase client & types
 
-**Start using it now!**
+supabase/
+├── functions/       # Edge functions (AI, email, etc.)
+└── config.toml      # Supabase configuration
 
-Go to your live URL and begin managing your travel business efficiently! 🚀
+docs/                # Full documentation suite
+```
+
+---
+
+## 📖 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Setup Guide](./docs/SETUP.md) | Installation & first-run setup |
+| [Configuration](./docs/CONFIG.md) | All configuration options |
+| [Customization](./docs/CUSTOMIZE.md) | Branding, theming, features |
+| [API Reference](./docs/API.md) | Edge functions & database schema |
+| [Deployment](./docs/DEPLOYMENT.md) | Vercel, Netlify, Docker |
+| [Updates](./docs/UPDATES.md) | How to apply updates |
+| [Support](./docs/SUPPORT.md) | Troubleshooting & FAQ |
+
+---
+
+## 📜 License
+
+Commercial license — see [LICENSE](./LICENSE) for details.
+
+**Standard** ($149) · **Extended** ($349) · **Agency** ($599)
+
+---
+
+## 🆘 Support
+
+- 📧 Email: support@traveldocs.dev
+- 📚 Docs: [docs.traveldocs.dev](https://docs.traveldocs.dev)
+- 🐛 Issues: Private GitHub repo
+
+---
+
+Built with ❤️ for travel professionals.
