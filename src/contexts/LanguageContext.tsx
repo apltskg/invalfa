@@ -14,7 +14,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguage] = useState<Language>(APP_CONFIG.defaultLanguage);
+    const [language, setLanguage] = useState<Language>(APP_CONFIG.locale.defaultLanguage);
 
     const formatCurrency = (amount: number): string => {
         return new Intl.NumberFormat(language === "el" ? "el-GR" : "en-US", {
