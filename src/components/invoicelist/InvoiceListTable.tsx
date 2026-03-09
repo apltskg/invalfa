@@ -247,9 +247,9 @@ export function InvoiceListTable({
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors">
                           <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {item.match_status === 'matched' && onUnmatch ? (

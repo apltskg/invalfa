@@ -13,79 +13,44 @@ serve(async (req) => {
   }
 
   try {
-    // ============ AUTHENTICATION CHECK ============
+    // ============ AUTHENTICATION ============
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      console.error('[AUTH] Missing or invalid Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - missing authentication', transactions: [], detected_bank: null }),
+        JSON.stringify({ error: 'Unauthorized', transactions: [], detected_bank: null }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.error('[CONFIG] Supabase environment variables not configured');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error', transactions: [], detected_bank: null }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify user authentication
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
     });
-
     const { data: userData, error: authError } = await authClient.auth.getUser(token);
     if (authError || !userData?.user) {
-      console.error('[AUTH] Authentication failed:', authError?.message);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid session', transactions: [], detected_bank: null }),
+        JSON.stringify({ error: 'Unauthorized', transactions: [], detected_bank: null }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log('[AUTH] Authenticated user:', userData.user.email);
-    // ============ END AUTHENTICATION CHECK ============
-
     if (!LOVABLE_API_KEY) {
-      console.error('[CONFIG] LOVABLE_API_KEY is not configured');
       return new Response(
         JSON.stringify({ error: 'AI service not configured', transactions: [], detected_bank: null }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('[CONFIG] SUPABASE_SERVICE_ROLE_KEY is not configured');
-      return new Response(
-        JSON.stringify({ error: 'Storage service not configured', transactions: [], detected_bank: null }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const { filePath, fileName } = await req.json();
 
-    // Validate filePath format to prevent path traversal
     if (!filePath || typeof filePath !== 'string') {
-      console.error('[VALIDATION] Invalid file path');
       return new Response(
         JSON.stringify({ error: 'Invalid file path', transactions: [], detected_bank: null }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const filePathRegex = /^[a-zA-Z0-9\-_\/\.]+$/;
-    if (!filePathRegex.test(filePath)) {
-      console.error('[VALIDATION] Invalid file path format:', filePath);
-      return new Response(
-        JSON.stringify({ error: 'Invalid file path format', transactions: [], detected_bank: null }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -93,12 +58,9 @@ serve(async (req) => {
     const safeFileName = String(fileName || 'bank-statement').substring(0, 100);
     console.log(`[START] Processing bank PDF: ${safeFileName}`);
 
-    // Use service role key for storage access (after user is authenticated)
+    // Download PDF bytes and encode as base64
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Download PDF bytes and encode as base64
-    console.log("[PDF] Downloading PDF bytes for base64 encoding...");
-    
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("bank-statements")
       .download(filePath);
@@ -113,54 +75,34 @@ serve(async (req) => {
 
     const arrayBuffer = await fileData.arrayBuffer();
     const base64Data = base64Encode(arrayBuffer);
-    const fileSize = arrayBuffer.byteLength;
+    console.log(`[PDF] Encoded to base64 (${arrayBuffer.byteLength} bytes)`);
 
-    console.log(`[PDF] Encoded PDF to base64 (${fileSize} bytes)`);
-
-    // Enhanced system prompt for Greek bank statements with bank detection
-    const systemPrompt = `You are an expert financial auditor specializing in Greek bank statements. Your task is to:
-1. IDENTIFY the bank from logos, headers, or formatting
-2. EXTRACT every single transaction line item
+    const systemPrompt = `You are an expert financial auditor specializing in Greek bank statements.
 
 BANK IDENTIFICATION:
-- Eurobank: Look for "EUROBANK", burgundy/red colors, specific header format
+- Eurobank: Look for "EUROBANK", burgundy/red colors
 - Alpha Bank: Look for "ALPHA BANK", "ΑΛΦΑ ΤΡΑΠΕΖΑ", blue branding
-- Viva Wallet: Look for "VIVA WALLET", "VIVA", green branding, digital payment format
-- Wise: Look for "WISE", "TransferWise", teal/blue-green branding, multi-currency format
+- Viva Wallet: Look for "VIVA WALLET", "VIVA", green branding
+- Wise: Look for "WISE", "TransferWise", teal/blue-green branding
 
-CRITICAL RULES FOR GREEK BANK STATEMENTS:
+CRITICAL RULES:
+1. NUMBER FORMATS: Greek format uses dot (.) for thousands and comma (,) for decimals
+   - "1.234,56" = 1234.56, "-500,00" = -500.00
+   - Always output standard decimal numbers
 
-1. **NUMBER FORMATS (VERY IMPORTANT)**:
-   - Greek format: dot (.) = thousands separator, comma (,) = decimal
-   - Example: "1.234,56" means 1234.56
-   - Example: "-500,00" means -500.00
-   - Always convert to standard decimal number
+2. DATES: Greek format DD/MM/YYYY → convert to ISO YYYY-MM-DD
 
-2. **DATE FORMATS**:
-   - Greek dates: DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY
-   - Convert ALL dates to ISO format: YYYY-MM-DD
+3. SIGNS:
+   - CREDITS (Πίστωση, deposits, incoming) = POSITIVE numbers
+   - DEBITS (Χρέωση, withdrawals, outgoing) = NEGATIVE numbers
 
-3. **AMOUNT SIGNS**:
-   - CREDITS (Deposits, Πίστωση) = POSITIVE numbers
-   - DEBITS (Withdrawals, Χρέωση) = NEGATIVE numbers
-   - Look for: +/- signs, CR/DR indicators, or separate Credit/Debit columns
+4. EXHAUSTIVE: Extract EVERY SINGLE transaction row. Do NOT summarize or skip any.
 
-4. **EXHAUSTIVE EXTRACTION**:
-   - Do NOT summarize or skip ANY transaction rows
-   - If there are 50 transactions, return exactly 50 objects
-   - Include ALL transactions even if they seem similar
+5. IGNORE: Page numbers, headers, footers, opening/closing balances, total rows.
 
-5. **CLEAN DESCRIPTIONS**:
-   - Remove line breaks within descriptions
-   - Keep the full description text for matching purposes
+Extract ALL transactions with zero exceptions.`;
 
-6. **IGNORE**:
-   - Page numbers, headers, footers
-   - "Balance Brought Forward", "Opening Balance", "Closing Balance"
-   - "Total", "Σύνολο" summary rows
-   - Only extract actual transaction movements`;
-
-    console.log("[AI] Sending to Gemini 2.5 Flash for extraction with bank detection...");
+    console.log("[AI] Sending to Gemini 2.5 Flash with tool calling...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -175,30 +117,62 @@ CRITICAL RULES FOR GREEK BANK STATEMENTS:
           {
             role: "user",
             content: [
-              { 
-                type: "text", 
-                text: `Analyze this bank statement PDF: ${safeFileName}. 
-                
-First identify the bank (eurobank, alpha, viva, or wise - use lowercase).
-Then extract ALL transactions.
-
-Return ONLY a JSON object in this exact format:
-{
-  "detected_bank": "eurobank" | "alpha" | "viva" | "wise" | null,
-  "transactions": [
-    { "date": "YYYY-MM-DD", "description": "full description", "amount": number }
-  ]
-}` 
+              {
+                type: "text",
+                text: `Analyze this bank statement PDF: "${safeFileName}". Identify the bank and extract ALL transactions.`
               },
-              { 
-                type: "image_url", 
-                image_url: { 
-                  url: `data:application/pdf;base64,${base64Data}` 
-                } 
+              {
+                type: "image_url",
+                image_url: { url: `data:application/pdf;base64,${base64Data}` }
               }
             ]
           }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_bank_transactions",
+              description: "Extract all transactions from a bank statement PDF",
+              parameters: {
+                type: "object",
+                properties: {
+                  detected_bank: {
+                    type: "string",
+                    enum: ["eurobank", "alpha", "viva", "wise"],
+                    description: "The bank identified from the statement"
+                  },
+                  transactions: {
+                    type: "array",
+                    description: "ALL transaction rows extracted from the statement",
+                    items: {
+                      type: "object",
+                      properties: {
+                        date: {
+                          type: "string",
+                          description: "Transaction date in YYYY-MM-DD format"
+                        },
+                        description: {
+                          type: "string",
+                          description: "Full transaction description/narration"
+                        },
+                        amount: {
+                          type: "number",
+                          description: "Amount as decimal. POSITIVE for credits/deposits, NEGATIVE for debits/withdrawals"
+                        }
+                      },
+                      required: ["date", "description", "amount"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["transactions"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "extract_bank_transactions" } }
       }),
     });
 
@@ -212,7 +186,6 @@ Return ONLY a JSON object in this exact format:
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       if (errorStatus === 402) {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted.", transactions: [], detected_bank: null }),
@@ -221,67 +194,67 @@ Return ONLY a JSON object in this exact format:
       }
 
       return new Response(
-        JSON.stringify({ transactions: [], detected_bank: null }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "AI gateway error", transactions: [], detected_bank: null }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const aiResponse = await response.json();
-    console.log("[AI] Response received successfully");
-    
-    const content = aiResponse.choices?.[0]?.message?.content || "";
-    console.log("[AI] Raw content length:", content.length);
+    console.log("[AI] Response received");
 
-    // Clean up markdown code blocks if present
+    // Extract from tool call (primary path)
+    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+
+    if (toolCall?.function?.arguments) {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        const transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+        const detected_bank = parsed.detected_bank || null;
+
+        console.log(`[EXTRACTED] Bank: ${detected_bank}, Transactions: ${transactions.length}`);
+        if (transactions.length > 0) {
+          console.log("[SAMPLE]", JSON.stringify(transactions[0]));
+        }
+
+        return new Response(
+          JSON.stringify({ transactions, detected_bank }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (parseError) {
+        console.error("[AI] Failed to parse tool call arguments:", parseError);
+      }
+    }
+
+    // Fallback: try raw content JSON parsing
+    const content = aiResponse.choices?.[0]?.message?.content || "";
+    console.log("[AI] Fallback: parsing raw content...");
     const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
 
-    // Try to parse as a full object first
     let detected_bank: string | null = null;
     let transactions: any[] = [];
 
     try {
-      // Try finding JSON object
       const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        
-        if (parsed.detected_bank && typeof parsed.detected_bank === 'string') {
-          detected_bank = parsed.detected_bank.toLowerCase();
-          console.log(`[DETECTED] Bank identified: ${detected_bank}`);
-        }
-        
-        if (Array.isArray(parsed.transactions)) {
-          transactions = parsed.transactions;
-          console.log(`[EXTRACTED] Found ${transactions.length} transactions`);
-        }
+        if (parsed.detected_bank) detected_bank = String(parsed.detected_bank).toLowerCase();
+        if (Array.isArray(parsed.transactions)) transactions = parsed.transactions;
       }
     } catch (e) {
-      console.log("[AI] Failed to parse as object, trying array extraction");
-      
-      // Fallback: try to find just the array
       const arrayMatch = cleanContent.match(/\[[\s\S]*\]/);
       if (arrayMatch) {
-        try {
-          transactions = JSON.parse(arrayMatch[0]);
-          console.log(`[EXTRACTED] Found ${transactions.length} transactions (array only)`);
-        } catch (e2) {
-          console.error("[AI] JSON Parse Error:", e2);
-        }
+        try { transactions = JSON.parse(arrayMatch[0]); } catch {}
       }
     }
 
-    // Log first transaction for debugging
-    if (transactions.length > 0) {
-      console.log("[SAMPLE] First transaction:", JSON.stringify(transactions[0]));
-    }
-    
+    console.log(`[FALLBACK] Bank: ${detected_bank}, Transactions: ${transactions.length}`);
     return new Response(
       JSON.stringify({ transactions, detected_bank }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error("[ERROR] Extraction error:", error);
+    console.error("[ERROR]", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", transactions: [], detected_bank: null }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

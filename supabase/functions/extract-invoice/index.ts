@@ -61,9 +61,9 @@ serve(async (req) => {
       );
     }
 
-    // Stricter file path validation - only allow uploads directory with expected format
-    if (!filePath.match(/^uploads\/[0-9]+-[a-z0-9]+\.(pdf|png|jpg|jpeg|webp)$/i)) {
-      console.error('[VALIDATION] Invalid file path format');
+    // Allow uploads directory with expected format (timestamps + random alphanumeric + extension)
+    if (!filePath.match(/^uploads\/[0-9]+-[a-zA-Z0-9]+\.(pdf|png|jpg|jpeg|webp)$/i)) {
+      console.error('[VALIDATION] Invalid file path format:', filePath);
       return new Response(
         JSON.stringify({ error: 'Invalid file path format', code: 'INVALID_PATH', extracted: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
