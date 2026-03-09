@@ -41,7 +41,10 @@ serve(async (req) => {
       );
     }
 
-    const { filePath, fileName } = await req.json();
+    const { filePath, fileName, fallbackMode } = await req.json();
+    const useFallback = fallbackMode === true;
+    const selectedModel = useFallback ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    const startTime = Date.now();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -272,7 +275,7 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: selectedModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: contentPayload }
@@ -408,6 +411,9 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
         console.log("[EXTRACTED] tax_id (clean):", cleanTaxId);
         console.log("[EXTRACTED] buyer_vat (clean):", cleanBuyerVat);
 
+        const confidence = calculateConfidence(parsed);
+        const duration_ms = Date.now() - startTime;
+
         return new Response(
           JSON.stringify({
             extracted: {
@@ -424,7 +430,14 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
               vat_rate: typeof parsed.vat_rate === 'number' ? parsed.vat_rate : null,
               invoice_number: parsed.invoice_number || null,
               document_type: parsed.document_type || "invoice",
-              confidence: calculateConfidence(parsed)
+              confidence
+            },
+            _diagnostics: {
+              model: selectedModel,
+              duration_ms,
+              confidence,
+              raw_args: toolCall.function.arguments,
+              is_fallback: useFallback
             }
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -446,7 +459,7 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
-          console.log("[FALLBACK] Extracted data from content");
+          const duration_ms = Date.now() - startTime;
           return new Response(
             JSON.stringify({
               extracted: {
@@ -458,6 +471,13 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
                 currency: parsed.currency || "EUR",
                 invoice_number: parsed.invoice_number || null,
                 confidence: 0.7
+              },
+              _diagnostics: {
+                model: selectedModel,
+                duration_ms,
+                confidence: 0.7,
+                raw_args: jsonMatch[0],
+                is_fallback: useFallback
               }
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -469,9 +489,11 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
     }
 
     console.log("[AI] No structured data extracted, returning low confidence");
+    const duration_ms = Date.now() - startTime;
     return new Response(
       JSON.stringify({
-        extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
+        extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 },
+        _diagnostics: { model: selectedModel, duration_ms, confidence: 0.1, is_fallback: useFallback }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
