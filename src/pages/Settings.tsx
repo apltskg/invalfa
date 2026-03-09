@@ -655,6 +655,9 @@ export default function Settings() {
                     <IncomeCategoryManager />
                 </CardContent>
             </Card>
+
+            {/* ── Batch AI Re-extraction ── */}
+            <BatchReExtraction />
         </div>
     );
 }
