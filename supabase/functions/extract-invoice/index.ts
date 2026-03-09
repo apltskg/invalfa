@@ -489,9 +489,11 @@ NEVER mix up seller and buyer VAT. seller=tax_id, buyer=buyer_vat. Output ONLY 9
     }
 
     console.log("[AI] No structured data extracted, returning low confidence");
+    const duration_ms = Date.now() - startTime;
     return new Response(
       JSON.stringify({
-        extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 }
+        extracted: { merchant: null, amount: null, date: null, category: "other", confidence: 0.1 },
+        _diagnostics: { model: selectedModel, duration_ms, confidence: 0.1, is_fallback: useFallback }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
