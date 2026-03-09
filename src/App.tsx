@@ -107,6 +107,7 @@ const App = () => (
             />
           </Routes>
         </BrowserRouter>
+        <CookieConsent />
       </TooltipProvider>
       </ThemeProvider>
     </AuthProvider>
