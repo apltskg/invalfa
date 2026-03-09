@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSEOHead } from "@/hooks/useSEOHead";
 import { Link } from "react-router-dom";
 import {
   FileText, BarChart2, CreditCard, Package, Users, Zap,
@@ -177,6 +178,14 @@ function Nav() {
 
 /* ═══════════════════════════════════════════════════════════════════ */
 export default function LandingEN() {
+  useSEOHead({
+    title: "invalfa — Invoice Management for Travel Agencies",
+    description: "Automated invoice processing, bank reconciliation, real-time reports, and client document sharing — all in one platform for travel agencies.",
+    canonicalUrl: "/landing/en",
+    lang: "en",
+    alternateLang: { href: "/landing", hreflang: "el" },
+  });
+
   return (
     <div className="bg-[#07091a] min-h-screen text-white font-sans" style={{ fontFamily: "'Inter', sans-serif" }}>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
