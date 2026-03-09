@@ -4,9 +4,11 @@ import { ContextualFAB } from "./ContextualFAB";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MonthSelector } from "./MonthSelector";
 import { MonthProvider } from "@/contexts/MonthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { KeyboardShortcuts } from "@/components/shared/KeyboardShortcuts";
 import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 interface AppLayoutProps {
   children: React.ReactNode;
