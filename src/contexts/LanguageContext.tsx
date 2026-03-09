@@ -37,7 +37,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
                 language, 
                 setLanguage, 
                 t: translations[language],
-                currency: APP_CONFIG.currency,
+                currency: APP_CONFIG.locale.currency,
                 formatCurrency,
                 formatDate
             }}
