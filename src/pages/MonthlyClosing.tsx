@@ -615,6 +615,51 @@ export default function MonthlyClosing() {
                 )}
             </div>
 
+            {/* Send Reminder Card */}
+            {!loading && (
+                <Card className="rounded-2xl border-border bg-card">
+                    <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Mail className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-semibold text-foreground">Αποστολή Υπενθύμισης</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Στείλτε email με την τρέχουσα κατάσταση κλεισίματος στον λογιστή ή στον υπεύθυνο.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Όνομα παραλήπτη</Label>
+                                <Input
+                                    placeholder="π.χ. Γιώργης"
+                                    value={reminderName}
+                                    onChange={e => setReminderName(e.target.value)}
+                                    className="h-9 text-sm rounded-xl"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Email παραλήπτη *</Label>
+                                <Input
+                                    type="email"
+                                    placeholder="logistis@example.com"
+                                    value={reminderEmail}
+                                    onChange={e => setReminderEmail(e.target.value)}
+                                    className="h-9 text-sm rounded-xl"
+                                />
+                            </div>
+                        </div>
+                        <Button
+                            onClick={handleSendReminder}
+                            disabled={sendingReminder || !reminderEmail}
+                            size="sm"
+                            className="w-full rounded-xl gap-2 text-sm"
+                        >
+                            {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                            {sendingReminder ? "Αποστολή..." : "Αποστολή Υπενθύμισης"}
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Quick Tips */}
             {!loading && !allDone && (
                 <Card className="rounded-2xl border-border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-100 dark:border-blue-900">
