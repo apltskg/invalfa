@@ -9,12 +9,14 @@ import {
     CheckCircle2, Circle, ChevronRight, FileSpreadsheet, Receipt,
     Building2, ArrowLeftRight, Send, AlertTriangle, Calendar,
     Loader2, ChevronDown, ChevronUp, Clock, Sparkles, Lock,
-    FileText, CreditCard, Users, Truck, Fuel, Car, ExternalLink
+    FileText, CreditCard, Users, Truck, Fuel, Car, ExternalLink, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 // ── Types ──
