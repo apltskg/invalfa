@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSEOHead } from "@/hooks/useSEOHead";
 import { Link } from "react-router-dom";
 import {
   FileText, BarChart2, CreditCard, Package, Users, Zap,
