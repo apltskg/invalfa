@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.verify-afm]
 verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-monthly-reminder]
+verify_jwt = false
