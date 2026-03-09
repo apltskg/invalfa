@@ -30,6 +30,7 @@ import ClientPortal from "./pages/ClientPortal";
 import InvoiceExchange from "./pages/InvoiceExchange";
 import BusinessIntelligence from "./pages/BusinessIntelligence";
 import Landing from "./pages/Landing";
+import LandingEN from "./pages/LandingEN";
 import InvoiceRequest from "./pages/InvoiceRequest";
 import InvoiceRequestsInbox from "./pages/InvoiceRequestsInbox";
 import Travellers from "./pages/Travellers";
@@ -53,6 +54,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/landing" element={<Landing />} />
+            <Route path="/landing/en" element={<LandingEN />} />
             <Route path="/accountant/:token" element={<AccountantPortal />} />
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/invoice-request" element={<InvoiceRequest />} />
