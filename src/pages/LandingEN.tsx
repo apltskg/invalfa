@@ -423,7 +423,8 @@ export default function LandingEN() {
           </div>
           <p className="text-slate-600 text-sm">© {new Date().getFullYear()} invalfa · Built for travel agencies worldwide</p>
           <div className="flex gap-6">
-            {["Terms of Service", "Privacy", "GDPR"].map(l => <a key={l} href="#" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">{l}</a>)}
+            <Link to="/terms?lang=en" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">Terms of Service</Link>
+            <Link to="/privacy?lang=en" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">Privacy</Link>
           </div>
         </div>
       </footer>

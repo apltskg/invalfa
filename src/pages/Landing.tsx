@@ -783,9 +783,8 @@ export default function Landing() {
                         © {new Date().getFullYear()} invalfa · Φτιαγμένο για τα ελληνικά τουριστικά γραφεία
                     </p>
                     <div className="flex gap-6">
-                        {["Όροι Χρήσης", "Απόρρητο", "GDPR"].map(l => (
-                            <a key={l} href="#" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">{l}</a>
-                        ))}
+                        <Link to="/terms?lang=el" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">Όροι Χρήσης</Link>
+                        <Link to="/privacy?lang=el" className="text-sm text-slate-600 hover:text-slate-400 transition-colors">Απόρρητο</Link>
                     </div>
                 </div>
             </footer>

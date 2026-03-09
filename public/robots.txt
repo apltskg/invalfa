@@ -11,4 +11,17 @@ User-agent: facebookexternalhit
 Allow: /
 
 User-agent: *
-Allow: /
+Allow: /landing
+Allow: /landing/en
+Allow: /privacy
+Allow: /terms
+Allow: /invoice-request
+Disallow: /dashboard
+Disallow: /packages
+Disallow: /bank-sync
+Disallow: /export-hub
+Disallow: /settings
+Disallow: /admin
+Disallow: /login
+
+Sitemap: https://invalfa.lovable.app/sitemap.xml
