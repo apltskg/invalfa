@@ -134,18 +134,16 @@ export function BulkUploadModal({
 
       updateFile(item.id, { filePath, progress: 50, status: 'extracting' });
 
-      // Extract
+      // Extract with retry and fallback
       let extractedData: ExtractedData | null = null;
       try {
-        const response = await supabase.functions.invoke('extract-invoice', {
-          body: { filePath, fileName: item.file.name },
+        const result = await runExtractionWithRetry({
+          filePath,
+          fileName: item.file.name,
+          fallbackMode: false,
+          maxRetries: 2, // Fewer retries for bulk to avoid long waits
         });
-
-        if (response.data && typeof response.data === 'object') {
-          // Edge function returns { extracted: { merchant, amount, ... } }
-          const rawData = response.data as any;
-          extractedData = (rawData.extracted || rawData) as ExtractedData;
-        }
+        extractedData = result.extracted;
       } catch (extractError) {
         console.warn('Extraction failed for', item.file.name);
       }
