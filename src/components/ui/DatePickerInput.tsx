@@ -99,7 +99,8 @@ export function DatePickerInput({
     };
 
     const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+    const startYear = 1940;
+    const years = Array.from({ length: currentYear - startYear + 6 }, (_, i) => startYear + i);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
