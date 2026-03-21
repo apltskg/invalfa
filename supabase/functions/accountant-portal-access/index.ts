@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
       const { data: bankStatementsData } = await supabase
         .from('bank_statements')
         .select('*')
-        .eq('period_month', monthYear)
+        .eq('statement_month', monthYear)
         .order('upload_date', { ascending: false });
 
       const bankStatements = bankStatementsData || [];
