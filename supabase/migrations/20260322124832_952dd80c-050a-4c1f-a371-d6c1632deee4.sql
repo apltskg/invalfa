@@ -1,0 +1,1 @@
+UPDATE public.bank_statements SET statement_month = '2026-02' WHERE statement_month = '2026-03' AND id IN ('011994ee-f0b6-44ad-a348-803cee38f3b9', 'a40ce34b-118a-4872-aea3-a1e59e3fd5e7', '53f471f4-9677-442f-942d-5ea7ff7b3dea', '138b53ca-0b8e-498f-9c7f-fc02918964e3');
