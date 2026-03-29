@@ -287,6 +287,17 @@ export async function runAutoMatching(
         );
         result.autoLinkedSuppliers = autoLinked;
 
+        // 2b. Build learned patterns from confirmed matches
+        let learnedPatterns: LearnedPattern[] = [];
+        try {
+            learnedPatterns = await buildLearnedPatterns();
+            if (learnedPatterns.length > 0) {
+                console.log(`[AUTO-MATCH] Loaded ${learnedPatterns.length} learned patterns`);
+            }
+        } catch (e) {
+            console.warn('[AUTO-MATCH] Could not load learned patterns:', e);
+        }
+
         const matchedInvIds = new Set((invoiceMatches || []).map(m => m.invoice_id));
         const unmatchedInvoices = invoices.filter(i => !matchedInvIds.has(i.id));
 
@@ -322,7 +333,7 @@ export async function runAutoMatching(
 
             for (const inv of allMatchable) {
                 if (inv.type !== expectedType) continue;
-                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap);
+                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap, learnedPatterns);
                 if (confidence > (bestMatch?.confidence || 0)) {
                     const isListItem = listItemInvoices.some(li => li.id === inv.id);
                     bestMatch = { invoice: inv as Invoice, confidence, reasons, isListItem };
