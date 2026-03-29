@@ -85,7 +85,7 @@ export async function runExtractionWithRetry({
       const confidence = extracted?.confidence ?? rawData?._diagnostics?.confidence;
 
       const diagnostics = {
-        model: rawData?._diagnostics?.model || (fallbackMode ? 'gemini-2.5-pro' : 'gemini-2.5-flash'),
+        model: rawData?._diagnostics?.model || (fallbackMode ? 'gemini-2.5-pro' : 'gemini-3-flash-preview'),
         duration_ms: rawData?._diagnostics?.duration_ms || duration_ms,
         confidence,
         raw_args: rawData?._diagnostics?.raw_args || JSON.stringify(extracted),

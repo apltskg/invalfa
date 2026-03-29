@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { buildLearnedPatterns, scoreWithLearnedPatterns, LearnedPattern } from "@/lib/match-learning";
 
 export interface AutoMatchResult {
     totalProcessed: number;
@@ -94,7 +95,8 @@ function calculateMatchConfidence(
     txn: Transaction,
     inv: Invoice,
     supplierMap: Map<string, Supplier>,
-    customerMap: Map<string, Customer>
+    customerMap: Map<string, Customer>,
+    learnedPatterns?: LearnedPattern[]
 ): { confidence: number; reasons: string[] } {
     const reasons: string[] = [];
     let confidence = 0;
@@ -160,6 +162,21 @@ function calculateMatchConfidence(
     if (invoiceNum.length >= 3 && descLower.includes(invoiceNum.toLowerCase().replace(/\s/g, ""))) {
         confidence += 12;
         reasons.push("Αρ. τιμολογίου στην περιγραφή");
+    }
+
+    // 7. Learned patterns from confirmed matches (bonus up to 20%)
+    if (learnedPatterns && learnedPatterns.length > 0) {
+        const learned = scoreWithLearnedPatterns(txn.description, learnedPatterns);
+        if (learned.bonus > 0 && learned.matchedMerchant) {
+            // Only apply if the learned merchant matches this invoice's merchant
+            const invMerchant = (inv.merchant || '').toLowerCase();
+            if (learned.matchedMerchant.toLowerCase() === invMerchant || 
+                invMerchant.includes(learned.matchedMerchant.toLowerCase()) ||
+                learned.matchedMerchant.toLowerCase().includes(invMerchant)) {
+                confidence += learned.bonus;
+                if (learned.reason) reasons.push(learned.reason);
+            }
+        }
     }
 
     return { confidence, reasons };
@@ -270,6 +287,17 @@ export async function runAutoMatching(
         );
         result.autoLinkedSuppliers = autoLinked;
 
+        // 2b. Build learned patterns from confirmed matches
+        let learnedPatterns: LearnedPattern[] = [];
+        try {
+            learnedPatterns = await buildLearnedPatterns();
+            if (learnedPatterns.length > 0) {
+                console.log(`[AUTO-MATCH] Loaded ${learnedPatterns.length} learned patterns`);
+            }
+        } catch (e) {
+            console.warn('[AUTO-MATCH] Could not load learned patterns:', e);
+        }
+
         const matchedInvIds = new Set((invoiceMatches || []).map(m => m.invoice_id));
         const unmatchedInvoices = invoices.filter(i => !matchedInvIds.has(i.id));
 
@@ -305,7 +333,7 @@ export async function runAutoMatching(
 
             for (const inv of allMatchable) {
                 if (inv.type !== expectedType) continue;
-                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap);
+                const { confidence, reasons } = calculateMatchConfidence(txn, inv as Invoice, supplierMap, customerMap, learnedPatterns);
                 if (confidence > (bestMatch?.confidence || 0)) {
                     const isListItem = listItemInvoices.some(li => li.id === inv.id);
                     bestMatch = { invoice: inv as Invoice, confidence, reasons, isListItem };

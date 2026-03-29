@@ -14,6 +14,7 @@ import { checkDuplicateInvoice } from "@/lib/duplicate-detection";
 import { runAutoMatching } from "@/lib/auto-matching";
 import { runExtractionWithRetry, ExtractionResult } from "@/lib/extraction-utils";
 import { ExtractionDiagnostics, DiagnosticsData } from "./ExtractionDiagnostics";
+import { autoCategorize } from "@/lib/auto-categorize";
 
 interface UploadedFile {
   file?: File;
@@ -245,6 +246,22 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         (uploadedFile.extractedData as any)?.tax_id
       );
 
+      // Auto-categorize if no category was manually selected
+      let finalExpenseCategoryId = data.expenseCategoryId || null;
+      if (defaultType === "expense" && !finalExpenseCategoryId) {
+        const extracted = uploadedFile.extractedData as any;
+        const autoResult = await autoCategorize({
+          aiCategory: extracted?.category || data.category,
+          merchantName: data.merchant,
+          supplierId: finalSupplierId,
+          taxId: extracted?.tax_id,
+        });
+        if (autoResult.categoryId) {
+          finalExpenseCategoryId = autoResult.categoryId;
+          console.log(`[AUTO-CAT] Assigned category via ${autoResult.source}`);
+        }
+      }
+
       const { error } = await (supabase as any).from("invoices").insert([{
         file_path: uploadedFile.path,
         file_name: uploadedFile.file?.name || "Manual Entry",
@@ -252,7 +269,7 @@ export function UploadModal({ open, onOpenChange, packageId, onUploadComplete, d
         amount: data.amount,
         invoice_date: data.date,
         category: data.category,
-        expense_category_id: defaultType === "expense" ? (data.expenseCategoryId || null) : null,
+        expense_category_id: defaultType === "expense" ? finalExpenseCategoryId : null,
         
         package_id: data.packageId || packageId || null,
         extracted_data: uploadedFile.extractedData as any,
