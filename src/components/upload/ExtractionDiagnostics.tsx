@@ -159,7 +159,30 @@ export function ExtractionDiagnostics({
                     {confidence !== undefined ? `${Math.round(confidence * 100)}%` : "–"}
                   </p>
                 </div>
-              </div>
+               </div>
+
+              {/* OCR Quality section */}
+              {ocr_quality && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Ποιότητα εγγράφου:</span>
+                    <Badge className={cn("text-xs", qualityInfo.bg, qualityInfo.color)}>
+                      {qualityInfo.label}
+                    </Badge>
+                  </div>
+                  {ocr_issues && ocr_issues.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap ml-5">
+                      <AlertTriangle className="h-3 w-3 text-amber-500" />
+                      {ocr_issues.map((issue) => (
+                        <Badge key={issue} variant="outline" className="text-xs">
+                          {ocrIssueLabels[issue] || issue}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Raw response */}
               {raw_args && (
