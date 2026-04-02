@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight, Clock, Cpu, Brain, Copy, Check, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Cpu, Brain, Copy, Check, RefreshCw, Eye, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,27 @@ export interface DiagnosticsData {
   raw_args?: string;
   is_fallback?: boolean;
   retry_count?: number;
+  ocr_quality?: 'clear' | 'readable' | 'partial' | 'poor';
+  ocr_issues?: string[];
 }
+
+const ocrQualityLabels: Record<string, { label: string; color: string; bg: string }> = {
+  clear: { label: "Καθαρό", color: "text-emerald-600", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
+  readable: { label: "Αναγνώσιμο", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
+  partial: { label: "Μερικώς αναγνώσιμο", color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+  poor: { label: "Κακή ποιότητα", color: "text-destructive", bg: "bg-red-100 dark:bg-red-900/30" },
+};
+
+const ocrIssueLabels: Record<string, string> = {
+  blurry_text: "Θολό κείμενο",
+  skewed: "Στραβό",
+  low_contrast: "Χαμηλή αντίθεση",
+  faded_ink: "Ξεθωριασμένο",
+  partial_crop: "Κομμένο",
+  handwritten: "Χειρόγραφο",
+  stamp_overlay: "Σφραγίδα",
+  small_font: "Μικρή γραμματοσειρά",
+};
 
 interface ExtractionDiagnosticsProps {
   diagnostics: DiagnosticsData | null;
