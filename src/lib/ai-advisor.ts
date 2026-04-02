@@ -1,40 +1,36 @@
-
+import { supabase } from "@/integrations/supabase/client";
 import { TaxLiability } from "./tax-engine";
 
-// Simulate AI processing delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 /**
- * Simulates a conversation with an AI Accountant specialized in Greek Tax Law.
+ * AI-powered accountant advisor using Lovable AI (Gemini 3 Flash).
+ * Sends the financial context to the backend and gets real AI analysis.
  */
 export async function askAccountant(prompt: string, liability: TaxLiability): Promise<string> {
-  await delay(1500); // Simulate thinking
+  try {
+    const response = await supabase.functions.invoke('ai-advisor', {
+      body: {
+        prompt,
+        context: {
+          vatPayable: liability.vatPayable,
+          incomeTax: liability.incomeTax,
+          tradeTax: liability.tradeTax,
+          totalLiability: liability.totalLiability,
+          netProfit: liability.netProfit,
+          netProfitAfterTax: liability.netProfitAfterTax,
+          totalIncome: (liability as any).totalIncome,
+          totalExpenses: (liability as any).totalExpenses,
+        },
+      },
+    });
 
-  const promptLower = prompt.toLowerCase();
-  const { vatPayable, incomeTax, tradeTax, totalLiability, netProfit } = liability;
+    if (response.error) {
+      console.error('AI Advisor error:', response.error);
+      return 'Δεν ήταν δυνατή η σύνδεση με τον AI λογιστή. Δοκιμάστε ξανά.';
+    }
 
-  // Context-aware responses
-  if (promptLower.includes("φπα") || promptLower.includes("vat")) {
-      if (vatPayable > 0) {
-          return `Για το τρέχον διάστημα, το χρεωστικό υπόλοιπο ΦΠΑ ανέρχεται στα €${vatPayable.toLocaleString()}. Αυτό προκύπτει επειδή τα έσοδά σας (€${(vatPayable / 0.24).toLocaleString()} καθαρά περίπου) υπερβαίνουν τα έξοδά σας. Προτείνω την άμεση εξόφληση ή ρύθμιση για αποφυγή προσαυξήσεων.`;
-      } else {
-          return `Έχετε πιστωτικό υπόλοιπο ΦΠΑ €${Math.abs(vatPayable).toLocaleString()}. Αυτό σημαίνει ότι μπορείτε να το συμψηφίσετε με μελλοντικές υποχρεώσεις ΦΠΑ.`;
-      }
+    return (response.data as any)?.answer || 'Δεν λήφθηκε απάντηση.';
+  } catch (error) {
+    console.error('AI Advisor error:', error);
+    return 'Σφάλμα επικοινωνίας. Δοκιμάστε ξανά αργότερα.';
   }
-
-  if (promptLower.includes("φόρ") || promptLower.includes("tax")) {
-      return `Η εκτιμώμενη φορολογική σας επιβάρυνση είναι €${totalLiability.toLocaleString()}. Αυτή περιλαμβάνει τον φόρο εισοδήματος (€${incomeTax.toLocaleString()}) και το τέλος επιτηδεύματος (€${tradeTax.toLocaleString()}). ${incomeTax > 5000 ? "Επειδή ο φόρος είναι υψηλός, ίσως αξίζει να εξετάσετε πρόσθετες επαγγελματικές δαπάνες πριν το τέλος του έτους." : "Η επιβάρυνση είναι σε λογικά επίπεδα για την κερδοφορία σας."}`;
-  }
-
-  if (promptLower.includes("κέρδ") || promptLower.includes("profit")) {
-      return `Τα καθαρά κέρδη προ φόρων είναι €${netProfit.toLocaleString()}. Μετά την αφαίρεση των φόρων (€${totalLiability.toLocaleString()}), τα διαθέσιμα κέρδη είναι €${liability.netProfitAfterTax.toLocaleString()}. Η απόδοση της επιχείρησής σας είναι ${(liability.netProfitAfterTax / Math.max(1, netProfit + totalLiability) * 100).toFixed(1)}%.`;
-  }
-
-  if (promptLower.includes("βελτιστοποίη") || promptLower.includes("optimize")) {
-      const suggestExpense = netProfit * 0.15;
-      return `Για να μειώσετε τον φόρο εισοδήματος, θα πρότεινα την πραγματοποίηση παραγωγικών δαπανών ύψους περίπου €${suggestExpense.toLocaleString()}. Εξετάστε επενδύσεις σε πάγια, αναλώσιμα ή υπηρεσίες μάρκετινγκ που θα βοηθήσουν την ανάπτυξή σας.`;
-  }
-
-  // Default fallback
-  return `Ως ο ψηφιακός λογιστής σας, βλέπω ότι η συνολική σας φορολογική υποχρέωση εκτιμάται στα €${totalLiability.toLocaleString()}. Μπορώ να απαντήσω σε ερωτήσεις για τον ΦΠΑ, τον Φόρο Εισοδήματος, ή να προτείνω τρόπους φορολογικής βελτιστοποίησης. Πώς μπορώ να βοηθήσω;`;
 }
