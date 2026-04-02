@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight, Clock, Cpu, Brain, Copy, Check, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Cpu, Brain, Copy, Check, RefreshCw, Eye, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,27 @@ export interface DiagnosticsData {
   raw_args?: string;
   is_fallback?: boolean;
   retry_count?: number;
+  ocr_quality?: 'clear' | 'readable' | 'partial' | 'poor';
+  ocr_issues?: string[];
 }
+
+const ocrQualityLabels: Record<string, { label: string; color: string; bg: string }> = {
+  clear: { label: "Καθαρό", color: "text-emerald-600", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
+  readable: { label: "Αναγνώσιμο", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
+  partial: { label: "Μερικώς αναγνώσιμο", color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+  poor: { label: "Κακή ποιότητα", color: "text-destructive", bg: "bg-red-100 dark:bg-red-900/30" },
+};
+
+const ocrIssueLabels: Record<string, string> = {
+  blurry_text: "Θολό κείμενο",
+  skewed: "Στραβό",
+  low_contrast: "Χαμηλή αντίθεση",
+  faded_ink: "Ξεθωριασμένο",
+  partial_crop: "Κομμένο",
+  handwritten: "Χειρόγραφο",
+  stamp_overlay: "Σφραγίδα",
+  small_font: "Μικρή γραμματοσειρά",
+};
 
 interface ExtractionDiagnosticsProps {
   diagnostics: DiagnosticsData | null;
@@ -30,7 +50,8 @@ export function ExtractionDiagnostics({
 
   if (!diagnostics) return null;
 
-  const { model, duration_ms, confidence, raw_args, is_fallback, retry_count } = diagnostics;
+  const { model, duration_ms, confidence, raw_args, is_fallback, retry_count, ocr_quality, ocr_issues } = diagnostics;
+  const qualityInfo = ocrQualityLabels[ocr_quality || 'clear'];
 
   const confidenceColor =
     confidence === undefined ? "text-muted-foreground" :
@@ -67,7 +88,13 @@ export function ExtractionDiagnostics({
           <span className="font-medium">AI Diagnostics</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {ocr_quality && ocr_quality !== 'clear' && (
+            <Badge className={cn("text-xs", qualityInfo.bg, qualityInfo.color)}>
+              <Eye className="h-3 w-3 mr-1" />
+              {qualityInfo.label}
+            </Badge>
+          )}
           {retry_count !== undefined && retry_count > 0 && (
             <Badge variant="outline" className="text-xs">
               Retry #{retry_count}
@@ -132,7 +159,30 @@ export function ExtractionDiagnostics({
                     {confidence !== undefined ? `${Math.round(confidence * 100)}%` : "–"}
                   </p>
                 </div>
-              </div>
+               </div>
+
+              {/* OCR Quality section */}
+              {ocr_quality && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Ποιότητα εγγράφου:</span>
+                    <Badge className={cn("text-xs", qualityInfo.bg, qualityInfo.color)}>
+                      {qualityInfo.label}
+                    </Badge>
+                  </div>
+                  {ocr_issues && ocr_issues.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap ml-5">
+                      <AlertTriangle className="h-3 w-3 text-amber-500" />
+                      {ocr_issues.map((issue) => (
+                        <Badge key={issue} variant="outline" className="text-xs">
+                          {ocrIssueLabels[issue] || issue}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Raw response */}
               {raw_args && (
