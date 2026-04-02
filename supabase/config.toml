@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.send-payment-reminder]
 verify_jwt = false
+
+[functions.ai-advisor]
+verify_jwt = false
+
+[functions.ai-insights]
+verify_jwt = false
