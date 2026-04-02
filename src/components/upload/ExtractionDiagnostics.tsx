@@ -88,7 +88,13 @@ export function ExtractionDiagnostics({
           <span className="font-medium">AI Diagnostics</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {ocr_quality && ocr_quality !== 'clear' && (
+            <Badge className={cn("text-xs", qualityInfo.bg, qualityInfo.color)}>
+              <Eye className="h-3 w-3 mr-1" />
+              {qualityInfo.label}
+            </Badge>
+          )}
           {retry_count !== undefined && retry_count > 0 && (
             <Badge variant="outline" className="text-xs">
               Retry #{retry_count}
