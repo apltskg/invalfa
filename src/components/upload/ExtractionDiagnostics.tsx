@@ -50,7 +50,8 @@ export function ExtractionDiagnostics({
 
   if (!diagnostics) return null;
 
-  const { model, duration_ms, confidence, raw_args, is_fallback, retry_count } = diagnostics;
+  const { model, duration_ms, confidence, raw_args, is_fallback, retry_count, ocr_quality, ocr_issues } = diagnostics;
+  const qualityInfo = ocrQualityLabels[ocr_quality || 'clear'];
 
   const confidenceColor =
     confidence === undefined ? "text-muted-foreground" :
